@@ -4,6 +4,7 @@ import { useEffect, useState} from 'react'
 
 type Restaurant = {
     id: number
+    providerId: string;
     name: string
     address: string
     category: string
@@ -15,6 +16,10 @@ export default function SessionPage() {
     const [sessionId, setSessionId] = useState('5')
     const [restaurants, setRestaurants] = useState<Restaurant[]>([])
     const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        console.log('Fetched restaurants:', restaurants)
+    }, [restaurants]);
 
     const fetchRestaurants = async () => {
         if (!sessionId) {
