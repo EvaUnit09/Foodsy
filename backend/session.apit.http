@@ -1,0 +1,14 @@
+### POST request to example server
+POST http://localhost:8080/api/sessions
+Content-Type: application/json
+
+{
+  "creatorId": "testuser",
+  "poolSize": 10,
+  "roundTime": 300,
+  "likesPerUser": 2
+
+}
+
+### Get all restaurants for session 1
+GET http://localhost:8080/api/sessions/1/restaurants

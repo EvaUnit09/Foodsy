@@ -1,0 +1,64 @@
+package com.foodiefriends.backend.domain;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity
+public class Session {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String creatorId;
+    private Integer poolSize;
+    private Integer roundTime;
+    private Integer likesPerUser;
+    
+    private String status; // open, voting, ended
+    private Instant createdAt = Instant.now();
+
+    // Getters / Setters
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    public String getStatus() {
+        return status;
+    }
+    public void setPoolSize(Integer poolSize) {
+        this.poolSize = poolSize;
+    }
+    public Integer getPoolSize() {
+        return poolSize;
+    }
+    public void setRoundTime(Integer roundTime) {
+        this.roundTime = roundTime;
+    }
+    public Integer getRoundTime() {
+        return roundTime;
+    }
+    public void setLikesPerUser(Integer likesPerUser) {
+        this.likesPerUser = likesPerUser;
+    }
+    public Integer getLikesPerUser() {
+        return likesPerUser;
+    }
+    public void setCreatorId(String creatorId) {
+        this.creatorId = creatorId;
+    }
+    public String getCreatorId() {
+        return creatorId;
+    }
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+}

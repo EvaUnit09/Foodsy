@@ -2,16 +2,21 @@ package com.foodiefriends.backend.controller;
 
 import java.util.List;
 import com.foodiefriends.backend.client.FoursquareClient;
+import com.foodiefriends.backend.domain.Session;
 import com.foodiefriends.backend.dto.FoursquareSearchResponse;
 import com.foodiefriends.backend.dto.RestaurantDto;
+import com.foodiefriends.backend.service.SessionService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/restaurants")
 public class RestaurantController {
     private final FoursquareClient fsq;
-    public RestaurantController(FoursquareClient fsq) {
+    private final SessionService sessionService;
+
+    public RestaurantController(FoursquareClient fsq, SessionService sessionService) {
         this.fsq = fsq;
+        this.sessionService = sessionService;
     }
     @GetMapping
     public List<RestaurantDto> search(@RequestParam String near, @RequestParam String query) {
@@ -25,6 +30,10 @@ public class RestaurantController {
                         place.categories().isEmpty() ? "Unknow" : place.categories().getFirst().name()
                 ))
                 .toList();
+    }
+    @PostMapping
+    public Session create(@RequestBody Session session) {
+        return sessionService.createSession(session);
     }
 
 
