@@ -14,7 +14,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/restaurants?near=Toronto&query=sushi')
+    fetch('http://localhost:8080/api/sessions/5/restaurants')
         .then(res => res.json())
         .then(data => {
           setRestaurants(data)
@@ -28,7 +28,7 @@ export default function HomePage() {
 
   return (
       <main className="p-4">
-          <h1 className="text-2xl font-bold"> Nearby Restaurants</h1>
+          <h1 className="text-2xl font-bold">Session</h1>
 
           {loading ? (
               <p className="text-2xl font-bold">Loading...</p>
