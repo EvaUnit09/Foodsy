@@ -36,6 +36,15 @@ public class RestaurantController {
         return sessionService.createSession(session);
     }
 
+    @GetMapping("/{providerId}/photos")
+    public List<String> getPhotos(
+            @PathVariable String providerId,
+            @RequestParam(defaultValue = "5") int limit) {
 
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be positive");
+        }
 
+        return fsq.fetchPhotoUrls(providerId, limit);
+    }
 }

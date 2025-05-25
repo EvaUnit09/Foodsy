@@ -27,7 +27,7 @@ public class SessionService {
         Session saved = sessionRepository.save(session);
         System.out.println("Created session with ID: " + saved.getId());
         
-        var response = fsq.search("Toronto", "restaurants");
+        var response = fsq.search("Astoria, NY", "restaurants");
         List<FoursquareSearchResponse.Place> places = response.results();
         System.out.println("Retrieved " + places.size() + " places from Foursquare");
 

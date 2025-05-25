@@ -4,226 +4,280 @@ import { useParams } from "next/navigation";
 import {useState, useEffect, use} from "react";
 import Button from "@mui/material/Button";
 
-export default function SessionPage() {
-    const { id } = useParams() // session id from url
+type Restaurant = {
+    id: number
+    providerId: string
+    name: string
+    category: string
+    address: string
+    likeCount: number
+    round: number
+    photos?: string[]
+}
+export default function sessionPage() {
+    const { id } = useParams()
     const sessionId = id as string
 
-    const [creatorId, setCreatorId] = useState('guest')
-    const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const [likedRestaurants, setLikedRestaurants] = useState<Restaurant[]>([])
-    const [loading, setLoading] = useState(true)
-    const [hasVoted, setHasVoted] = useState(false)
 
-    // Calculate voting progress properly
-    const totalRestaurants = restaurants.length;
-// Sum actual like count values from all restaurants
-    const totalLikes = restaurants.reduce((sum, r) => sum + (r.likeCount || 0), 0);
-// For percentage, we need to define what 100% means - typically total restaurants
-    const likePercentage = totalRestaurants > 0 ? (totalLikes / totalRestaurants) * 100 : 0;
+/* ----------------------- component state --------------------- */
+const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+const [currentIndex, setCurrentIndex] = useState(0)
 
-// Debug the values
-    useEffect(() => {
-        console.log('Total restaurants:', totalRestaurants);
-        console.log('Total likes (sum of all like counts):', totalLikes);
-        console.log('Like percentage:', likePercentage.toFixed(2) + '%');
-    }, [totalLikes, totalRestaurants, likePercentage]);
+// "liked"" list per restaurant
+const [likedRestaurants, setLikedRestaurants] = useState<Restaurant[]>([])
 
+// keeps track of every restaurant the user has already voted on
+const [votedMap, setVotedMap] = useState<Record<string, 'like' | 'dislike'>>({})
 
+/* ---------- fetch restaurants + their photos ---------- */
+useEffect(() => {
+    if (!sessionId) return
 
+        ;(async () => {
+        /* 1. base restaurant info */
+        const base = await fetch(
+            `http://localhost:8080/api/sessions/${sessionId}/restaurants`,
+        ).then(r => r.json())
 
+        /* 2. enrich each with 5 photos */
+        const enriched: Restaurant[] = await Promise.all(
+            base.map(async (r: Restaurant) => {
+                try {
+                    const photos: string[] = await fetch(
+                        `http://localhost:8080/api/restaurants/${r.providerId}/photos?limit=5`,
+                    ).then(pr => pr.json())
 
-    type Restaurant = {
-        id: number
-        providerId: string
-        name: string
-        category: string
-        address: string
-        likeCount: number
-        round: number
-    }
-
-    useEffect(() => {
-        console.log('Session ID:', sessionId)
-        console.log("useParams() - id:", id)
-    }, [sessionId]);
-
-    useEffect(() => {
-        const fetchRestaurants = async () => {
-            try {
-                const res = await fetch(`http://localhost:8080/api/sessions/${sessionId}/restaurants`)
-                const data = await res.json();
-                setRestaurants(data); // Load the restaurants
-                setCurrentIndex(0); // Start at the first restaurant
-            } catch (error) {
-                console.error('Error fetching restaurants:', error);
-            }
-        };
-        if (sessionId) fetchRestaurants();
-    }, [sessionId]);
-
-    const handleVote = async (type: 'like' | 'dislike') => {
-        const currentRestaurant = restaurants[currentIndex]; // Get the current restaurant
-        if (!currentRestaurant) {
-            console.error("No restaurant found or restaurants not loaded properly")
-            return;
-        }
-        // For debugging, log the current restaurant and its like count
-        console.log('Voting for restaurant:', currentRestaurant);
-        console.log('Current like count:', currentRestaurant.likeCount);
-
-
-        const votePayload = {
-            sessionId: Number(sessionId),
-            providerId: String(currentRestaurant.providerId), // providerId is a string
-            userId: 'guest', // replace when implementing authentication
-            voteType: type
-        };
-        console.log('Submitting votePayload:', votePayload);
-
-        try {
-            const res = await fetch('http://localhost:8080/api/votes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json'},
-                body: JSON.stringify(votePayload),
-            });
-
-            if (res.ok) {
-                // if its a like, move it to the liked list
-                if (type === 'like') {
-                    updateRestaurantLikeCount(currentRestaurant);
-                    setLikedRestaurants((prev) => [...prev, currentRestaurant]);
-
+                    return { ...r, photos }
+                } catch {
+                    return { ...r, photos: [] }
                 }
-                console.log('Vote submitted successfully');
-                setHasVoted(true); // prevent further votes
+            }),
+        )
 
-            } else {
-                const errorText = await res.text()
-                console.error('Failed to submit vote:', errorText);
-            }
-        } catch (err) {
-            console.error('Error submitting vote:', err)
-        }
+        setRestaurants(enriched)
+        setCurrentIndex(0)
+    })()
+}, [sessionId])
 
-    };
 
-    // Update Local state after a successful vote
-    const updateRestaurantLikeCount = (currentRestaurant: Restaurant) => {
-        // Always increment by exactly 1, regardless of which restaurant it is
-        const updatedRestaurant = {
-            ...currentRestaurant,
-            likeCount: currentRestaurant.likeCount + 1  // Always increment by 1
-        };
+/* ---------------------- Local - Storage persistence --------- */
+const votesKey = `votes_${sessionId}`
+const likesKey = `likes_${sessionId}`
 
-        // Update the main restaurants array
+useEffect(() => {
+    const savedVotes = localStorage.getItem(votesKey)
+    const savedLikes = localStorage.getItem(likesKey)
+
+    if (savedVotes) setVotedMap(JSON.parse(savedVotes))
+    else setVotedMap({})
+
+    if (savedLikes) setLikedRestaurants(JSON.parse(savedLikes))
+    else setLikedRestaurants([])
+}, [sessionId]); // runs again if user navigates to another session
+
+/* persist on every change */
+useEffect(() => {
+    localStorage.setItem(votesKey, JSON.stringify(votedMap))
+}, [votedMap, votesKey])
+useEffect(() => {
+    localStorage.setItem(likesKey, JSON.stringify(likedRestaurants))
+}, [likedRestaurants, likesKey]);
+
+
+/*--------------------- helpers------------------------------- */
+const totalRestaurants = restaurants.length;
+const likesUsed = likedRestaurants.length;
+const likeProgressPct = totalRestaurants ? (likesUsed / totalRestaurants) * 100 : 0;
+
+const current = restaurants[currentIndex]
+const alreadyVoted = current ? current.providerId in votedMap : false
+
+/* ------------------ fetch once ----------------------------*/
+useEffect(() => {
+    if (!sessionId) return
+    ;(async () => {
+        const r = await fetch(
+            `http://localhost:8080/api/sessions/${sessionId}/restaurants`,
+        )
+        const data = await r.json()
+        setRestaurants(data)
+        setCurrentIndex(0)
+    })()
+}, [sessionId]);
+
+    /* ------------------ voting logic ----------------------------*/
+const handleVote = async (type: 'like' | 'dislike') => {
+    if (!current || current.providerId in votedMap) return
+
+    setVotedMap(prev => ({...prev, [current.providerId]: type }))
+
+    if (type === 'like') bumpLikeLocally(current)
+
+    try {
+        await fetch('http://localhost:8080/api/votes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                sessionId: Number(sessionId),
+                providerId: current.providerId,
+                userId: 'guest',
+                voteType: type,
+            }),
+        })
+    } catch (err) {
+        console.error('Vote failed:', err)
+        setVotedMap(prev => {
+            const { [current.providerId]: _, ...rest } = prev
+            return rest
+        })
+        if (type === 'like') undoLikeLocally(current)
+    }
+}
+
+/* ---- helper to increment local likeCount & liked list without duplicates ---*/
+    const bumpLikeLocally = (target: Restaurant) => {
         setRestaurants(prev =>
-            prev.map(r => r.id === currentRestaurant.id ? updatedRestaurant : r)
-        );
-
-        // Update the liked restaurants array
-        setLikedRestaurants(prev => {
-            const exists = prev.some(r => r.id === currentRestaurant.id);
-            if (exists) {
-                return prev.map(r => r.id === currentRestaurant.id ? updatedRestaurant : r);
-            } else {
-                return [...prev, updatedRestaurant];
-            }
-        });
-
-        console.log('Updated restaurant like count:', updatedRestaurant.name, updatedRestaurant.likeCount);
-    };
-
-    const handleNext = () => {
-        if (currentIndex < restaurants.length - 1) {
-            setCurrentIndex(currentIndex + 1)
-            setHasVoted(false) // Reset voting state for next card
-        }
-    };
-
-    const handlePrevious = () => {
-        if (currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1)
-            setHasVoted(false)
-        }
+            prev.map(r =>
+                r.providerId === target.providerId
+            ? { ...r, likeCount: r.likeCount + 1 }
+            : r,
+            ),
+        )
+       setLikedRestaurants(prev => {
+           const exists = prev.some(r => r.providerId === target.providerId)
+           return exists
+                ? prev.map(r =>
+                   r.providerId === target.providerId
+                       ? { ...r, likeCount: r.likeCount + 1 }
+                       : r,
+               )
+               : [...prev, { ...target, likeCount: target.likeCount + 1 }]
+       })
     }
 
+    const undoLikeLocally = (target: Restaurant) => {
+        setRestaurants(prev =>
+            prev.map(r =>
+                r.providerId === target.providerId
+                    ? { ...r, likeCount: r.likeCount - 1 }
+                    : r,
+            ),
+        )
+        setLikedRestaurants(prev =>
+            prev
+                .map(r =>
+                    r.providerId === target.providerId
+                    ? { ...r, likeCount: r.likeCount - 1 }
+                        : r,
+                )
+                .filter(r => r.likeCount > 0),
+        )
+    }
 
+    /* ----------------- navigation ----------------- */
+    const toNext = () =>
+        setCurrentIndex(i => Math.min(i + 1, restaurants.length - 1))
+    const toPrev = () => setCurrentIndex(i => Math.max(i - 1, 0))
 
+/* ----- UI --------- */
     return (
-        <main className={"max-w-screen-xl mx-auto p-6 space-y-6"}>
-            {/* Session header */}
-            <section className={"flex justify-between items-center border-b pb-4"}>
-                <div className={"space-y-1"}>
-                    <p className={"text-sm text-gray-500"}>Session ID: {sessionId}</p>
-                    <p className={"text-sm text-gray-400"}>Creator: {creatorId || 'Loading...'}</p>
-                </div>
-                {/*Placeholder avatars*/}
-                <div className="flex -space-x-3 px-4">
-                    {['🧑user1', '👩user2', '🧔user3', '👩‍💼user4'].map((emoji, i) => (
-                        <span key={i} className="text-xl px-4 text-gray-300">{emoji}</span>
-                    ))}
-                </div>
-            </section>
-            {/* Liked restaurant sections*/}
-            {/* Progress Status Bar */}
-            <section className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Voting Progress</h3>
+        <main className="max-w-screen-xl mx-auto p-6 space-y-6">
+            {/* progress bar */}
+            <section>
+                <h3 className="font-semibold mb-2">Voting Progress</h3>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
                     <div
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(likePercentage, 100)}%` }}  // Cap at 100%
-                    ></div>
+                        className="bg-blue-600 h-2.5 rounded-full transition-all"
+                        style={{ width: `${likeProgressPct}%` }}
+                    />
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                    <span>{totalLikes} like{totalLikes !== 1 ? 's' : ''} recorded</span>
-                    <span>{Math.min(Math.round(likePercentage), 100)}% complete</span>
+          <span>
+            {likesUsed}/{totalRestaurants} likes used
+          </span>
+                    <span>{Math.round(likeProgressPct)} %</span>
                 </div>
             </section>
-            {/* Liked restaurant sections*/}
+
+            {/* liked list */}
             <section>
-                <h2 className="text-xl font-bold mb-4">Liked Restaurants</h2>
-                <ul className="space-y-4">
-                    {likedRestaurants.map((restaurant) => (
-                        <li key={restaurant.providerId} className="border rounded-xl p-4 shadow-sm">
-                            <h2 className="text-lg font-semibold">{restaurant.name}</h2>
-                            <p className="text-sm text-gray-500 mt-1">
-                                <span className="font-medium">{restaurant.likeCount || 0}</span> like{restaurant.likeCount !== 1 ? 's' : ''}
-                            </p>
-                            <div className="relative bg-gray-200 rounded h-4 mt-2">
-                                <div
-                                    className="bg-green-500 h-4 rounded"
-                                    style={{ width: `${Math.min((restaurant.likeCount || 0) * 10, 100)}%` }}
-                                ></div>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </section>
-            {/* Restaurants*/}
-            <section className="space-y-6">
-                <div>
-                    <h2 className="text-xl font-bold">{restaurants[currentIndex]?.name}</h2>
-                    <p className="text-sm text-gray-600">{restaurants[currentIndex]?.category}</p>
-                    <p className="text-sm text-gray-400">{restaurants[currentIndex]?.address}</p>
+  <h2 className="text-xl font-bold mb-4">Most Liked Restaurants</h2>
+
+  <ul className="space-y-4">
+    {[...likedRestaurants]                     // clone to avoid mutating state
+      .sort((a, b) => b.likeCount - a.likeCount) // highest likes first
+      .slice(0, 3)                               // top 3 only
+      .map(r => (
+        <li
+          key={r.providerId}
+          className="border rounded-xl px-4 py-4 shadow-sm"
+        >
+          <h2 className="text-lg font-medium mb-1">{r.name}</h2>
+
+          <div className="relative bg-gray-400 rounded h-4">
+            <div
+              className="bg-green-500 h-4 rounded"
+              style={{ width: `${Math.min(r.likeCount * 10, 100)}%` }}
+            />
+            <span className="absolute right-2 top-0 text-xs text-white leading-4">
+              {r.likeCount} 👍
+            </span>
+          </div>
+        </li>
+      ))}
+  </ul>
+</section>
+
+            {/* current restaurant card */}
+            <div className="border-amber-200 border-4 rounded-2xl p-4">
+            {current && (
+                <section>
+                    <h2 className="text-xl font-bold">{current.name}</h2>
+                    <p className="text-sm text-gray-600">{current.category}</p>
+                    <p className="text-sm text-gray-400">{current.address}</p>
+
+                    {/* ─── new photo grid ─── */}
+                    {current.photos && current.photos.length > 0 && (
+                        <div className="grid grid-cols-5 gap-2 my-4">
+                            {current.photos.map(url => (
+                                <img
+                                    key={url}
+                                    src={url}
+                                    alt={current.name}
+                                    className="h-24 w-full object-cover rounded"
+                                />
+                            ))}
+                        </div>
+                    )}
+
+
                     <div className="flex justify-between mt-4 px-4">
-                        <Button className={"px-4"} onClick={handlePrevious} disabled={currentIndex === 0}>
+                        <Button onClick={toPrev} disabled={currentIndex === 0}>
                             Prev
                         </Button>
-                        <div className={"px-4"}>
-                            <Button className={"px-4"} onClick={() => handleVote('dislike')} disabled={hasVoted}>
+
+                        <div>
+                            <Button
+                                onClick={() => handleVote('dislike')}
+                                disabled={alreadyVoted}
+                            >
                                 Dislike
                             </Button>
-                            <Button onClick={() => handleVote('like')} disabled={hasVoted}>
+                            <Button onClick={() => handleVote('like')} disabled={alreadyVoted}>
                                 Like
                             </Button>
                         </div>
-                        <Button onClick={handleNext} disabled={currentIndex === restaurants.length - 1}>
+
+                        <Button
+                            onClick={toNext}
+                            disabled={currentIndex === restaurants.length - 1}
+                        >
                             Next
                         </Button>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
+            </div>
         </main>
     )
 }
