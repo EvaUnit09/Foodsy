@@ -4,8 +4,14 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
+@Table(
+        name = "session",
+        uniqueConstraints = @UniqueConstraint(columnNames = "join_code"
+        )
+)
 public class Session {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
     private String creatorId;
@@ -16,7 +22,16 @@ public class Session {
     private String status; // open, voting, ended
     private Instant createdAt = Instant.now();
 
+    @Column(name = "join_code", unique = true, nullable = false, length = 6)
+    private String joinCode;
+
     // Getters / Setters
+    public String getJoinCode() {
+        return joinCode;
+    }
+    public void setJoinCode(String joinCode) {
+        this.joinCode = joinCode;
+    }
 
     public void setStatus(String status) {
         this.status = status;

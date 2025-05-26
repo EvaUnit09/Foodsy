@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 	implementation("me.paulschwarz:spring-dotenv:4.0.0")
 	implementation("com.h2database:h2")
+	implementation("org.postgresql:postgresql:42.7.3")
 	implementation("jakarta.platform:jakarta.jakartaee-api:10.0.0")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
 	testImplementation("org.mockito:mockito-core:5.12.0")

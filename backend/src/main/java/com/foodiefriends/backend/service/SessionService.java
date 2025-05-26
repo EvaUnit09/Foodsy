@@ -2,12 +2,16 @@ package com.foodiefriends.backend.service;
 
 import com.foodiefriends.backend.client.FoursquareClient;
 import com.foodiefriends.backend.domain.Session;
+import com.foodiefriends.backend.domain.SessionParticipant;
 import com.foodiefriends.backend.domain.SessionRestaurant;
 import com.foodiefriends.backend.dto.FoursquareSearchResponse;
+import com.foodiefriends.backend.example.session.JoinCodeGenerator;
+import com.foodiefriends.backend.repository.SessionParticipantRepository;
 import com.foodiefriends.backend.repository.SessionRepository;
 import com.foodiefriends.backend.repository.SessionRestaurantRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -16,13 +20,21 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository restaurantRepo;
     private final FoursquareClient fsq;
+    private final SessionParticipantRepository sessionParticipantRepository;
 
-    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, FoursquareClient fsq) {
+    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, FoursquareClient fsq, SessionParticipantRepository sessionParticipantRepository) {
         this.sessionRepository = sessionRepo;
         this.restaurantRepo = restaurantRepo;
         this.fsq = fsq;
+        this.sessionParticipantRepository = sessionParticipantRepository;
     }
     public Session createSession(Session session) {
+        String code;
+        do {
+            code = JoinCodeGenerator.generate();
+        } while (sessionRepository.findByJoinCode(code).isPresent());
+
+        session.setJoinCode(code);
         session.setStatus("OPEN");
         Session saved = sessionRepository.save(session);
         System.out.println("Created session with ID: " + saved.getId());
@@ -54,5 +66,24 @@ public class SessionService {
         }
         
         return saved;
+    }
+    public Session getSession(Long id, String userId) {
+        if (id == null || userId == null) return null;
+        Session session = sessionRepository.findById(id).orElse(null);
+
+        if (session == null) return null;
+
+        // Check if user already a participant
+        boolean isParticipant = sessionParticipantRepository
+                .findBySessionIdAndUserId(id, userId)
+                .isPresent();
+        if (isParticipant) {
+            SessionParticipant participant = new SessionParticipant();
+            participant.setSession(session);
+            participant.setUserId(userId);
+            participant.setJoinedAt(Instant.now());
+            sessionParticipantRepository.save(participant);
+        }
+        return session;
     }
 }
