@@ -9,7 +9,9 @@ import com.foodiefriends.backend.example.session.JoinCodeGenerator;
 import com.foodiefriends.backend.repository.SessionParticipantRepository;
 import com.foodiefriends.backend.repository.SessionRepository;
 import com.foodiefriends.backend.repository.SessionRestaurantRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -33,6 +35,10 @@ public class SessionService {
         do {
             code = JoinCodeGenerator.generate();
         } while (sessionRepository.findByJoinCode(code).isPresent());
+
+        if (session.getCreatorId() == null || session.getPoolSize() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: creatorId, poolSize");
+        }
 
         session.setJoinCode(code);
         session.setStatus("OPEN");
@@ -85,5 +91,8 @@ public class SessionService {
             sessionParticipantRepository.save(participant);
         }
         return session;
+    }
+    public List<SessionParticipant> getParticipants(Long id) {
+        return sessionParticipantRepository.findBySessionId(id);
     }
 }

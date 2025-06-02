@@ -1,6 +1,7 @@
 package com.foodiefriends.backend.service;
 
 import com.foodiefriends.backend.domain.SessionRestaurant;
+import com.foodiefriends.backend.domain.VoteType;
 import com.foodiefriends.backend.dto.VoteRequest;
 import com.foodiefriends.backend.repository.SessionRestaurantRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,7 +19,7 @@ public class VoteService {
                 .findBySessionIdAndProviderId(voteRequest.sessionId(), voteRequest.providerId())
                 .orElseThrow(() -> new EntityNotFoundException("SessionRestaurant not found"));
 
-        if ("like".equalsIgnoreCase(voteRequest.voteType())) {
+        if (voteRequest.voteType() == VoteType.LIKE) {
             sessionRestaurant.setLikeCount(sessionRestaurant.getLikeCount() + 1);
 
         }

@@ -7,7 +7,8 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
+/* Dark mode  -> just change to dark*/
+@media (prefers-color-scheme: light) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -17,5 +18,5 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Roboto, Helvetica, sans-serif;
 }

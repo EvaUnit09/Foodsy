@@ -24,10 +24,15 @@ public class SessionParticipant {
     // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
     public Session getSession() { return session; }
+
     public void setSession(Session session) { this.session = session; }
+
     public String getUserId() { return userId; }
+
     public void setUserId(String userId) { this.userId = userId; }
+
     public Instant getJoinedAt() { return joinedAt; }
     public void setJoinedAt(Instant joinedAt) { this.joinedAt = joinedAt; }
 }

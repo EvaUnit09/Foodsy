@@ -1,4 +1,5 @@
-### POST request to example server
+### POST request to example server returns creatorID, poolSize, roundTime, likesPerUser
+### Status, createdAt, Join Code
 POST http://localhost:8080/api/sessions
 Content-Type: application/json
 
@@ -6,9 +7,20 @@ Content-Type: application/json
   "creatorId": "testuser",
   "poolSize": 10,
   "roundTime": 300,
-  "likesPerUser": 2
+  "likesPerUser": 10
 
 }
+### POST request to add participants
+POST http://localhost:8080/api/sessions/11/participants
+Content-Type: application/json
+
+{
+  "userId": "Noah"
+}
+
 
 ### Get all restaurants for session 1
-GET http://localhost:8080/api/sessions/1/restaurants
+GET http://localhost:8080/api/sessions/6/restaurants
+
+### Get all participants for session 6
+GET http://localhost:8080/api/sessions/11/participants

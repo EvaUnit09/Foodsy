@@ -1,9 +1,10 @@
 package com.foodiefriends.backend.dto;
 
+import com.foodiefriends.backend.domain.VoteType;
+
 public record VoteRequest(
         Long sessionId,
         String providerId,
         String userId,
-        String voteType // "like" or "dislike"
-) {
-}
+        VoteType voteType // "like" or "dislike"
+) {}

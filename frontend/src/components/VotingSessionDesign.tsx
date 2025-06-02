@@ -15,7 +15,13 @@ export default function VotingSessionPage() {
             <a href="#">Favorites</a>
             <a href="#">Profile</a>
           </nav>
-          <Image src="" alt="User avatar" className="w-10 h-10 rounded-full" />
+          <Image
+            src={`/public/vercel.svg`}
+            alt="User avatar"
+            width={32}
+            height={32}
+            className="w-10 h-10 rounded-full"
+          />
         </div>
       </div>
 
@@ -27,6 +33,8 @@ export default function VotingSessionPage() {
               key={id}
               src={`/avatars/${id}.jpg`}
               alt="User"
+              width={32}
+              height={32}
               className="w-10 h-10 rounded-full"
             />
           ))}
@@ -84,7 +92,13 @@ export default function VotingSessionPage() {
       </div>
 
       {/* Restaurant Card */}
-      <Image src="#" alt="Restaurant" className="w-full rounded-xl mb-4" />
+      <Image
+        src="/public/vercel.svg"
+        width={32}
+        height={32}
+        alt="Restaurant"
+        className="w-full rounded-xl mb-4"
+      />
       <h3 className="text-xl font-semibold">The Spice Merchant</h3>
       <p className="text-sm text-gray-500 mb-2">4.5 ⭐⭐⭐⭐ · $$ · Downtown</p>
       <p className="text-gray-600 mb-6">
@@ -100,6 +114,8 @@ export default function VotingSessionPage() {
             <div key={item} className="w-1/3 text-center">
               <Image
                 src={`/dishes/${index + 1}.jpg`}
+                width={64}
+                height={64}
                 alt={item}
                 className="rounded-lg mb-2"
               />
