@@ -6,8 +6,7 @@ export interface CreateVotePayload {
   userId: string;
   voteType: VoteType;
 }
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+
 /**
  * POST /api/sessions/{sessionId}/restaurants/{providerId}/vote
  */
@@ -18,11 +17,11 @@ export async function createVote({
   voteType,
 }: CreateVotePayload): Promise<void> {
   const res = await fetch(
-    `${API_BASE_URL}/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
+    `http://localhost:8080/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId, userId, voteType }),
+      body: JSON.stringify({ sessionId, providerId, userId, voteType }),
     },
   );
 

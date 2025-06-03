@@ -20,7 +20,7 @@ const JoinSessionForm = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/sessions/${joinCode}/join`, {
+      const res = await fetch(`/api/sessions/sessions/${joinCode}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userName: username }),
@@ -34,9 +34,8 @@ const JoinSessionForm = () => {
 
       const { sessionId, userId } = await res.json();
       // ✅ navigate to the voting screen for this session
-      router.push(
-        `/sessions/${sessionId}?userId=${encodeURIComponent(userId)}`,
-      );
+      sessionStorage.setItem("userId", userId);
+      router.push(`/sessions/${sessionId}`);
     } catch (err) {
       alert((err as Error).message);
     } finally {

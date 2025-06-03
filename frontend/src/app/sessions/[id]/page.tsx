@@ -1,11 +1,35 @@
 "use client";
-import { useParams } from "next/navigation";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+
+import {
+  ArrowLeft,
+  User,
+  Clock,
+  ThumbsUp,
+  ThumbsDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+
 import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Fragment,
+} from "react";
+
+import { Button } from "@/components/button";
+import { Card, CardContent } from "@/components/card";
+import { Progress } from "@/components/progress";
+import { Avatar, AvatarFallback } from "@/components/avatar";
+
 import { useSessionVoting } from "@/hooks/useSessionVoting";
 import { useUserId } from "@/hooks/useUserId";
 
-/* ----------------------- types & constants ----------------------- */
+/* ----------------란드 types & constants ----------------------- */
 export type Restaurant = {
   id: number;
   providerId: string;
@@ -19,6 +43,7 @@ export type Restaurant = {
 
 const API_BASE_URL = "http://localhost:8080/api";
 const IMAGES_LIMIT = 6;
+const INITIAL_TIMER = { minutes: 5, seconds: 0 };
 
 /* ----------------------- api helpers ----------------------------- */
 const fetchRestaurantsWithPhotos = async (
@@ -70,20 +95,33 @@ export default function SessionPage() {
 
   /* --------------------- component state ------------------------ */
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string }[]>([]);
   const [likedRestaurants, setLikedRestaurants] = usePersistedState<
     Restaurant[]
   >(`likes-${sessionId}`, []);
   const [loading, setLoading] = useState(true);
 
-  /* --------------------------------------------------- */
-  /* add just before the `useSessionVoting` invocation   */
-  /* --------------------------------------------------- */
+  /* ---- gallery (photo) state – resets when restaurant changes ---- */
+  const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
 
+  /* ---------------------- countdown timer ----------------------- */
+  const [timeLeft, setTimeLeft] = useState(INITIAL_TIMER);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.minutes === 0 && prev.seconds === 0) return prev;
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        return { minutes: prev.minutes - 1, seconds: 59 };
+      });
+    }, 1000);
+
+    return () => clearInterval(t);
+  }, []);
+
+  /* ---------------- voting helpers (unchanged) ------------------ */
   const bumpLikeLocally = useCallback(
     ({ providerId }: { providerId: string }) => {
-      // increment like count in `restaurants`
       setRestaurants((prev) =>
         prev.map((r) =>
           r.providerId === providerId
@@ -91,8 +129,6 @@ export default function SessionPage() {
             : r,
         ),
       );
-
-      // add to liked list if not there yet
       setLikedRestaurants((prev) => {
         if (prev.some((r) => r.providerId === providerId)) return prev;
         const target = restaurants.find((r) => r.providerId === providerId);
@@ -106,7 +142,6 @@ export default function SessionPage() {
 
   const undoLikeLocally = useCallback(
     ({ providerId }: { providerId: string }) => {
-      // decrement like count
       setRestaurants((prev) =>
         prev.map((r) =>
           r.providerId === providerId
@@ -114,16 +149,14 @@ export default function SessionPage() {
             : r,
         ),
       );
-
-      // remove from liked list
       setLikedRestaurants((prev) =>
         prev.filter((r) => r.providerId !== providerId),
       );
     },
     [setLikedRestaurants],
   );
-  const userId = useUserId();
 
+  const userId = useUserId();
   const { hasVoted, handleVote } = useSessionVoting({
     sessionId,
     userId,
@@ -141,7 +174,8 @@ export default function SessionPage() {
       ]);
       setRestaurants(enriched);
       setParticipants(fetchedParticipants);
-      setCurrentIndex(0);
+      setCurrentRestaurantIdx(0);
+      setCurrentPhotoIdx(0);
       setLoading(false);
     })();
   }, [sessionId]);
@@ -154,194 +188,295 @@ export default function SessionPage() {
         : 0,
     [restaurants.length, likedRestaurants.length],
   );
-  const currentRestaurant = restaurants[currentIndex];
+
+  const currentRestaurant = restaurants[currentRestaurantIdx];
+
   const alreadyVoted = useMemo(
     () => (currentRestaurant ? hasVoted(currentRestaurant.providerId) : false),
     [currentRestaurant, hasVoted],
   );
 
   /* -------------------- navigation helpers ---------------------- */
-  const toNext = useCallback(
-    () => setCurrentIndex((i) => Math.min(i + 1, restaurants.length - 1)),
+  const toNextRestaurant = useCallback(
+    () =>
+      setCurrentRestaurantIdx((i) => Math.min(i + 1, restaurants.length - 1)),
     [restaurants.length],
   );
-  const toPrev = useCallback(
-    () => setCurrentIndex((i) => Math.max(i - 1, 0)),
+  const toPrevRestaurant = useCallback(
+    () => setCurrentRestaurantIdx((i) => Math.max(i - 1, 0)),
     [],
   );
 
+  /* reset gallery index when restaurant changes */
+  useEffect(() => setCurrentPhotoIdx(0), [currentRestaurantIdx]);
+
+  const nextPhoto = () =>
+    setCurrentPhotoIdx(
+      (p) => (p + 1) % (currentRestaurant?.photos?.length || 1),
+    );
+  const prevPhoto = () =>
+    setCurrentPhotoIdx(
+      (p) =>
+        (p - 1 + (currentRestaurant?.photos?.length || 1)) %
+        (currentRestaurant?.photos?.length || 1),
+    );
+
   /* --------------------------- UI ------------------------------- */
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-10">Loading…</div>;
 
   return (
-    <main className="max-w-screen-xl mx-auto p-6 space-y-6">
-      {/* header */}
-      <div className="flex justify-between items-center border-b pb-4 mb-6">
-        <h1 className="text-2xl font-semibold">foodiefriends</h1>
-        <div className="flex items-center gap-6">
-          <nav className="flex gap-4 text-sm">
-            <a href="#">home</a>
-            <a href="#">favorites</a>
-            <a href="#">profile</a>
-          </nav>
-          <Image
-            src="/public/globe.svg"
-            alt="user avatar"
-            width={32}
-            height={32}
-            className="w-10 h-10 rounded-full"
-          />
-        </div>
-      </div>
-
-      {/* participants and timer */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <ul>
-            {participants.map((p) => (
-              <li key={p.userId}>{p.userId}</li>
-            ))}
-          </ul>
-          <span className="ml-4 text-sm pb-4 text-red-500">
-            session id: {sessionId}
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold">05</div>
-            <div className="text-sm text-gray-500">minutes</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">00</div>
-            <div className="text-sm text-gray-500">seconds</div>
-          </div>
-        </div>
-      </div>
-
-      {/* progress bar */}
-      <section>
-        <h3 className="font-semibold mb-2">voting progress</h3>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
-          <div
-            className="bg-blue-600 h-2.5 rounded-full transition-all"
-            style={{ width: `${likeProgressPct}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-sm text-gray-600">
-          <span>
-            {likedRestaurants.length}/{restaurants.length} likes used
-          </span>
-        </div>
-      </section>
-      {/* liked list */}
-      <section>
-        <h2 className="text-xl font-bold mb-4">Most Liked Restaurants</h2>
-
-        <ul className="space-y-4">
-          {[...likedRestaurants] // clone to avoid mutating state
-            .sort((a, b) => b.likeCount - a.likeCount) // highest likes first
-            .slice(0, 3) // top 3 only
-            .map((r) => (
-              <li
-                key={r.providerId}
-                className="border rounded-xl px-4 py-4 shadow-sm"
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      {/* ───────────────── header ───────────────── */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* left-most: back link + brand */}
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/"
+                className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors"
               >
-                <h2 className="text-lg font-medium mb-1">{r.name}</h2>
+                <ArrowLeft className="w-5 h-5" />
+                <span>Exit Session</span>
+              </Link>
 
-                <div className="relative bg-gray-400 rounded h-4">
-                  <div
-                    className="bg-green-500 h-4 rounded"
-                    style={{ width: `${Math.min(r.likeCount * 10, 100)}%` }}
-                  />
-                  <span className="absolute right-2 top-0 text-xs text-white leading-4">
-                    {r.likeCount} 👍
-                  </span>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">F</span>
                 </div>
-              </li>
-            ))}
-        </ul>
-      </section>
-
-      {/* current restaurant card */}
-      <div className="border-amber-200 border-4 rounded-2xl p-4">
-        {currentRestaurant && (
-          <section>
-            <h2 className="text-xl font-bold">{currentRestaurant.name}</h2>
-            <p className="text-sm text-gray-600">
-              {currentRestaurant.category}
-            </p>
-            <p className="text-sm text-gray-400">{currentRestaurant.address}</p>
-
-            {/* ─── new photo grid ─── */}
-            {currentRestaurant.photos &&
-              currentRestaurant.photos.length > 0 && (
-                <div className="grid grid-cols-5 gap-2 my-4">
-                  {currentRestaurant.photos.map((url) => (
-                    <Image
-                      width={600}
-                      height={600}
-                      key={url}
-                      src={url}
-                      alt={currentRestaurant.name}
-                      className="h-48 w-full object-cover rounded"
-                    />
-                  ))}
-                </div>
-              )}
-
-            {/* navigation */}
-            <div className="flex justify-between mt-6">
-              <button
-                onClick={toPrev}
-                disabled={currentIndex === 0}
-                className="px-3 py-1 border rounded disabled:opacity-40"
-              >
-                ← Prev
-              </button>
-
-              <button
-                onClick={toNext}
-                disabled={currentIndex === restaurants.length - 1}
-                className="px-3 py-1 border rounded disabled:opacity-40"
-              >
-                Next →
-              </button>
+                <span className="text-xl font-bold text-gray-900">
+                  foodiefriends
+                </span>
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  NY
+                </span>
+              </div>
             </div>
 
-            {/* like / vote action */}
-            <button
-              onClick={() =>
-                handleVote({
-                  providerId: currentRestaurant.providerId,
-                  type: "like",
-                  currentRestaurantObj: {
-                    providerId: currentRestaurant.providerId,
-                  },
-                })
-              }
-              disabled={alreadyVoted}
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-40"
-            >
-              {alreadyVoted ? "Already voted" : "Like"}
-            </button>
-            <button
-              onClick={() =>
-                handleVote({
-                  providerId: currentRestaurant.providerId,
-                  type: "dislike",
-                  currentRestaurantObj: {
-                    providerId: currentRestaurant.providerId,
-                  },
-                })
-              }
-              disabled={alreadyVoted}
-              className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-40"
-            >
-              {alreadyVoted ? "Already voted" : "Dislike"}
-            </button>
-          </section>
+            {/* right: session id, timer, profile */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Session:</span>
+                <span className="text-sm font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                  #{sessionId}
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
+                <Clock className="w-4 h-4 text-red-600" />
+                <span className="text-lg font-mono text-red-600">
+                  {String(timeLeft.minutes).padStart(2, "0")}:
+                  {String(timeLeft.seconds).padStart(2, "0")}
+                </span>
+              </div>
+
+              <Button variant="ghost" size="sm">
+                <User className="w-4 h-4 mr-2" />
+                Profile
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ───────────────── content ───────────────── */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* participants & voting progress */}
+        <section className="flex items-center justify-between">
+          {/* participants */}
+          <div className="flex items-center space-x-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Participants
+            </h2>
+            <div className="flex items-center space-x-3">
+              {participants.map((p) => (
+                <Fragment key={p.userId}>
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-orange-100 text-orange-800 text-sm">
+                      {p.userId?.[0]?.toUpperCase() ?? "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-gray-600">{p.userId}</span>
+                </Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* progress */}
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">Voting Progress</span>
+            <div className="flex items-center space-x-2">
+              <Progress value={likeProgressPct} className="w-28" />
+              <span className="text-sm font-medium text-gray-900">
+                {likedRestaurants.length}/{restaurants.length}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* current restaurant card */}
+        {currentRestaurant && (
+          <Card className="shadow-2xl border-0 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                {/* left – restaurant info + vote buttons */}
+                <div className="p-8 bg-white flex flex-col">
+                  <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      {currentRestaurant.name}
+                    </h1>
+                    <p className="text-lg text-orange-600 mb-1">
+                      {currentRestaurant.category}
+                    </p>
+                    <p className="text-gray-600">{currentRestaurant.address}</p>
+                  </div>
+
+                  {/* like / pass */}
+                  <div className="flex space-x-4 mt-auto">
+                    <Button
+                      onClick={() =>
+                        handleVote({
+                          type: "dislike",
+                          providerId: currentRestaurant!.providerId,
+                          currentRestaurantObj: currentRestaurant,
+                        })
+                      }
+                      disabled={alreadyVoted}
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 h-14 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                    >
+                      <ThumbsDown className="w-5 h-5 mr-2" />
+                      Pass
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        handleVote({
+                          type: "like",
+                          providerId: currentRestaurant!.providerId,
+                          currentRestaurantObj: currentRestaurant,
+                        })
+                      }
+                      disabled={alreadyVoted}
+                      size="lg"
+                      className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                    >
+                      <ThumbsUp className="w-5 h-5 mr-2" />
+                      Like
+                    </Button>
+                  </div>
+
+                  {alreadyVoted && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg">
+                      <p className="text-green-800 text-center font-medium">
+                        Vote recorded!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* right – photo gallery */}
+                <div className="relative bg-gray-100">
+                  {/* main photo */}
+                  {currentRestaurant.photos &&
+                  currentRestaurant.photos.length > 0 ? (
+                    <div className="aspect-square relative overflow-hidden">
+                      <Image
+                        src={
+                          currentRestaurant.photos[currentPhotoIdx] ??
+                          "/placeholder.svg"
+                        }
+                        alt={`${currentRestaurant.name} photo ${
+                          currentPhotoIdx + 1
+                        }`}
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                      />
+
+                      {/* photo nav */}
+                      <div className="absolute inset-0 flex items-center justify-between p-4">
+                        <Button
+                          onClick={prevPhoto}
+                          variant="outline"
+                          size="icon"
+                          className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                        >
+                          <ChevronLeft />
+                        </Button>
+                        <Button
+                          onClick={nextPhoto}
+                          variant="outline"
+                          size="icon"
+                          className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                        >
+                          <ChevronRight />
+                        </Button>
+                      </div>
+
+                      {/* counter */}
+                      <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                        {currentPhotoIdx + 1} /{" "}
+                        {currentRestaurant.photos.length}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <span className="text-gray-500">No photos</span>
+                    </div>
+                  )}
+
+                  {/* thumbnails */}
+                  {currentRestaurant.photos &&
+                    currentRestaurant.photos.length > 1 && (
+                      <div className="p-4 bg-white">
+                        <div className="grid grid-cols-6 gap-2">
+                          {currentRestaurant.photos.map((url, idx) => (
+                            <button
+                              key={url}
+                              onClick={() => setCurrentPhotoIdx(idx)}
+                              className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                idx === currentPhotoIdx
+                                  ? "border-orange-500 shadow-md"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <Image
+                                src={url}
+                                alt={`Thumbnail ${idx + 1}`}
+                                width={120}
+                                height={120}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
-      </div>
-    </main>
+
+        {/* navigation between restaurants */}
+        <div className="flex justify-between">
+          <Button
+            onClick={toPrevRestaurant}
+            disabled={currentRestaurantIdx === 0}
+            variant="outline"
+          >
+            ← Prev Restaurant
+          </Button>
+          <Button
+            onClick={toNextRestaurant}
+            disabled={currentRestaurantIdx === restaurants.length - 1}
+            variant="outline"
+          >
+            Next Restaurant →
+          </Button>
+        </div>
+      </main>
+    </div>
   );
 }

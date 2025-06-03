@@ -7,6 +7,7 @@ import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { Badge } from "@/components/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 /* -------------------------------------------------------------------------- */
 /*  1.  Static data (kept outside the component)                               */
@@ -163,10 +164,12 @@ const Index = () => {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Users className="w-4 h-4 mr-2" />
-                Sessions
-              </Button>
+              <Link href={"/sessions/Joinpage"}>
+                <Button variant="ghost" size="sm">
+                  <Users className="w-4 h-4 mr-2" />
+                  Sessions
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm">
                 <Heart className="w-4 h-4 mr-2" />
                 Favorites
