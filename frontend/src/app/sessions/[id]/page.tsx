@@ -165,6 +165,11 @@ export default function SessionPage() {
     undoLikeLocally,
   });
 
+  // Track if session has started
+  const [sessionStarted, setSessionStarted] = useState(false);
+  // Track if the host has pressed start (for instant feedback)
+  const [startPressed, setStartPressed] = useState(false);
+
   // Data fetching effect
   useEffect(() => {
     if (!sessionId) return;
@@ -188,7 +193,7 @@ export default function SessionPage() {
     if (!event) return;
     switch (event.type) {
       case "sessionStarted":
-        // Optionally show a message or update UI state to enable voting
+        setSessionStarted(true);
         break;
       case "timerUpdate":
         setTimeLeft({
@@ -220,6 +225,21 @@ export default function SessionPage() {
     () => (currentRestaurant ? hasVoted(currentRestaurant.providerId) : false),
     [currentRestaurant, hasVoted],
   );
+
+  // Normalize host check
+  console.log('creatorId:', session?.creatorId, 'userId:', userId);
+  const isHost = useMemo(() => {
+    return (
+      session?.creatorId?.trim().toLowerCase() === userId?.trim().toLowerCase()
+    );
+  }, [session?.creatorId, userId]);
+
+  // Handler for host to start session
+  const handleStartSession = () => {
+    send(`/app/session/${sessionId}/start`, {});
+    setStartPressed(true);
+    setSessionStarted(true); // Optimistically update for host
+  };
 
   /* -------------------- navigation helpers ---------------------- */
   const toNextRestaurant = useCallback(
@@ -341,6 +361,18 @@ export default function SessionPage() {
 
       {/* ───────────────── content ───────────────── */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Voting started banner */}
+        {sessionStarted && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-900 rounded-lg text-center text-lg font-semibold shadow">
+            Voting has started! Cast your votes now.
+          </div>
+        )}
+        {/* Waiting for host message for non-hosts */}
+        {!sessionStarted && !isHost && (
+          <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 text-yellow-900 rounded-lg text-center text-lg font-semibold shadow">
+            Waiting for host to start the session...
+          </div>
+        )}
         {/* participants & voting progress */}
         <section className="flex items-center justify-between">
           {/* participants */}
@@ -360,7 +392,7 @@ export default function SessionPage() {
             </ul>
           </div>
 
-          {/* progress */}
+          {/* progress and Start button for host */}
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">Voting Progress</span>
             <div className="flex items-center space-x-2">
@@ -369,8 +401,19 @@ export default function SessionPage() {
                 {likedRestaurants.length}/{restaurants.length}
               </span>
             </div>
+            {/* Show Start button only for host and only if session hasn't started */}
+            {isHost && !sessionStarted && !startPressed && (
+              <Button
+                onClick={handleStartSession}
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+              >
+                Start Voting Session
+              </Button>
+            )}
           </div>
         </section>
+
+        
 
         {/* current restaurant card */}
         {currentRestaurant && (
@@ -430,7 +473,7 @@ export default function SessionPage() {
                           currentRestaurantObj: currentRestaurant,
                         })
                       }
-                      disabled={alreadyVoted}
+                      disabled={alreadyVoted || !sessionStarted}
                       variant="outline"
                       size="lg"
                       className="flex-1 h-14 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
@@ -446,7 +489,7 @@ export default function SessionPage() {
                           currentRestaurantObj: currentRestaurant,
                         })
                       }
-                      disabled={alreadyVoted}
+                      disabled={alreadyVoted || !sessionStarted}
                       size="lg"
                       className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                     >
@@ -548,18 +591,18 @@ export default function SessionPage() {
           </Card>
         )}
 
-        {/* navigation between restaurants */}
+        {/* navigation between restaurants - disable if not started */}
         <div className="flex justify-between">
           <Button
             onClick={toPrevRestaurant}
-            disabled={currentRestaurantIdx === 0}
+            disabled={currentRestaurantIdx === 0 || !sessionStarted}
             variant="outline"
           >
             ← Prev Restaurant
           </Button>
           <Button
             onClick={toNextRestaurant}
-            disabled={currentRestaurantIdx === restaurants.length - 1}
+            disabled={currentRestaurantIdx === restaurants.length - 1 || !sessionStarted}
             variant="outline"
           >
             Next Restaurant →
