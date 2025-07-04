@@ -9,7 +9,7 @@ public class SessionRestaurant {
     private Long id;
 
     private Long sessionId; // FK to Session
-    private String providerId; //Foursquare fsq_id
+    private String providerId; //Google Places place_id
     private String name;
     private String address;
     private String category;

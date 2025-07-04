@@ -13,7 +13,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "fastly.4sqi.net",
+        hostname: "places.googleapis.com",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "8080",
       },
     ],
   },

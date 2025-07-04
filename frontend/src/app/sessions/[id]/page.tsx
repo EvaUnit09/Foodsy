@@ -56,9 +56,15 @@ const fetchRestaurantsWithPhotos = async (
   return Promise.all(
     base.map(async (restaurant) => {
       try {
-        const photos: string[] = await fetch(
+        const photoIds: string[] = await fetch(
           `${API_BASE_URL}/restaurants/${restaurant.providerId}/photos?limit=${IMAGES_LIMIT}`,
         ).then((pr) => pr.json());
+        
+        // Convert photo IDs to proxy URLs
+        const photos = photoIds.map(photoId => 
+          `${API_BASE_URL}/restaurants/photos/${restaurant.providerId}/${photoId}?maxHeightPx=800&maxWidthPx=800`
+        );
+        
         return { ...restaurant, photos };
       } catch {
         return { ...restaurant, photos: [] };
@@ -173,7 +179,7 @@ export default function SessionPage() {
         fetchParticipants(sessionId),
       ]);
       setRestaurants(enriched);
-      setParticipants(fetchedParticipants);
+      setParticipants(Array.isArray(fetchedParticipants) ? fetchedParticipants : []);
       setCurrentRestaurantIdx(0);
       setCurrentPhotoIdx(0);
       setLoading(false);

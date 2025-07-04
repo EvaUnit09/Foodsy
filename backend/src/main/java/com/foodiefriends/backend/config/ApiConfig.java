@@ -6,10 +6,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ApiConfig {
-    @Value("{foursquare.api,key}")
-    private String foursquareApiKey;
+    @Value("${google.places.api.key}")
+    private String googlePlacesApiKey;
 
-    public String getFoursquareApiKey() {
-        return foursquareApiKey;
+    public String getGooglePlacesApiKey() {
+        return googlePlacesApiKey;
     }
 }

@@ -1,8 +1,8 @@
 package com.foodiefriends.backend.config;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.Customizer;
@@ -25,7 +25,7 @@ public class SecurityConfig {
     public static class WebConfig implements WebMvcConfigurer {
 
         @Override
-        public void addCorsMappings(CorsRegistry registry) {
+        public void addCorsMappings(@NonNull CorsRegistry registry) {
             registry.addMapping("/api/**")
                     .allowedOrigins("https://localhost:3000")
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
