@@ -64,7 +64,7 @@ export function useSessionVoting({
       await createVote({
         sessionId,
         providerId,
-        userId: userId!,
+        userId: userId!.trim().toLowerCase(),
         voteType: type,
       });
     } catch (error) {

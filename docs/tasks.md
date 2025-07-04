@@ -176,3 +176,52 @@ This document contains a detailed list of actionable improvement tasks for the F
     - [ ] Add health check endpoints
     - [ ] Set up application performance monitoring
     - [ ] Configure alerting for critical issues
+
+# Voting Session Live Feature — TODO List
+
+## 1. WebSocket/Real-Time Backend
+- [x] Set up Spring WebSocket/STOMP support in backend
+- [ x] Define WebSocket endpoints for session events (timer, round transitions, etc.)
+- [ x] Implement event broadcasting for:
+    - [ x] Session start
+    - [ x ] Timer countdown
+    - [ x ] Round transitions
+    - [ x ] Session end
+    - [ ] (Optional) Live participant join/leave notifications
+
+## 2. User/Account System
+- [ ] Add user entity/table (with avatar, dietary preferences fields)
+- [ ] Implement email/password sign-up & login (Spring Security)
+- [ ] Integrate Google OAuth2 login
+- [ ] Allow guest join (no account required for now)
+- [ ] Update session/join logic to support both registered and guest users
+
+## 3. Session Creation & Sharing
+- [ ] Add "Create Session" button (requires name input)
+- [ ] Generate unique session link and short join code
+- [ ] Implement join by link and join by code endpoints
+- [ ] Update frontend to support both join methods
+
+## 4. Live Session Flow
+- [ ] Restrict restaurant navigation until host starts session
+- [ ] Host can start session (with option to start early)
+- [ ] Broadcast session start event to all participants
+- [ ] Implement synchronized timer (broadcast via WebSocket)
+- [ ] Prevent voting until session starts
+- [ ] Visual indicator for round transitions (frontend)
+
+## 5. Voting Rounds Logic
+- [ ] Implement two-round voting structure
+- [ ] Calculate Top K restaurants after round 1
+- [ ] Restrict round 2 to Top K, one vote per user
+- [ ] Hide votes until round ends; reveal results at end of each round
+- [ ] Handle tie-breakers as per VotingSession.md
+
+## 6. Miscellaneous
+- [ ] Add profile management (avatar, dietary preferences)
+- [ ] Add error handling and edge case logic (disconnects, late joiners, etc.)
+- [ ] Add tests for new features (backend & frontend)
+
+---
+
+*This list is the implementation plan for the `feature/voting-session-live` branch. Update as progress is made or requirements change.*

@@ -34,7 +34,7 @@ const JoinSessionForm = () => {
 
       const { sessionId, userId } = await res.json();
       // ✅ navigate to the voting screen for this session
-      sessionStorage.setItem("userId", userId);
+      sessionStorage.setItem("userId", userId.trim().toLowerCase());
       router.push(`/sessions/${sessionId}`);
     } catch (err) {
       alert((err as Error).message);

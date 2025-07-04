@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Heart, Star, Users } from "lucide-react";
+import { Search, Heart, Star, Users, Section } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { Badge } from "@/components/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import WebSocketTest from "@/components/WebSocketTest";
 
 /* -------------------------------------------------------------------------- */
 /*  1.  Static data (kept outside the component)                               */
@@ -162,6 +163,13 @@ const Index = () => {
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                 NY
               </span>
+            </div>
+            <div>
+              <Link href={"/sessions/create"}>
+                <Button variant="ghost" size="sm">
+                  Create Session
+                </Button>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <Link href={"/sessions/Joinpage"}>
@@ -380,6 +388,7 @@ const Index = () => {
           </div>
         </div>
       </section>
+      
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">

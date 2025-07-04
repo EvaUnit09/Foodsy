@@ -15,7 +15,11 @@ public record GooglePlacesSearchResponse(
             List<Photo> photos,
             Double rating,
             Integer userRatingsTotal,
-            PriceLevel priceLevel
+            PriceLevel priceLevel,
+            String priceRange,
+            String currentOpeningHours,
+            String generativeSummary,
+            String reviewSummary
     ) {}
 
     public record DisplayName(

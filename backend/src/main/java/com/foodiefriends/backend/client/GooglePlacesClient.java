@@ -4,6 +4,7 @@ import com.foodiefriends.backend.dto.GooglePlacesSearchResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +38,18 @@ public class GooglePlacesClient {
         }
         
         try {
-            return searchNearby(40.7645, -73.9235, 5000.0, 10);
+            GooglePlacesSearchResponse response = searchNearby(40.7645, -73.9235, 5000.0, 10);
+            // For each place, fetch details and merge
+            List<GooglePlacesSearchResponse.Place> enrichedPlaces = response.places().stream().map(place -> {
+                try {
+                    Map<String, Object> details = fetchPlaceDetails(place.id());
+                    return mergePlaceWithDetails(place, details);
+                } catch (Exception e) {
+                    System.err.println("Error fetching details for place " + place.id() + ": " + e.getMessage());
+                    return place;
+                }
+            }).toList();
+            return new GooglePlacesSearchResponse(enrichedPlaces);
         } catch (Exception e) {
             System.err.println("Error calling Google Places API: " + e.getMessage());
             // Return mock data as fallback
@@ -57,7 +69,11 @@ public class GooglePlacesClient {
                 List.of(),
                 4.5,
                 100,
-                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE
+                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE,
+                "$-$$",
+                "Mon-Sun: 9am-9pm",
+                "A great place for mock food.",
+                "Loved by locals for its mock cuisine."
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_2",
@@ -69,7 +85,11 @@ public class GooglePlacesClient {
                 List.of(),
                 4.2,
                 85,
-                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE
+                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
+                "$",
+                "Mon-Fri: 10am-8pm",
+                "Affordable and tasty mock meals.",
+                "Great value for the price."
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_3",
@@ -81,7 +101,11 @@ public class GooglePlacesClient {
                 List.of(),
                 4.8,
                 120,
-                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE
+                GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE,
+                "$$$",
+                "Sat-Sun: 11am-11pm",
+                "Fine dining mock experience.",
+                "Top-rated by mock foodies."
             )
         );
         
@@ -208,5 +232,46 @@ public class GooglePlacesClient {
 
     public String getApiKey() {
         return this.apiKey;
+    }
+
+    private Map<String, Object> fetchPlaceDetails(String placeId) {
+        RestClient detailsClient = RestClient.builder()
+                .baseUrl("https://places.googleapis.com/v1")
+                .defaultHeader("X-Goog-Api-Key", apiKey)
+                .defaultHeader("X-Goog-FieldMask",
+                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount,priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary")
+                .build();
+        return detailsClient.get()
+                .uri("/places/{placeId}", placeId)
+                .retrieve()
+                .body(Map.class);
+    }
+
+    private GooglePlacesSearchResponse.Place mergePlaceWithDetails(GooglePlacesSearchResponse.Place place, Map<String, Object> details) {
+        // Helper to extract string or null
+        java.util.function.Function<String, String> getString = key -> details.get(key) != null ? details.get(key).toString() : null;
+        Double rating = details.get("rating") instanceof Number ? ((Number) details.get("rating")).doubleValue() : place.rating();
+        Integer userRatingCount = details.get("userRatingCount") instanceof Number ? ((Number) details.get("userRatingCount")).intValue() : place.userRatingsTotal();
+        String priceLevel = getString.apply("priceLevel");
+        String priceRange = getString.apply("priceRange");
+        String currentOpeningHours = details.get("currentOpeningHours") != null ? details.get("currentOpeningHours").toString() : null;
+        String generativeSummary = getString.apply("generativeSummary");
+        String reviewSummary = getString.apply("reviewSummary");
+        return new GooglePlacesSearchResponse.Place(
+                place.id(),
+                place.name(),
+                place.displayName(),
+                place.formattedAddress(),
+                place.types(),
+                place.location(),
+                place.photos(),
+                rating,
+                userRatingCount,
+                place.priceLevel(),
+                priceRange,
+                currentOpeningHours,
+                generativeSummary,
+                reviewSummary
+        );
     }
 }

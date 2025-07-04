@@ -10,7 +10,7 @@ export function useUserId(): string | undefined {
   useEffect(() => {
     // Runs only on the client
     const stored = localStorage.getItem("userId"); // ← change key if you use another one
-    if (stored) setUserId(stored);
+    if (stored) setUserId(stored.trim().toLowerCase());
   }, []);
 
   return userId;

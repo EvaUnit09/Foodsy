@@ -1,5 +1,5 @@
 "use client";
-
+import { useSessionWebSocket } from "@/hooks/useWebSockethook";
 import {
   ArrowLeft,
   User,
@@ -85,6 +85,9 @@ const fetchParticipants = (sessionId: number) =>
     res.json(),
   );
 
+const fetchSession = (sessionId: number) =>
+  fetch(`${API_BASE_URL}/sessions/${sessionId}`).then((res) => res.json());
+
 /* -------------------- local-storage helper ------------------------ */
 function usePersistedState<T>(key: string, initial: T) {
   const [state, setState] = useState<T>(initial);
@@ -106,33 +109,18 @@ export default function SessionPage() {
   const { id } = useParams();
   const sessionId = Number(id);
 
-  /* --------------------- component state ------------------------ */
+  // All hooks at the top!
+  const [session, setSession] = useState<{ creatorId: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
-  const [participants, setParticipants] = useState<{ userId: string }[]>([]);
-  const [likedRestaurants, setLikedRestaurants] = usePersistedState<
-    Restaurant[]
-  >(`likes-${sessionId}`, []);
+  const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
+  const [likedRestaurants, setLikedRestaurants] = usePersistedState<Restaurant[]>(`likes-${sessionId}`, []);
   const [loading, setLoading] = useState(true);
-
-  /* ---- gallery (photo) state – resets when restaurant changes ---- */
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
-
-  /* ---------------------- countdown timer ----------------------- */
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIMER);
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.minutes === 0 && prev.seconds === 0) return prev;
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        return { minutes: prev.minutes - 1, seconds: 59 };
-      });
-    }, 1000);
 
-    return () => clearInterval(t);
-  }, []);
+  const { event, send } = useSessionWebSocket(sessionId);
 
-  /* ---------------- voting helpers (unchanged) ------------------ */
   const bumpLikeLocally = useCallback(
     ({ providerId }: { providerId: string }) => {
       setRestaurants((prev) =>
@@ -177,21 +165,45 @@ export default function SessionPage() {
     undoLikeLocally,
   });
 
-  /* -------------- initial fetch (restaurants + participants) ---- */
+  // Data fetching effect
   useEffect(() => {
     if (!sessionId) return;
     (async () => {
-      const [enriched, fetchedParticipants] = await Promise.all([
+      const [enriched, fetchedParticipants, sessionObj] = await Promise.all([
         fetchRestaurantsWithPhotos(sessionId),
         fetchParticipants(sessionId),
+        fetchSession(sessionId),
       ]);
       setRestaurants(enriched);
       setParticipants(Array.isArray(fetchedParticipants) ? fetchedParticipants : []);
+      setSession(sessionObj);
       setCurrentRestaurantIdx(0);
       setCurrentPhotoIdx(0);
       setLoading(false);
     })();
   }, [sessionId]);
+
+  // WebSocket event effect
+  useEffect(() => {
+    if (!event) return;
+    switch (event.type) {
+      case "sessionStarted":
+        // Optionally show a message or update UI state to enable voting
+        break;
+      case "timerUpdate":
+        setTimeLeft({
+          minutes: Math.floor(event.payload.millisLeft / 60000),
+          seconds: Math.floor((event.payload.millisLeft % 60000) / 1000),
+        });
+        break;
+      case "roundTransition":
+        // event.payload.newRound, event.payload.topK
+        // Optionally update round state, show top K, reset votes, etc.
+        break;
+      default:
+        break;
+    }
+  }, [event]);
 
   /* -------------------- derived state --------------------------- */
   const likeProgressPct = useMemo(
@@ -336,18 +348,16 @@ export default function SessionPage() {
             <h2 className="text-lg font-semibold text-gray-900">
               Participants
             </h2>
-            <div className="flex items-center space-x-3">
+            <ul>
               {participants.map((p) => (
-                <Fragment key={p.userId}>
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-orange-100 text-orange-800 text-sm">
-                      {p.userId?.[0]?.toUpperCase() ?? "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-gray-600">{p.userId}</span>
-                </Fragment>
+                <li key={p.userId}>
+                  {p.userId}
+                  {p.isHost && (
+                    <span className="ml-2 text-orange-600 font-semibold">(Host)</span>
+                  )}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           {/* progress */}

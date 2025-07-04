@@ -73,9 +73,25 @@ public class SessionService {
                 sr.setRound(1);
                 sr.setLikeCount(0);
 
+                // Set the new fields from Google Places data
+                sr.setPriceLevel(place.priceLevel() != null ? place.priceLevel().name() : null);
+                sr.setPriceRange(place.priceRange());
+                sr.setRating(place.rating());
+                sr.setUserRatingCount(place.userRatingsTotal());
+                sr.setCurrentOpeningHours(place.currentOpeningHours());
+                sr.setGenerativeSummary(place.generativeSummary());
+                sr.setReviewSummary(place.reviewSummary());
+
                 SessionRestaurant savedRestaurant = restaurantRepo.save(sr);
                 System.out.println("Saved restaurant: " + savedRestaurant.getName() + " for session " + saved.getId());
             }
+            
+            // After saving the session
+            SessionParticipant participant = new SessionParticipant();
+            participant.setSession(saved);
+            participant.setUserId(session.getCreatorId());
+            participant.setJoinedAt(Instant.now());
+            sessionParticipantRepository.save(participant);
             
             System.out.println("Session creation completed successfully");
             return saved;

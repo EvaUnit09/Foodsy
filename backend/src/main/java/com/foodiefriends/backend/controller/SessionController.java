@@ -35,6 +35,23 @@ public class SessionController {
     private final SessionRestaurantRepository sessionRestaurantRepository;
     private final SessionRestaurantVoteRepository voteRepo;
 
+    // Add DTO definition at the top or in a separate file
+    record SessionRestaurantDto(
+        Long id,
+        String providerId,
+        String name,
+        String category,
+        String address,
+        Integer likeCount,
+        Integer round,
+        String priceLevel,
+        String priceRange,
+        Double rating,
+        Integer userRatingCount,
+        String currentOpeningHours,
+        String generativeSummary,
+        String reviewSummary
+    ) {}
 
     public SessionController(SessionRepository repo,
                              SessionRestaurantRepository restaurantRepo,
@@ -69,22 +86,33 @@ public class SessionController {
     // GET all participants for a session
     @GetMapping("/{id}/participants")
     public List<ParticipantDto> getParticipants(@PathVariable Long id) {
-
-        if (!repo.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
-
-        }
+        Session session = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        String creatorId = session.getCreatorId();
         return sessionService.getParticipants(id).stream()
-                .map(p -> new ParticipantDto(p.getUserId()))
+                .map(p -> new ParticipantDto(p.getUserId(), "participant", p.getUserId().equals(creatorId)))
                 .collect(Collectors.toList());
     }
     // GET all restaurants for a session
     @GetMapping("/{id}/restaurants")
-    public List<SessionRestaurant> getRestaurants(@PathVariable Long id) {
+    public List<SessionRestaurantDto> getRestaurants(@PathVariable Long id) {
         List<SessionRestaurant> restaurants = restaurantRepo.findBySessionId(id);
-        System.out.println("Fetching restaurants for session " + id + ". Found: " + restaurants.size());
-        return restaurants;
-
+        return restaurants.stream().map(r -> new SessionRestaurantDto(
+            r.getId(),
+            r.getProviderId(),
+            r.getName(),
+            r.getCategory(),
+            r.getAddress(),
+            r.getLikeCount(),
+            r.getRound(),
+            r.getPriceLevel(),
+            r.getPriceRange(),
+            r.getRating(),
+            r.getUserRatingCount(),
+            r.getCurrentOpeningHours(),
+            r.getGenerativeSummary(),
+            r.getReviewSummary()
+        )).toList();
     }
 
     // Add a new participant to a session
@@ -93,17 +121,17 @@ public class SessionController {
         Session session = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 
-        if (sessionService.getParticipants(id).stream().anyMatch(p -> p.getUserId().equals(dto.getUserId()))) {
+        String normalizedUserId = dto.getUserId().trim().toLowerCase();
+        if (sessionService.getParticipants(id).stream().anyMatch(p -> p.getUserId().equals(normalizedUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Participant already exists");
         }
 
         SessionParticipant participant = new SessionParticipant();
         participant.setSession(session);
-        participant.setUserId(dto.getUserId());
+        participant.setUserId(normalizedUserId);
         participant.setJoinedAt(Instant.now());
-        sessionParticipantRepository.save(participant); // `
+        sessionParticipantRepository.save(participant);
 
-        // Return ResponseEntity with location header and DTO body
         return ResponseEntity
                 .created(URI.create("/api/sessions/" + id + "/participants/" + participant.getUserId()))
                 .body(new ParticipantDto(participant.getUserId()));
@@ -122,18 +150,17 @@ public class SessionController {
         if (userName == null || userName.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User name is required");
         }
-
+        String normalizedUserName = userName.trim().toLowerCase();
         Session session = repo.findByJoinCode(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid join code"));
-        
-        Optional<SessionParticipant> existing = sessionParticipantRepository.findBySessionIdAndUserId(session.getId(), userName);
+        Optional<SessionParticipant> existing = sessionParticipantRepository.findBySessionIdAndUserId(session.getId(), normalizedUserName);
         if (existing.isPresent()) {
             return ResponseEntity.ok(
                     new JoinSessionResponse(existing.get().getUserId(), session.getId()));
         }
         SessionParticipant participant = new SessionParticipant();
         participant.setSession(session);
-        participant.setUserId(userName);
+        participant.setUserId(normalizedUserName);
         participant.setJoinedAt(Instant.now());
         sessionParticipantRepository.save(participant);
         
@@ -144,10 +171,9 @@ public class SessionController {
     @PostMapping("/{id}/restaurants/{providerId}/vote")
     public ResponseEntity<Void> voteForRestaurant(
             @PathVariable Long id,
-            @PathVariable String providerId,          // <<< was Long
+            @PathVariable String providerId,
             @RequestBody VoteRequest voteRequest) {
 
-        // ---- basic request-body checks ---------------------------
         if (voteRequest == null ||
                 voteRequest.sessionId() == null ||
                 voteRequest.userId() == null) {
@@ -159,48 +185,44 @@ public class SessionController {
                     "Session ID mismatch");
         }
 
-        // ---- session & participant checks ------------------------
         var session = sessionRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Session not found"));
 
+        String normalizedUserId = voteRequest.userId().trim().toLowerCase();
         boolean isParticipant = sessionParticipantRepository
-                .findBySessionIdAndUserId(id, voteRequest.userId())
+                .findBySessionIdAndUserId(id, normalizedUserId)
                 .isPresent();
         if (!isParticipant) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "User is not a participant of this session");
         }
 
-        // ---- restaurant lookup (by session + providerId) ---------
         SessionRestaurant restaurant = restaurantRepo
                 .findBySessionIdAndProviderId(id, providerId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Restaurant not found"));
 
         voteRepo.findBySession_IdAndProviderIdAndUserIdAndRound(
-                id, providerId, voteRequest.userId(), restaurant.getRound())
+                id, providerId, normalizedUserId, restaurant.getRound())
                         .ifPresent(v -> {
                             throw new ResponseStatusException(HttpStatus.CONFLICT,
                                     "User has already voted for this restaurant in this round");
                         });
 
-
         SessionRestaurantVote vote = new SessionRestaurantVote();
         vote.setSession(session);
         vote.setProviderId(providerId);
-        vote.setUserId(voteRequest.userId());
+        vote.setUserId(normalizedUserId);
         vote.setRound(restaurant.getRound());
         vote.setVoteType(voteRequest.voteType());
-        voteRepo.save(vote);                      // <–– INSERTS ROW
+        voteRepo.save(vote);
 
-        // ----------- RESTAURANT LIKE COUNT ------------------------
         if (voteRequest.voteType() == VoteType.LIKE) {
             restaurant.setLikeCount(restaurant.getLikeCount() + 1);
             restaurantRepo.save(restaurant);
         }
         return ResponseEntity.noContent().build();
-
     }
 
 

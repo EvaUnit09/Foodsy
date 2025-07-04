@@ -21,7 +21,7 @@ export async function createVote({
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId, providerId, userId, voteType }),
+      body: JSON.stringify({ sessionId, providerId, userId: userId.trim().toLowerCase(), voteType }),
     },
   );
 

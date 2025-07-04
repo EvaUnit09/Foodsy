@@ -7,7 +7,7 @@ public class SessionRestaurant {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @Lob
     private Long sessionId; // FK to Session
     private String providerId; //Google Places place_id
     private String name;
@@ -17,6 +17,18 @@ public class SessionRestaurant {
     private Integer likeCount = 0;
     private Integer round = 1;
 
+    // New fields for restaurant details
+    private String priceLevel;
+    private String priceRange;
+    private Double rating;
+    private Integer userRatingCount;
+
+    @Column(columnDefinition = "TEXT")
+    private String currentOpeningHours;
+    @Column(columnDefinition = "TEXT")
+    private String generativeSummary;
+    @Column(columnDefinition = "TEXT")
+    private String reviewSummary;
 
     public SessionRestaurant() {
 
@@ -63,6 +75,60 @@ public class SessionRestaurant {
     }
     public void setRound(Integer round) {
         this.round = round;
+    }
+
+    // New getters and setters
+    public String getPriceLevel() {
+        return priceLevel;
+    }
+    public void setPriceLevel(String priceLevel) {
+        this.priceLevel = priceLevel;
+    }
+
+    public String getPriceRange() {
+        return priceRange;
+    }
+    public void setPriceRange(String priceRange) {
+        this.priceRange = priceRange;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+    public void setRating(Double rating) {
+        this.rating = rating;
+    }
+
+    public Integer getUserRatingCount() {
+        return userRatingCount;
+    }
+    public void setUserRatingCount(Integer userRatingCount) {
+        this.userRatingCount = userRatingCount;
+    }
+
+    public String getCurrentOpeningHours() {
+        return currentOpeningHours;
+    }
+    public void setCurrentOpeningHours(String currentOpeningHours) {
+        this.currentOpeningHours = currentOpeningHours;
+    }
+
+    public String getGenerativeSummary() {
+        return generativeSummary;
+    }
+    public void setGenerativeSummary(String generativeSummary) {
+        this.generativeSummary = generativeSummary;
+    }
+
+    public String getReviewSummary() {
+        return reviewSummary;
+    }
+    public void setReviewSummary(String reviewSummary) {
+        this.reviewSummary = reviewSummary;
+    }
+
+    public Long getId() {
+        return id;
     }
 
 }
