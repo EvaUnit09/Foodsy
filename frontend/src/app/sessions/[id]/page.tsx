@@ -39,6 +39,13 @@ export type Restaurant = {
   likeCount: number;
   round: number;
   photos?: string[];
+  priceLevel?: string | null;
+  priceRange?: string | null;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  currentOpeningHours?: string | null;
+  generativeSummary?: string | null;
+  reviewSummary?: string | null;
 };
 
 const API_BASE_URL = "http://localhost:8080/api";
@@ -227,6 +234,41 @@ export default function SessionPage() {
         (currentRestaurant?.photos?.length || 1),
     );
 
+  /* Helper functions for formatting */
+  function formatHours(hours: string | null | undefined) {
+    if (!hours) return null;
+    // Try to extract weekdayDescriptions array
+    try {
+      const match = hours.match(/weekdayDescriptions=\[(.*?)\]/);
+      if (match) {
+        const days = match[1].split(',').map(s => s.trim());
+        // Google returns days in order: Monday, Tuesday, ...
+        const jsDay = new Date().getDay(); // 0=Sunday, 1=Monday, ...
+        // Map JS day to Google day (Monday=0, ..., Sunday=6)
+        const googleDayIdx = jsDay === 0 ? 6 : jsDay - 1;
+        return days[googleDayIdx] || days[0];
+      }
+    } catch {}
+    return "See details";
+  }
+
+  function extractSummaryText(summary: string | null | undefined) {
+    if (!summary) return null;
+    const match = summary.match(/text=([^,{}}\]]+)/);
+    return match ? match[1] : summary;
+  }
+
+  function formatPriceRange(priceRange: string | null | undefined) {
+    if (!priceRange) return null;
+    // Try to extract start and end price in USD from the string
+    const startMatch = priceRange.match(/startPrice=\{currencyCode=USD, units=(\d+)\}/);
+    const endMatch = priceRange.match(/endPrice=\{currencyCode=USD, units=(\d+)\}/);
+    if (startMatch && endMatch) {
+      return `$${startMatch[1]} - $${endMatch[1]}`;
+    }
+    return priceRange;
+  }
+
   /* --------------------------- UI ------------------------------- */
   if (loading) return <div className="p-10">Loading…</div>;
 
@@ -327,14 +369,45 @@ export default function SessionPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
                 {/* left – restaurant info + vote buttons */}
                 <div className="p-8 bg-white flex flex-col">
-                  <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {currentRestaurant.name}
-                    </h1>
-                    <p className="text-lg text-orange-600 mb-1">
-                      {currentRestaurant.category}
-                    </p>
-                    <p className="text-gray-600">{currentRestaurant.address}</p>
+                  <div className="mb-6 p-6 rounded-lg shadow bg-white dark:bg-orange-600">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{currentRestaurant.name}</h1>
+                    <div className="text-white-600 font-2xl text-bold mb-1">{currentRestaurant.category}</div>
+                    <div className="text-white-600 dark:text-gray-300 mb-2">{currentRestaurant.address}</div>
+
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-200 mb-2">
+                      {currentRestaurant.priceRange && (
+                        <span>
+                          <b>Price:</b> {formatPriceRange(currentRestaurant.priceRange)}
+                        </span>
+                      )}
+                      {currentRestaurant.rating && (
+                        <span>
+                          <b>Rating:</b> {currentRestaurant.rating} ★
+                          {currentRestaurant.userRatingCount && (
+                            <span className="ml-1 text-gray-500">({currentRestaurant.userRatingCount} reviews)</span>
+                          )}
+                        </span>
+                      )}
+                      {currentRestaurant.currentOpeningHours && (
+                        <span className="text-white-600 font-large text-bold mb-1">
+                          <b>Hours:</b> {formatHours(currentRestaurant.currentOpeningHours)}
+                        </span>
+                      )}
+                    </div>
+
+                    {currentRestaurant.generativeSummary && (
+                      <div className="mt-2">
+                        <b>Summary:</b>
+                        <div className="text-gray-800 dark:text-gray-100">{extractSummaryText(currentRestaurant.generativeSummary)}</div>
+                      </div>
+                    )}
+
+                    {currentRestaurant.reviewSummary && (
+                      <div className="mt-2">
+                        <b>Review Summary:</b>
+                        <div className="text-gray-800 dark:text-gray-100">{extractSummaryText(currentRestaurant.reviewSummary)}</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* like / pass */}
