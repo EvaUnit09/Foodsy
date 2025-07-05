@@ -18,13 +18,11 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
-  Fragment,
 } from "react";
 
 import { Button } from "@/components/button";
 import { Card, CardContent } from "@/components/card";
 import { Progress } from "@/components/progress";
-import { Avatar, AvatarFallback } from "@/components/avatar";
 
 import { useSessionVoting } from "@/hooks/useSessionVoting";
 import { useUserId } from "@/hooks/useUserId";

@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, User } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
+import { useAuth } from "@/contexts/AuthContext";
 
 const JoinSessionForm = () => {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { user, isAuthenticated } = useAuth();
   const disabled = !username || joinCode.length !== 6 || submitting;
+
+  // Auto-fill username for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setUsername(user.username || user.displayName || "");
+    }
+  }, [isAuthenticated, user]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -102,12 +111,27 @@ const JoinSessionForm = () => {
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Enter your name"
+                    placeholder={isAuthenticated ? "Logged in as..." : "Enter your name"}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="h-12 text-lg border-gray-200 focus:border-orange-300"
+                    className={`h-12 text-lg border-gray-200 focus:border-orange-300 ${
+                      isAuthenticated && user && username ? "bg-gray-50 text-gray-600" : ""
+                    }`}
+                    readOnly={isAuthenticated && user && username ? true : false}
                     required
                   />
+                  {isAuthenticated && user && username && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Using your account name. Want to use a different name?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setUsername("")}
+                        className="text-orange-600 hover:text-orange-500 font-medium"
+                      >
+                        Click here to change
+                      </button>
+                    </p>
+                  )}
                 </div>
 
                 <div>

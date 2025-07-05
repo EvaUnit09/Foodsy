@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, User, Check, Copy as CopyIcon } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateSessionPage() {
   const [creatorId, setCreatorId] = useState("");
@@ -17,15 +18,19 @@ export default function CreateSessionPage() {
   const router = useRouter();
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [createdSession, setCreatedSession] = useState<{ id: number; joinCode: string } | null>(null);
+  const { user, isAuthenticated } = useAuth();
+
+  // Auto-fill username for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setCreatorId(user.username || user.displayName || "");
+    }
+  }, [isAuthenticated, user]);
 
   const handleCopy = (text: string, type: "code" | "link") => {
     navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 1500);
-  };
-  const handleSubmit = () => {
-    const normalizedCreatorId = creatorId.trim().toLowerCase();
-    setCreatorId(normalizedCreatorId);
   };
 
   const handleCreateSession = async (e: React.FormEvent) => {
@@ -154,12 +159,27 @@ export default function CreateSessionPage() {
                     </label>
                     <Input
                       type="text"
-                      placeholder="Enter your name"
+                      placeholder={isAuthenticated ? "Logged in as..." : "Enter your name"}
                       value={creatorId}
                       onChange={(e) => setCreatorId(e.target.value)}
-                      className="h-12 text-lg border-gray-200 focus:border-orange-300"
+                      className={`h-12 text-lg border-gray-200 focus:border-orange-300 ${
+                        isAuthenticated && user && creatorId ? "bg-gray-50 text-gray-600" : ""
+                      }`}
+                      readOnly={isAuthenticated && user && creatorId ? true : false}
                       required
                     />
+                    {isAuthenticated && user && creatorId && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Using your account name. Want to use a different name?{" "}
+                        <button
+                          type="button"
+                          onClick={() => setCreatorId("")}
+                          className="text-orange-600 hover:text-orange-500 font-medium"
+                        >
+                          Click here to change
+                        </button>
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
