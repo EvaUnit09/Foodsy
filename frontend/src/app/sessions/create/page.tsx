@@ -36,15 +36,20 @@ export default function CreateSessionPage() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    // Only include creatorId for guests (not authenticated users)
+    const body: any = {
+      poolSize,
+      roundTime,
+      likesPerUser,
+    };
+    if (!isAuthenticated) {
+      body.creatorId = creatorId.trim().toLowerCase();
+    }
     const res = await fetch("http://localhost:8080/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        creatorId: creatorId.trim().toLowerCase(),
-        poolSize,
-        roundTime,
-        likesPerUser,
-      }),
+      body: JSON.stringify(body),
+      credentials: "include",
     });
     setSubmitting(false);
     if (res.ok) {

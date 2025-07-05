@@ -55,7 +55,16 @@ public class SessionController {
     ) {}
 
     // Add DTO definition at the top or in a separate file
-    record SessionResponse(Long id, String creatorId, boolean isHost) {}
+    record SessionResponse(
+        Long id, 
+        String creatorId, 
+        boolean isHost, 
+        Integer round, 
+        Integer likesPerUser, 
+        String status,
+        Integer poolSize,
+        Integer roundTime
+    ) {}
 
     public SessionController(SessionRepository repo,
                              SessionRestaurantRepository restaurantRepo,
@@ -75,10 +84,11 @@ public class SessionController {
     }
 
     @PostMapping
-    public Session create(@RequestBody Session session) {
-        if (session.getCreatorId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required field: creatorId");
+    public Session create(@RequestBody Session session, Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
+        session.setCreatorId(principal.getName().trim().toLowerCase());
         return sessionService.createSession(session);
     }
 
@@ -89,7 +99,16 @@ public class SessionController {
         System.out.println("Session creatorId: " + session.getCreatorId() + ", principal: " + (principal != null ? principal.getName() : "null"));
         String currentUserId = principal != null ? principal.getName() : null;
         boolean isHost = currentUserId != null && session.getCreatorId().trim().equalsIgnoreCase(currentUserId.trim());
-        return new SessionResponse(session.getId(), session.getCreatorId(), isHost);
+        return new SessionResponse(
+            session.getId(), 
+            session.getCreatorId(), 
+            isHost,
+            session.getRound(),
+            session.getLikesPerUser(),
+            session.getStatus(),
+            session.getPoolSize(),
+            session.getRoundTime()
+        );
     }
 
     // GET all participants for a session
