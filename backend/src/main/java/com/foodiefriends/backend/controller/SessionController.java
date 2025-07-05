@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/sessions")
@@ -53,6 +54,9 @@ public class SessionController {
         String reviewSummary
     ) {}
 
+    // Add DTO definition at the top or in a separate file
+    record SessionResponse(Long id, String creatorId, boolean isHost) {}
+
     public SessionController(SessionRepository repo,
                              SessionRestaurantRepository restaurantRepo,
                              SessionService sessionService,
@@ -79,8 +83,13 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    public Session get(@PathVariable Long id) {
-        return repo.findById(id).orElse(null);
+    public SessionResponse get(@PathVariable Long id, Principal principal) {
+        Session session = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        System.out.println("Session creatorId: " + session.getCreatorId() + ", principal: " + (principal != null ? principal.getName() : "null"));
+        String currentUserId = principal != null ? principal.getName() : null;
+        boolean isHost = currentUserId != null && session.getCreatorId().trim().equalsIgnoreCase(currentUserId.trim());
+        return new SessionResponse(session.getId(), session.getCreatorId(), isHost);
     }
 
     // GET all participants for a session

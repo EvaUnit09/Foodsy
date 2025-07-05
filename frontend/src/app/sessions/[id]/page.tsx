@@ -108,7 +108,7 @@ export default function SessionPage() {
   const sessionId = Number(id);
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; status: string } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; status: string; isHost?: boolean } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -247,17 +247,24 @@ export default function SessionPage() {
 
   // Normalize host check
   console.log('creatorId:', session?.creatorId, 'userId:', userId);
-  const isHost = useMemo(() => {
-    return (
-      session?.creatorId?.trim().toLowerCase() === userId?.trim().toLowerCase()
-    );
-  }, [session?.creatorId, userId]);
+  const isHost = session?.isHost;
 
   // Handler for host to start session
   const handleStartSession = () => {
     send(`/app/session/${sessionId}/start`, {});
     setStartPressed(true);
     setSessionStarted(true); // Optimistically update for host
+  };
+
+  // Handler for host to complete round 1 and transition to round 2
+  const handleCompleteRound1 = () => {
+    send(`/app/session/${sessionId}/completeRound1`, {});
+    setRoundTransitioning(true);
+  };
+
+  // Handler for host to complete round 2 and finish session
+  const handleCompleteRound2 = () => {
+    send(`/app/session/${sessionId}/completeRound2`, {});
   };
 
   /* -------------------- navigation helpers ---------------------- */
@@ -354,11 +361,21 @@ export default function SessionPage() {
 
             {/* right: session id, timer, profile */}
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Session:</span>
-                <span className="text-sm font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                  #{sessionId}
-                </span>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Session:</span>
+                  <span className="text-sm font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                    #{sessionId}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600">Round:</span>
+                  <span className={`text-sm font-bold px-2 py-1 rounded ${
+                    currentRound === 1 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {currentRound}/2
+                  </span>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
@@ -386,12 +403,40 @@ export default function SessionPage() {
 
       {/* ───────────────── content ───────────────── */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Voting started banner */}
-        {sessionStarted && (
-          <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-900 rounded-lg text-center text-lg font-semibold shadow">
-            Voting has started! Cast your votes now.
+        {/* Session Complete Banner */}
+        {sessionComplete && winner && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-green-100 to-blue-100 border border-green-300 rounded-lg text-center shadow-lg">
+            <div className="text-2xl font-bold text-green-800 mb-2">🎉 We Have a Winner! 🎉</div>
+            <div className="text-lg text-green-700">
+              <strong>{winner.name}</strong> - {winner.address}
+            </div>
+            <div className="text-sm text-green-600 mt-1">
+              Final votes: {winner.likeCount}
+            </div>
           </div>
         )}
+
+        {/* Round Transition Banner */}
+        {roundTransitioning && !sessionComplete && (
+          <div className="mb-6 p-4 bg-purple-100 border border-purple-300 text-purple-900 rounded-lg text-center text-lg font-semibold shadow animate-pulse">
+            🔄 Transitioning to Round {currentRound === 1 ? 2 : 'Complete'}...
+          </div>
+        )}
+
+        {/* Round-specific banners */}
+        {sessionStarted && !sessionComplete && !roundTransitioning && (
+          <div className={`mb-6 p-4 rounded-lg text-center text-lg font-semibold shadow ${
+            currentRound === 1 
+              ? 'bg-blue-100 border border-blue-300 text-blue-900'
+              : 'bg-purple-100 border border-purple-300 text-purple-900'
+          }`}>
+            {currentRound === 1 
+              ? `Round 1: Vote for your favorites! (${session?.likesPerUser || 0} likes per person)`
+              : 'Round 2: Final vote! Choose your top pick (1 vote only)'
+            }
+          </div>
+        )}
+
         {/* Waiting for host message for non-hosts */}
         {!sessionStarted && !isHost && (
           <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 text-yellow-900 rounded-lg text-center text-lg font-semibold shadow">
@@ -426,14 +471,39 @@ export default function SessionPage() {
                 {likedRestaurants.length}/{restaurants.length}
               </span>
             </div>
-            {/* Show Start button only for host and only if session hasn't started */}
-            {isHost && !sessionStarted && !startPressed && (
-              <Button
-                onClick={handleStartSession}
-                className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
-              >
-                Start Voting Session
-              </Button>
+            {/* Host Control Buttons */}
+            {isHost && (
+              <>
+                {/* Start Session Button */}
+                {!sessionStarted && !startPressed && (
+                  <Button
+                    onClick={handleStartSession}
+                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                  >
+                    Start Voting Session
+                  </Button>
+                )}
+
+                {/* Complete Round 1 Button */}
+                {sessionStarted && currentRound === 1 && !roundTransitioning && (
+                  <Button
+                    onClick={handleCompleteRound1}
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                  >
+                    Complete Round 1
+                  </Button>
+                )}
+
+                {/* Complete Round 2 Button */}
+                {sessionStarted && currentRound === 2 && !roundTransitioning && !sessionComplete && (
+                  <Button
+                    onClick={handleCompleteRound2}
+                    className="bg-gradient-to-r from-purple-500 to-green-500 text-white"
+                  >
+                    Finish Voting
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </section>
@@ -498,7 +568,7 @@ export default function SessionPage() {
                           currentRestaurantObj: currentRestaurant,
                         })
                       }
-                      disabled={alreadyVoted || !sessionStarted}
+                      disabled={alreadyVoted || !sessionStarted || sessionComplete || roundTransitioning}
                       variant="outline"
                       size="lg"
                       className="flex-1 h-14 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
@@ -514,7 +584,7 @@ export default function SessionPage() {
                           currentRestaurantObj: currentRestaurant,
                         })
                       }
-                      disabled={alreadyVoted || !sessionStarted}
+                      disabled={alreadyVoted || !sessionStarted || sessionComplete || roundTransitioning}
                       size="lg"
                       className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                     >
@@ -620,14 +690,14 @@ export default function SessionPage() {
         <div className="flex justify-between">
           <Button
             onClick={toPrevRestaurant}
-            disabled={currentRestaurantIdx === 0 || !sessionStarted}
+            disabled={currentRestaurantIdx === 0 || !sessionStarted || sessionComplete || roundTransitioning}
             variant="outline"
           >
             ← Prev Restaurant
           </Button>
           <Button
             onClick={toNextRestaurant}
-            disabled={currentRestaurantIdx === restaurants.length - 1 || !sessionStarted}
+            disabled={currentRestaurantIdx === restaurants.length - 1 || !sessionStarted || sessionComplete || roundTransitioning}
             variant="outline"
           >
             Next Restaurant →
