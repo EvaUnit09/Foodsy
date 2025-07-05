@@ -187,6 +187,12 @@ export default function SessionPage() {
       setRestaurants(enriched);
       setParticipants(Array.isArray(fetchedParticipants) ? fetchedParticipants : []);
       setSession(sessionObj);
+      
+      // Initialize round state from session
+      if (sessionObj) {
+        setCurrentRound(sessionObj.round || 1);
+      }
+      
       setCurrentRestaurantIdx(0);
       setCurrentPhotoIdx(0);
       setLoading(false);
