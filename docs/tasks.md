@@ -231,19 +231,22 @@ This document contains a detailed list of actionable improvement tasks for the F
 - [x] Restrict restaurant navigation until host starts session
 - [x] Host can start session (with option to start early)
 - [x] Broadcast session start event to all participants
-- [ ] Implement synchronized timer (broadcast via WebSocket)
+- [x] Implement synchronized timer (broadcast via WebSocket)
 - [x] Prevent voting until session starts
-- [ ] Visual indicator for round transitions (frontend)
+- [x] Visual indicator for round transitions (frontend)
 
 ## 5. Voting Rounds Logic
-- [ ] Implement two-round voting structure
+- [x] **COMPLETED: Implement two-round voting structure**
 - [x] Calculate Top K restaurants after round 1
 - [x] Restrict round 2 to Top K, one vote per user
-- [ ] Hide votes until round ends; reveal results at end of each round(Restaurants with top votes)
+- [x] Round-aware voting limits (configurable likes in round 1, 1 vote in round 2)
+- [x] Real-time round transitions via WebSocket
+- [x] Host controls for round progression
+- [x] Session completion with winner display
+- [x] Visual feedback for all round states
 - [ ] Handle tie-breakers as per VotingSession.md
-- [ ] Create new page for Round 1 winners. Proceed with same logic
-- [ ] Create final page for Restaurant winner displaying restaurant details and link to restaurant.
-- [ ] 
+- [ ] Create dedicated results page for Round 1 winners
+- [ ] Create final winner page with restaurant details and booking link 
 
 ## 6. Miscellaneous
 - [ ] Add profile management (avatar, dietary preferences)
