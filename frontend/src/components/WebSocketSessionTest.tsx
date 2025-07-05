@@ -35,6 +35,12 @@ const WebSocketSessionHandler: React.FC = () => {
             alert(`Round ${event.payload.newRound} started! Top K: ${event.payload.topK.join(', ')}`);
             // TODO: Update UI for new round and show top K restaurants
             break;
+          case 'sessionEnd':
+            const { winner, finalRankings, totalParticipants, totalVotes } = event.payload;
+            alert(`🎉 Session Ended!\nWinner: ${winner?.name || 'No winner'}\nTotal Participants: ${totalParticipants}\nTotal Votes: ${totalVotes}\nFinal Rankings: ${finalRankings?.map((r: { name: string }, i: number) => `${i+1}. ${r.name}`).join(', ') || 'No rankings'}`);
+            // TODO: Navigate to results page or show results modal
+            console.log('Session ended with final results:', event.payload);
+            break;
           default:
             console.warn('Unknown event type:', event.type);
         }
@@ -91,11 +97,25 @@ const WebSocketSessionHandler: React.FC = () => {
     }
   };
 
+  // Example: Host triggers session end
+  const endSession = () => {
+    if (clientRef.current && clientRef.current.connected) {
+      clientRef.current.publish({
+        destination: `/app/session/${SESSION_ID}/end`,
+        body: '',
+      });
+      console.log('Session end event sent');
+    }
+  };
+
   return (
-    <div>
-      <button onClick={startSession} className="bg-blue-500 text-white px-4 py-2 rounded-md">Start Session (Host)</button>
-      <button onClick={sendTimerUpdate} className="bg-purple-500 text-white px-4 py-2 rounded-md">Send Timer Update (Host)</button>
-      <button onClick={sendRoundTransition} className="bg-green-500 text-white px-4 py-2 rounded-md">Send Round Transition (Host)</button>
+    <div className="space-y-4 p-4">
+      <div className="space-x-2">
+        <button onClick={startSession} className="bg-blue-500 text-white px-4 py-2 rounded-md">Start Session (Host)</button>
+        <button onClick={sendTimerUpdate} className="bg-purple-500 text-white px-4 py-2 rounded-md">Send Timer Update (Host)</button>
+        <button onClick={sendRoundTransition} className="bg-green-500 text-white px-4 py-2 rounded-md">Send Round Transition (Host)</button>
+        <button onClick={endSession} className="bg-red-500 text-white px-4 py-2 rounded-md">End Session (Host)</button>
+      </div>
       <div>Subscribed to session events for session {SESSION_ID}.</div>
     </div>
   );

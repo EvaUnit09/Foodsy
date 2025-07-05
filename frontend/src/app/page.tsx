@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Heart, Star, Users, Section } from "lucide-react";
+import { Search, Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
@@ -146,6 +147,7 @@ const featuredRestaurants = [
 /*  2.  Page component                                                         */
 /* -------------------------------------------------------------------------- */
 const Index = () => {
+  const { user, isAuthenticated, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -163,14 +165,13 @@ const Index = () => {
                 NY
               </span>
             </div>
-            <div>
+            <div className="flex items-center space-x-4">
               <Link href={"/sessions/create"}>
                 <Button variant="ghost" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
                   Create Session
                 </Button>
               </Link>
-            </div>
-            <div className="flex items-center space-x-4">
               <Link href={"/sessions/Joinpage"}>
                 <Button variant="ghost" size="sm">
                   <Users className="w-4 h-4 mr-2" />
@@ -181,12 +182,34 @@ const Index = () => {
                 <Heart className="w-4 h-4 mr-2" />
                 Favorites
               </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                Sign In
-              </Button>
+              {isAuthenticated && user ? (
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 bg-orange-50 px-3 py-1 rounded-full">
+                    <UserIcon className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700">
+                      {user.displayName}
+                    </span>
+                  </div>
+                  <Button
+                    onClick={signOut}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <LogOut className="w-4 h-4 mr-1" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <Link href="/auth/signin">
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

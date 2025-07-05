@@ -42,7 +42,7 @@ Include in profile dietary restrictions and general food you don’t like
 
 1.  **Round 1** – everyone swipes the full pool (or until likes exhausted). Select **Top K** by total likes where `K = min(5, group_size + 2)`.
     
-2.  **Round 2 (Final)** – present only those Top K cards. Each user gets **one vote**. Highest total wins. Ties resolved by super‑like weight, else random sudden‑death vote.
+2.  **Round 2 (Final)** – present only those Top K cards. Each user gets **one vote**. Highest total wins. Ties resolved by googles user rating, else random sudden‑death vote.
     
 
 *Large groups (≥ 8)* → insert a semi‑final round instead of throwing 30 cards at everyone.

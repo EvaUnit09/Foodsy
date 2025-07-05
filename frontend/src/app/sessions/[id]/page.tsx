@@ -344,10 +344,16 @@ export default function SessionPage() {
 
               <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
                 <Clock className="w-4 h-4 text-red-600" />
-                <span className="text-lg font-mono text-red-600">
-                  {String(timeLeft.minutes).padStart(2, "0")}:
-                  {String(timeLeft.seconds).padStart(2, "0")}
-                </span>
+                {timeLeft.minutes === 0 && timeLeft.seconds === 0 ? (
+                  <span className="text-lg font-bold text-red-600 animate-pulse">
+                    TIME&apos;S UP!
+                  </span>
+                ) : (
+                  <span className="text-lg font-mono text-red-600">
+                    {String(timeLeft.minutes).padStart(2, "0")}:
+                    {String(timeLeft.seconds).padStart(2, "0")}
+                  </span>
+                )}
               </div>
 
               <Button variant="ghost" size="sm">
