@@ -228,17 +228,17 @@ This document contains a detailed list of actionable improvement tasks for the F
 - [x] Update frontend to support both join methods
 
 ## 4. Live Session Flow
-- [ ] Restrict restaurant navigation until host starts session
-- [ ] Host can start session (with option to start early)
-- [ ] Broadcast session start event to all participants
+- [x] Restrict restaurant navigation until host starts session
+- [x] Host can start session (with option to start early)
+- [x] Broadcast session start event to all participants
 - [ ] Implement synchronized timer (broadcast via WebSocket)
-- [ ] Prevent voting until session starts
+- [x] Prevent voting until session starts
 - [ ] Visual indicator for round transitions (frontend)
 
 ## 5. Voting Rounds Logic
 - [ ] Implement two-round voting structure
-- [ ] Calculate Top K restaurants after round 1
-- [ ] Restrict round 2 to Top K, one vote per user
+- [x] Calculate Top K restaurants after round 1
+- [x] Restrict round 2 to Top K, one vote per user
 - [ ] Hide votes until round ends; reveal results at end of each round(Restaurants with top votes)
 - [ ] Handle tie-breakers as per VotingSession.md
 - [ ] Create new page for Round 1 winners. Proceed with same logic

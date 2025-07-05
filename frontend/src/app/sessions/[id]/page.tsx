@@ -108,7 +108,7 @@ export default function SessionPage() {
   const sessionId = Number(id);
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; status: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -116,6 +116,13 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIMER);
+  
+  // Round management state
+  const [currentRound, setCurrentRound] = useState(1);
+  const [remainingLikes, setRemainingLikes] = useState(0);
+  const [roundTransitioning, setRoundTransitioning] = useState(false);
+  const [sessionComplete, setSessionComplete] = useState(false);
+  const [winner, setWinner] = useState<Restaurant | null>(null);
 
   const { event, send } = useSessionWebSocket(sessionId);
 
@@ -200,8 +207,22 @@ export default function SessionPage() {
         });
         break;
       case "roundTransition":
-        // event.payload.newRound, event.payload.topK
-        // Optionally update round state, show top K, reset votes, etc.
+        setCurrentRound(event.payload.newRound);
+        setRoundTransitioning(true);
+        // Refetch restaurants for new round
+        if (event.payload.newRound === 2) {
+          setTimeout(() => {
+            window.location.reload(); // Simple approach to reload round 2 restaurants
+          }, 2000);
+        }
+        break;
+      case "sessionComplete":
+        setSessionComplete(true);
+        setWinner(event.payload.winner);
+        break;
+      case "roundStatus":
+        setCurrentRound(event.payload.currentRound);
+        setRemainingLikes(event.payload.remainingLikes || 0);
         break;
       default:
         break;

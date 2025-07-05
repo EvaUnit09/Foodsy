@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface SessionParticipantRepository extends JpaRepository<SessionParticipant, Long> {
     List<SessionParticipant> findBySessionId(Long sessionId);
     Optional<SessionParticipant> findBySessionIdAndUserId(Long sessionId, String userId);
+    int countBySessionId(Long sessionId);
 }

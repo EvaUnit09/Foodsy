@@ -20,6 +20,7 @@ public class Session {
     private Integer likesPerUser;
     
     private String status; // open, voting, ended
+    private Integer round = 1; // current round (1 or 2)
     private Instant createdAt = Instant.now();
 
     @Column(name = "join_code", unique = true, nullable = false, length = 6)
@@ -74,6 +75,13 @@ public class Session {
     }
     public void setId(Long id) {
         this.id = id;
+    }
+    
+    public Integer getRound() {
+        return round;
+    }
+    public void setRound(Integer round) {
+        this.round = round;
     }
 
 }

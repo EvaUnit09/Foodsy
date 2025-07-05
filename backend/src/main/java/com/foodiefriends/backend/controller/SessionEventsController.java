@@ -13,6 +13,7 @@ import java.util.Map;
 
 import com.foodiefriends.backend.service.SessionTimerService;
 import com.foodiefriends.backend.service.SessionService;
+import com.foodiefriends.backend.service.RoundService;
 import com.foodiefriends.backend.dto.RestaurantDto;
 
 @Controller
@@ -20,12 +21,17 @@ public class SessionEventsController {
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionTimerService sessionTimerService;
     private final SessionService sessionService;
+    private final RoundService roundService;
 
     @Autowired
-    public SessionEventsController(SimpMessagingTemplate messagingTemplate, SessionTimerService sessionTimerService, SessionService sessionService) {
+    public SessionEventsController(SimpMessagingTemplate messagingTemplate, 
+                                 SessionTimerService sessionTimerService, 
+                                 SessionService sessionService,
+                                 RoundService roundService) {
         this.messagingTemplate = messagingTemplate;
         this.sessionTimerService = sessionTimerService;
         this.sessionService = sessionService;
+        this.roundService = roundService;
     }
 
     // Common event envelope
@@ -73,7 +79,49 @@ public class SessionEventsController {
         messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
     }
 
-    // Round transition event (host or backend triggers)
+    // Round 1 complete - transition to round 2 (host triggers)
+    @MessageMapping("/session/{sessionId}/completeRound1")
+    public void completeRound1(@DestinationVariable Long sessionId) {
+        try {
+            // Use RoundService to handle the transition
+            roundService.transitionToRound2(sessionId);
+            System.out.println("Round 1 completed for session " + sessionId + ", transitioned to Round 2");
+        } catch (Exception e) {
+            System.err.println("Failed to complete round 1: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Round 2 complete - finish session and show results (host triggers)
+    @MessageMapping("/session/{sessionId}/completeRound2") 
+    public void completeRound2(@DestinationVariable Long sessionId) {
+        try {
+            // Use RoundService to complete the session
+            roundService.completeSession(sessionId);
+            System.out.println("Round 2 completed for session " + sessionId + ", session finished");
+        } catch (Exception e) {
+            System.err.println("Failed to complete round 2: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Get current round status (can be called by frontend)
+    @MessageMapping("/session/{sessionId}/getRoundStatus")
+    public void getRoundStatus(@DestinationVariable Long sessionId) {
+        try {
+            Map<String, Object> roundStatus = roundService.getRoundStatus(sessionId);
+            SessionEvent event = new SessionEvent(
+                "roundStatus",
+                roundStatus
+            );
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
+        } catch (Exception e) {
+            System.err.println("Failed to get round status: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Legacy round transition method (kept for compatibility)
     @MessageMapping("/session/{sessionId}/roundTransition")
     public void roundTransition(@DestinationVariable Long sessionId, RoundTransitionPayload payload) {
         SessionEvent event = new SessionEvent(
