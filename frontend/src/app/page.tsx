@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/card";
 import { Badge } from "@/components/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import WebSocketTest from "@/components/WebSocketTest";
 
 /* -------------------------------------------------------------------------- */
 /*  1.  Static data (kept outside the component)                               */
