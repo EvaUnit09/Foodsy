@@ -12,16 +12,20 @@ import java.util.List;
 import java.util.Map;
 
 import com.foodiefriends.backend.service.SessionTimerService;
+import com.foodiefriends.backend.service.SessionService;
+import com.foodiefriends.backend.dto.RestaurantDto;
 
 @Controller
 public class SessionEventsController {
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionTimerService sessionTimerService;
+    private final SessionService sessionService;
 
     @Autowired
-    public SessionEventsController(SimpMessagingTemplate messagingTemplate, SessionTimerService sessionTimerService) {
+    public SessionEventsController(SimpMessagingTemplate messagingTemplate, SessionTimerService sessionTimerService, SessionService sessionService) {
         this.messagingTemplate = messagingTemplate;
         this.sessionTimerService = sessionTimerService;
+        this.sessionService = sessionService;
     }
 
     // Common event envelope
@@ -83,6 +87,43 @@ public class SessionEventsController {
         messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
     }
 
+    // Session end event (host or backend triggers)
+    @MessageMapping("/session/{sessionId}/end")
+    public void endSession(@DestinationVariable Long sessionId) {
+        // Calculate final results and update session status
+        try {
+            List<RestaurantDto> finalRankings = sessionService.getFinalRankings(sessionId);
+            RestaurantDto winner = sessionService.getWinner(sessionId);
+            int totalParticipants = sessionService.getParticipants(sessionId).size();
+            int totalVotes = sessionService.getTotalVotes(sessionId);
+            
+            // Update session status to ENDED
+            sessionService.endSession(sessionId);
+            
+            SessionEvent event = new SessionEvent(
+                "sessionEnd",
+                Map.of(
+                    "sessionId", sessionId,
+                    "endTime", Instant.now().toString(),
+                    "winner", winner,
+                    "finalRankings", finalRankings,
+                    "totalParticipants", totalParticipants,
+                    "totalVotes", totalVotes
+                )
+            );
+            messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
+            System.out.println("Session " + sessionId + " ended successfully and event broadcasted");
+        } catch (Exception e) {
+            System.err.println("Failed to end session: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Public method to broadcast session end (can be called by services)
+    public void broadcastSessionEnd(Long sessionId) {
+        endSession(sessionId);
+    }
+
     // Payload for round transition
     public static class RoundTransitionPayload {
         private int newRound;
@@ -92,4 +133,5 @@ public class SessionEventsController {
         public List<String> getTopK() { return topK; }
         public void setTopK(List<String> topK) { this.topK = topK; }
     }
+
 } 

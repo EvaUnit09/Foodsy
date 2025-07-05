@@ -63,6 +63,18 @@ public class SessionTimerService {
             Thread.sleep(interval);
             millisLeft -= interval;
         }
+
+        // Send final timer update when time reaches 0
+        messagingTemplate.convertAndSend(
+            "/topic/session/" + sessionId,
+            Map.of(
+                "type", "timerUpdate",
+                "payload", Map.of(
+                    "sessionId", sessionId,
+                    "millisLeft", 0L
+                )
+            )
+        );
         // 2. On timer expiry, calculate real top K restaurants for this round
         List<SessionRestaurant> restaurants = sessionRestaurantRepository.findBySessionId(sessionId)
             .stream()

@@ -5,6 +5,7 @@ import com.foodiefriends.backend.domain.Session;
 import com.foodiefriends.backend.domain.SessionParticipant;
 import com.foodiefriends.backend.domain.SessionRestaurant;
 import com.foodiefriends.backend.dto.GooglePlacesSearchResponse;
+import com.foodiefriends.backend.dto.RestaurantDto;
 import com.foodiefriends.backend.example.session.JoinCodeGenerator;
 import com.foodiefriends.backend.repository.SessionParticipantRepository;
 import com.foodiefriends.backend.repository.SessionRepository;
@@ -17,6 +18,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Service
 public class SessionService {
@@ -122,5 +125,51 @@ public class SessionService {
     }
     public List<SessionParticipant> getParticipants(Long id) {
         return sessionParticipantRepository.findBySessionId(id);
+    }
+
+    public void endSession(Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        
+        session.setStatus("ENDED");
+        sessionRepository.save(session);
+        System.out.println("Session " + sessionId + " status updated to ENDED");
+    }
+
+    public List<RestaurantDto> getFinalRankings(Long sessionId) {
+        List<SessionRestaurant> restaurants = restaurantRepo.findBySessionId(sessionId);
+        
+        return restaurants.stream()
+            .sorted(Comparator.comparingInt(SessionRestaurant::getLikeCount).reversed())
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+    }
+
+    public RestaurantDto getWinner(Long sessionId) {
+        List<RestaurantDto> rankings = getFinalRankings(sessionId);
+        return rankings.isEmpty() ? null : rankings.get(0);
+    }
+
+    public int getTotalVotes(Long sessionId) {
+        List<SessionRestaurant> restaurants = restaurantRepo.findBySessionId(sessionId);
+        return restaurants.stream()
+            .mapToInt(SessionRestaurant::getLikeCount)
+            .sum();
+    }
+
+    private RestaurantDto convertToDto(SessionRestaurant restaurant) {
+        return new RestaurantDto(
+            restaurant.getProviderId(),
+            restaurant.getName(),
+            restaurant.getAddress(),
+            restaurant.getCategory(),
+            restaurant.getPriceLevel(),
+            restaurant.getPriceRange(),
+            restaurant.getRating(),
+            restaurant.getUserRatingCount(),
+            restaurant.getCurrentOpeningHours(),
+            restaurant.getGenerativeSummary(),
+            restaurant.getReviewSummary()
+        );
     }
 }
