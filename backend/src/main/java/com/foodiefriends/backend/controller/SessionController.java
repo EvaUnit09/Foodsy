@@ -27,7 +27,7 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/sessions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class SessionController {
     private final SessionRepository repo;
     private final SessionRestaurantRepository restaurantRepo;
