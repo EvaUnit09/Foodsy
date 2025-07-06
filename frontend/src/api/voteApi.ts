@@ -3,7 +3,6 @@ export type VoteType = "like" | "dislike";
 export interface CreateVotePayload {
   sessionId: number;
   providerId: string;
-  userId: string;
   voteType: VoteType;
 }
 
@@ -13,7 +12,6 @@ export interface CreateVotePayload {
 export async function createVote({
   sessionId,
   providerId,
-  userId,
   voteType,
 }: CreateVotePayload): Promise<void> {
   const res = await fetch(
@@ -21,7 +19,8 @@ export async function createVote({
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId, providerId, userId: userId.trim().toLowerCase(), voteType }),
+      credentials: 'include', // Include HTTP-only cookies for authentication
+      body: JSON.stringify({ voteType }),
     },
   );
 

@@ -36,7 +36,6 @@ public class SessionService {
     }
     public Session createSession(Session session) {
         try {
-            System.out.println("Starting createSession with creatorId: " + session.getCreatorId());
             
             String code;
             do {
@@ -50,19 +49,14 @@ public class SessionService {
             session.setJoinCode(code);
             session.setStatus("OPEN");
             Session saved = sessionRepository.save(session);
-            System.out.println("Created session with ID: " + saved.getId());
             
-            System.out.println("About to call Google Places API...");
             var response = placesClient.search("Astoria, NY", "restaurants");
-            System.out.println("Google Places API call completed");
             
             List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(response.places());
-            System.out.println("Retrieved " + places.size() + " places from Google Places");
 
             // Shuffle and limit
             Collections.shuffle(places);
             long limit = session.getPoolSize();
-            System.out.println("Pool size limit: " + limit);
 
             for (int i = 0; i < Math.min(limit, places.size()); i++) {
                 var place = places.get(i);
@@ -86,7 +80,6 @@ public class SessionService {
                 sr.setReviewSummary(place.reviewSummary());
 
                 SessionRestaurant savedRestaurant = restaurantRepo.save(sr);
-                System.out.println("Saved restaurant: " + savedRestaurant.getName() + " for session " + saved.getId());
             }
             
             // After saving the session
@@ -96,7 +89,6 @@ public class SessionService {
             participant.setJoinedAt(Instant.now());
             sessionParticipantRepository.save(participant);
             
-            System.out.println("Session creation completed successfully");
             return saved;
         } catch (Exception e) {
             System.err.println("Error in createSession: " + e.getMessage());
@@ -133,7 +125,6 @@ public class SessionService {
         
         session.setStatus("ENDED");
         sessionRepository.save(session);
-        System.out.println("Session " + sessionId + " status updated to ENDED");
     }
 
     public List<RestaurantDto> getFinalRankings(Long sessionId) {

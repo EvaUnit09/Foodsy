@@ -36,13 +36,14 @@ export default function CreateSessionPage() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    // Only include creatorId for guests (not authenticated users)
+    // Always include creatorId if available to handle auth state mismatches
     const body: any = {
       poolSize,
       roundTime,
       likesPerUser,
     };
-    if (!isAuthenticated) {
+    // Include creatorId if we have one, regardless of auth state
+    if (creatorId && creatorId.trim()) {
       body.creatorId = creatorId.trim().toLowerCase();
     }
     const res = await fetch("http://localhost:8080/api/sessions", {
@@ -54,9 +55,20 @@ export default function CreateSessionPage() {
     setSubmitting(false);
     if (res.ok) {
       const session = await res.json();
+      // Store the userId in localStorage so the session page can identify the user
+      if (creatorId && creatorId.trim()) {
+        localStorage.setItem("userId", creatorId.trim().toLowerCase());
+        console.log('Stored userId in localStorage:', creatorId.trim().toLowerCase());
+      }
       setCreatedSession({ id: session.id, joinCode: session.joinCode });
     } else {
-      alert("Failed to create session");
+      // Get more detailed error information
+      const errorText = await res.text();
+      console.error("Session creation failed:", res.status, errorText);
+      console.error("Request body sent:", JSON.stringify(body));
+      console.error("Is authenticated:", isAuthenticated);
+      console.error("Creator ID:", creatorId);
+      alert(`Failed to create session: ${res.status} ${errorText}`);
     }
   };
 
@@ -151,7 +163,10 @@ export default function CreateSessionPage() {
                   </div>
                   <Button
                     className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                    onClick={() => router.push(`/sessions/${createdSession.id}`)}
+                    onClick={() => {
+                      // Add a small delay to ensure localStorage is set before navigation
+                      setTimeout(() => router.push(`/sessions/${createdSession.id}`), 100);
+                    }}
                   >
                     Enter Voting Room
                   </Button>

@@ -128,7 +128,6 @@ public class GooglePlacesClient {
             circle.put("radius", radiusMeters);
             body.put("locationRestriction", Map.of("circle", circle));
 
-            System.out.println("Making Google Places API request for nearby restaurants...");
             
             GooglePlacesSearchResponse response = restClient.post()
                     .uri("/places:searchNearby")
@@ -136,11 +135,9 @@ public class GooglePlacesClient {
                     .retrieve()
                     .body(GooglePlacesSearchResponse.class);
             
-            System.out.println("Google Places API response received. Response is null: " + (response == null));
             
             // Filter out non-restaurant places (hotels, etc.)
             if (response != null && response.places() != null) {
-                System.out.println("Original places count: " + response.places().size());
                 
                 List<GooglePlacesSearchResponse.Place> filteredPlaces = response.places().stream()
                         .filter(place -> {
@@ -148,7 +145,6 @@ public class GooglePlacesClient {
                                 // Check if it's actually a restaurant, not a hotel or other establishment
                                 List<String> types = place.types();
                                 if (types == null) {
-                                    System.out.println("Place " + place.id() + " has null types, excluding");
                                     return false;
                                 }
                                 
@@ -160,9 +156,6 @@ public class GooglePlacesClient {
                                 // Only include if it's a restaurant, bar, or cafe, but not a hotel
                                 boolean shouldInclude = (isRestaurant && !isHotel) || isBar || isCafe;
                                 
-                                if (!shouldInclude) {
-                                    System.out.println("Excluding place " + place.id() + " with types: " + types);
-                                }
                                 
                                 return shouldInclude;
                             } catch (Exception e) {
@@ -173,11 +166,9 @@ public class GooglePlacesClient {
                         .limit(maxResults)
                         .toList();
                 
-                System.out.println("Filtered " + response.places().size() + " places down to " + filteredPlaces.size() + " restaurants");
                 
                 return new GooglePlacesSearchResponse(filteredPlaces);
             } else {
-                System.out.println("Response or places list is null, returning empty response");
                 return new GooglePlacesSearchResponse(List.of());
             }
         } catch (Exception e) {

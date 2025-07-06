@@ -85,7 +85,6 @@ public class SessionEventsController {
         try {
             // Use RoundService to handle the transition
             roundService.transitionToRound2(sessionId);
-            System.out.println("Round 1 completed for session " + sessionId + ", transitioned to Round 2");
         } catch (Exception e) {
             System.err.println("Failed to complete round 1: " + e.getMessage());
             e.printStackTrace();
@@ -98,7 +97,6 @@ public class SessionEventsController {
         try {
             // Use RoundService to complete the session
             roundService.completeSession(sessionId);
-            System.out.println("Round 2 completed for session " + sessionId + ", session finished");
         } catch (Exception e) {
             System.err.println("Failed to complete round 2: " + e.getMessage());
             e.printStackTrace();
@@ -160,7 +158,6 @@ public class SessionEventsController {
                 )
             );
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
-            System.out.println("Session " + sessionId + " ended successfully and event broadcasted");
         } catch (Exception e) {
             System.err.println("Failed to end session: " + e.getMessage());
             e.printStackTrace();

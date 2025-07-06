@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +25,9 @@ public class SessionTimerService {
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository sessionRestaurantRepository;
     private final SessionParticipantRepository sessionParticipantRepository;
+    
+    // Track active timers to prevent duplicates
+    private final Set<String> activeTimers = ConcurrentHashMap.newKeySet();
 
     @Autowired
     public SessionTimerService(SimpMessagingTemplate messagingTemplate,
@@ -37,12 +42,22 @@ public class SessionTimerService {
 
     @Async
     public void startRoundTimer(Long sessionId, int round, Long unusedDurationMillis) throws InterruptedException {
-        // 1. Fetch session and use its roundTime (in minutes) for timer duration
-        Session session = sessionRepository.findById(sessionId).orElse(null);
-        if (session == null) {
-            System.err.println("Session not found for timer: " + sessionId);
+        // Create unique timer key
+        String timerKey = sessionId + "_round_" + round;
+        
+        // Check if timer is already running for this session/round
+        if (!activeTimers.add(timerKey)) {
+            System.err.println("Timer already running for session " + sessionId + " round " + round + ", skipping duplicate");
             return;
         }
+        
+        try {
+            // 1. Fetch session and use its roundTime (in minutes) for timer duration
+            Session session = sessionRepository.findById(sessionId).orElse(null);
+            if (session == null) {
+                System.err.println("Session not found for timer: " + sessionId);
+                return;
+            }
         int roundTimeMinutes = session.getRoundTime() != null ? session.getRoundTime() : 5; // default 5 min
         long durationMillis = roundTimeMinutes * 60_000L;
 
@@ -99,5 +114,9 @@ public class SessionTimerService {
                 )
             )
         );
+        } finally {
+            // Remove timer from active set when done
+            activeTimers.remove(timerKey);
+        }
     }
 } 

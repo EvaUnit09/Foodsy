@@ -26,6 +26,11 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 	implementation("me.paulschwarz:spring-dotenv:4.0.0")
 	implementation("com.h2database:h2")
+	
+	// JWT dependencies
+	implementation("io.jsonwebtoken:jjwt-api:0.12.3")
+	implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
+	implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
 	implementation("org.postgresql:postgresql:42.7.3")
 	implementation("jakarta.platform:jakarta.jakartaee-api:10.0.0")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")

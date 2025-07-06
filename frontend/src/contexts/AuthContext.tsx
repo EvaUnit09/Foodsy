@@ -23,6 +23,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (userData: User) => void;
   signOut: () => void;
+  checkAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,49 +45,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for stored authentication data on mount
-    const checkAuthState = () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        const storedAuth = localStorage.getItem('isAuthenticated');
-        
-        if (storedUser && storedAuth === 'true') {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Error loading auth state:', error);
-        // Clear potentially corrupted data
-        localStorage.removeItem('user');
-        localStorage.removeItem('isAuthenticated');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:8080/api/auth/me', {
+        method: 'GET',
+        credentials: 'include', // Include HTTP-only cookies
+      });
 
-    checkAuthState();
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      setUser(null);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAuthStatus();
   }, []);
 
   const signIn = (userData: User) => {
     setUser(userData);
     setIsAuthenticated(true);
-    
-    // Persist to localStorage
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('isAuthenticated', 'true');
   };
 
-  const signOut = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    
-    // Clear localStorage
-    localStorage.removeItem('user');
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userId'); // Also clear old session storage
-    sessionStorage.clear();
+  const signOut = async () => {
+    try {
+      await fetch('http://localhost:8080/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+      
+      // Clear any remaining localStorage data
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userId');
+      sessionStorage.clear();
+    }
   };
 
   const value: AuthContextType = {
@@ -95,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     signIn,
     signOut,
+    checkAuthStatus,
   };
 
   return (

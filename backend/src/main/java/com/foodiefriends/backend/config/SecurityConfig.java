@@ -1,6 +1,7 @@
 package com.foodiefriends.backend.config;
 
 import com.foodiefriends.backend.service.OAuth2UserService;
+import com.foodiefriends.backend.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -20,10 +22,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SecurityConfig {
     
     private final OAuth2UserService oauth2UserService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     
     @Autowired
-    public SecurityConfig(OAuth2UserService oauth2UserService) {
+    public SecurityConfig(OAuth2UserService oauth2UserService, JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.oauth2UserService = oauth2UserService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     
     @Bean
@@ -40,18 +44,26 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                     // Public endpoints
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
-                    .requestMatchers("/api/sessions/join").permitAll()
-                    .requestMatchers("/api/sessions/*/restaurants").permitAll()
                     .requestMatchers("/api/hello").permitAll()
                     .requestMatchers("/oauth2/**").permitAll()
                     .requestMatchers("/login/oauth2/**").permitAll()
-                    // Allow all for now (maintain backward compatibility)
-                    .anyRequest().permitAll()
+                    // Session viewing is public, but voting requires authentication
+                    .requestMatchers("/api/sessions/*/restaurants").permitAll()
+                    .requestMatchers("/api/sessions/*/participants").permitAll()
+                    .requestMatchers("/api/sessions/*/voting-status").permitAll()
+                    .requestMatchers("/api/sessions/{sessionId}").permitAll()
+                    // Session creation and voting requires authentication
+                    .requestMatchers("/api/sessions").authenticated()
+                    .requestMatchers("/api/sessions/*/restaurants/*/vote").authenticated()
+                    .requestMatchers("/api/sessions/*/remaining-votes").authenticated()
+                    // All other requests require authentication
+                    .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                     .authorizationEndpoint(authorization -> authorization

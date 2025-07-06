@@ -76,7 +76,6 @@ public class RestaurantController {
                 placeId, photoId, apiKey, maxHeightPx, maxWidthPx
             );
             
-            System.out.println("Fetching photo from: " + url);
 
             RestTemplate restTemplate = new RestTemplate();
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
@@ -89,7 +88,6 @@ public class RestaurantController {
                 byte[].class
             );
             MediaType contentType = response.getHeaders().getContentType();
-            System.out.println("Photo fetched successfully, content type: " + contentType);
             return ResponseEntity.status(response.getStatusCode())
                     .contentType(contentType != null ? contentType : MediaType.IMAGE_JPEG)
                     .body(response.getBody());

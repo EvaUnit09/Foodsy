@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { createVote, VoteType } from "@/api/voteApi";
-
-// ---------- helpers ----------
-const getVotesStorageKey = (sessionId: number) => `votes_${sessionId}`;
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface SessionVotingOptions {
   sessionId: number;
-  userId?: string;
+  currentRound: number;
   bumpLikeLocally?: (restaurant: { providerId: string }) => void;
   undoLikeLocally?: (restaurant: { providerId: string }) => void;
 }
@@ -20,29 +18,44 @@ interface VoteParams {
 // ---------- hook ----------
 export function useSessionVoting({
   sessionId,
-  userId,
+  currentRound,
   bumpLikeLocally,
   undoLikeLocally,
 }: SessionVotingOptions) {
-  const disabled = !userId;
+  const { isAuthenticated } = useAuth();
+  const disabled = !isAuthenticated;
+  
   // state ----------------------------------------------------------
   const [voteByProvider, setVoteByProvider] = useState<
     Record<string, VoteType>
   >({});
+  const [remainingVotes, setRemainingVotes] = useState<number>(0);
 
-  // local-storage persistence --------------------------------------
-  const storageKey = useMemo(() => getVotesStorageKey(sessionId), [sessionId]);
-
+  // Reset votes when round changes
   useEffect(() => {
-    const savedVotes = localStorage.getItem(storageKey);
-    if (savedVotes) {
-      setVoteByProvider(JSON.parse(savedVotes));
-    }
-  }, [storageKey]);
+    setVoteByProvider({});
+  }, [currentRound]);
 
+  // Fetch remaining votes
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(voteByProvider));
-  }, [voteByProvider, storageKey]);
+    if (!isAuthenticated || !sessionId) return;
+    
+    const fetchRemainingVotes = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/sessions/${sessionId}/remaining-votes`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setRemainingVotes(data.remainingVotes);
+        }
+      } catch (error) {
+        console.error('Failed to fetch remaining votes:', error);
+      }
+    };
+
+    fetchRemainingVotes();
+  }, [sessionId, isAuthenticated, currentRound, voteByProvider]); // Refetch when votes change
 
   // public API -----------------------------------------------------
   const hasVoted = (providerId: string) => providerId in voteByProvider;
@@ -64,7 +77,6 @@ export function useSessionVoting({
       await createVote({
         sessionId,
         providerId,
-        userId: userId!.trim().toLowerCase(),
         voteType: type,
       });
     } catch (error) {
@@ -81,5 +93,5 @@ export function useSessionVoting({
     }
   };
 
-  return { voteByProvider, handleVote, hasVoted, disabled };
+  return { voteByProvider, handleVote, hasVoted, disabled, remainingVotes };
 }
