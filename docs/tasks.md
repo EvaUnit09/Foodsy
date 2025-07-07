@@ -177,10 +177,17 @@ This document contains a detailed list of actionable improvement tasks for the F
 
 ## DevOps and Infrastructure
 
-27. [ ] Improve project documentation
-    - [ ] Add comprehensive README files
-    - [ ] Create API documentation
-    - [ ] Document architecture decisions
+27. [x] **COMPLETED: Improve project documentation**
+    - [x] Add comprehensive README files
+    - [x] Create API documentation  
+    - [x] Document architecture decisions
+    - [x] **COMPLETED: Created comprehensive how-to documentation in docs/how-to/ folder**
+      - [x] Backend Architecture Overview - Complete Spring Boot architecture guide
+      - [x] Frontend Architecture Overview - Complete Next.js React architecture guide
+      - [x] How to Modify Services Safely - Step-by-step service modification guide
+      - [x] How to Modify Controllers Safely - REST API controller modification guide
+      - [x] How to Modify Components Safely - React component modification guide
+      - [x] All guides written for junior engineers with real examples and best practices
 
 28. [ ] Set up proper environments
     - [ ] Configure development, staging, and production environments
