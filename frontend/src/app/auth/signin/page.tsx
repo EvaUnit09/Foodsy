@@ -25,6 +25,7 @@ const SignInPage = () => {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ 
           emailOrUsername: email, 
           password: password 
@@ -56,8 +57,7 @@ const SignInPage = () => {
   };
 
   const handleGoogleSignIn = () => {
-    // For now, redirect to Google OAuth endpoint (to be implemented)
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    alert("Google sign-in is temporarily disabled. Please use email/password sign-in.");
   };
 
   return (

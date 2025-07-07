@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, User, Check, Copy as CopyIcon } from "lucide-react";
@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateSessionPage() {
-  const [creatorId, setCreatorId] = useState("");
   const [poolSize, setPoolSize] = useState(20);
   const [roundTime, setRoundTime] = useState(5);
   const [likesPerUser, setLikesPerUser] = useState(7);
@@ -20,13 +19,6 @@ export default function CreateSessionPage() {
   const [createdSession, setCreatedSession] = useState<{ id: number; joinCode: string } | null>(null);
   const { user, isAuthenticated } = useAuth();
 
-  // Auto-fill username for authenticated users
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      setCreatorId(user.username || user.displayName || "");
-    }
-  }, [isAuthenticated, user]);
-
   const handleCopy = (text: string, type: "code" | "link") => {
     navigator.clipboard.writeText(text);
     setCopied(type);
@@ -35,40 +27,41 @@ export default function CreateSessionPage() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isAuthenticated) {
+      alert("Please sign in to create a session.");
+      return;
+    }
+    
     setSubmitting(true);
-    // Always include creatorId if available to handle auth state mismatches
-    const body: any = {
+    
+    const body = {
       poolSize,
       roundTime,
       likesPerUser,
     };
-    // Include creatorId if we have one, regardless of auth state
-    if (creatorId && creatorId.trim()) {
-      body.creatorId = creatorId.trim().toLowerCase();
-    }
-    const res = await fetch("http://localhost:8080/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      credentials: "include",
-    });
-    setSubmitting(false);
-    if (res.ok) {
-      const session = await res.json();
-      // Store the userId in localStorage so the session page can identify the user
-      if (creatorId && creatorId.trim()) {
-        localStorage.setItem("userId", creatorId.trim().toLowerCase());
-        console.log('Stored userId in localStorage:', creatorId.trim().toLowerCase());
+    
+    try {
+      const res = await fetch("http://localhost:8080/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      
+      if (res.ok) {
+        const session = await res.json();
+        setCreatedSession({ id: session.id, joinCode: session.joinCode });
+      } else {
+        const errorText = await res.text();
+        console.error("Session creation failed:", res.status, errorText);
+        alert(`Failed to create session: ${res.status} ${errorText}`);
       }
-      setCreatedSession({ id: session.id, joinCode: session.joinCode });
-    } else {
-      // Get more detailed error information
-      const errorText = await res.text();
-      console.error("Session creation failed:", res.status, errorText);
-      console.error("Request body sent:", JSON.stringify(body));
-      console.error("Is authenticated:", isAuthenticated);
-      console.error("Creator ID:", creatorId);
-      alert(`Failed to create session: ${res.status} ${errorText}`);
+    } catch (error) {
+      console.error("Network error:", error);
+      alert("Network error: Could not connect to server. Please make sure the backend is running.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -163,44 +156,31 @@ export default function CreateSessionPage() {
                   </div>
                   <Button
                     className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                    onClick={() => {
-                      // Add a small delay to ensure localStorage is set before navigation
-                      setTimeout(() => router.push(`/sessions/${createdSession.id}`), 100);
-                    }}
+                    onClick={() => router.push(`/sessions/${createdSession.id}`)}
                   >
                     Enter Voting Room
                   </Button>
                 </div>
+              ) : !isAuthenticated ? (
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Sign In Required</h2>
+                  <p className="text-gray-600">You need to be signed in to create a voting session.</p>
+                  <Link
+                    href="/auth/signin"
+                    className="inline-block w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg flex items-center justify-center transition-colors"
+                  >
+                    Sign In to Continue
+                  </Link>
+                </div>
               ) : (
                 <form onSubmit={handleCreateSession} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Your Name
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder={isAuthenticated ? "Logged in as..." : "Enter your name"}
-                      value={creatorId}
-                      onChange={(e) => setCreatorId(e.target.value)}
-                      className={`h-12 text-lg border-gray-200 focus:border-orange-300 ${
-                        isAuthenticated && user && creatorId ? "bg-gray-50 text-gray-600" : ""
-                      }`}
-                      readOnly={isAuthenticated && user && creatorId ? true : false}
-                      required
-                    />
-                    {isAuthenticated && user && creatorId && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        Using your account name. Want to use a different name?{" "}
-                        <button
-                          type="button"
-                          onClick={() => setCreatorId("")}
-                          className="text-orange-600 hover:text-orange-500 font-medium"
-                        >
-                          Click here to change
-                        </button>
+                  {isAuthenticated && user && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <p className="text-green-800 font-medium">
+                        Creating session as: {user.displayName || user.username}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Pool Size
