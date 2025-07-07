@@ -39,7 +39,7 @@ export function SessionStatusBanners({
             <strong>{winner.name}</strong> - {winner.address}
           </div>
           <div className="text-sm text-green-600 mt-1">
-            Final votes: {winner.likeCount}
+            Final votes: {winner.voteCount || winner.likeCount || 0}
           </div>
         </div>
       )}

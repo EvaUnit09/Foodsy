@@ -9,11 +9,21 @@ interface Participant {
   isHost: boolean;
 }
 
+interface VotingStatus {
+  allVotesIn: boolean;
+  totalParticipants: number;
+  participantsWithNoVotesLeft: number;
+  totalVotesCast: number;
+  totalPossibleVotes: number;
+  currentRound: number;
+}
+
 interface ParticipantsSectionProps {
   participants: Participant[];
   likeProgressPct: number;
   likedRestaurants: Restaurant[];
   restaurants: Restaurant[];
+  votingStatus: VotingStatus;
   isHost: boolean;
   sessionStarted: boolean;
   startPressed: boolean;
@@ -30,6 +40,7 @@ export function ParticipantsSection({
   likeProgressPct,
   likedRestaurants,
   restaurants,
+  votingStatus,
   isHost,
   sessionStarted,
   startPressed,
@@ -65,7 +76,7 @@ export function ParticipantsSection({
         <div className="flex items-center space-x-2">
           <Progress value={likeProgressPct} className="w-28" />
           <span className="text-sm font-medium text-gray-900">
-            {likedRestaurants.length}/{restaurants.length}
+            {votingStatus.totalVotesCast}/{votingStatus.totalPossibleVotes}
           </span>
         </div>
         

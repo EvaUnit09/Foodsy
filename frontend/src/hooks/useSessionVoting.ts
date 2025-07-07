@@ -36,26 +36,27 @@ export function useSessionVoting({
     setVoteByProvider({});
   }, [currentRound]);
 
-  // Fetch remaining votes
-  useEffect(() => {
+  // Fetch remaining votes function
+  const fetchRemainingVotes = async () => {
     if (!isAuthenticated || !sessionId) return;
     
-    const fetchRemainingVotes = async () => {
-      try {
-        const response = await fetch(`http://localhost:8080/api/sessions/${sessionId}/remaining-votes`, {
-          credentials: 'include'
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setRemainingVotes(data.remainingVotes);
-        }
-      } catch (error) {
-        console.error('Failed to fetch remaining votes:', error);
+    try {
+      const response = await fetch(`http://localhost:8080/api/sessions/${sessionId}/remaining-votes`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRemainingVotes(data.remainingVotes);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch remaining votes:', error);
+    }
+  };
 
+  // Fetch remaining votes on mount and round change
+  useEffect(() => {
     fetchRemainingVotes();
-  }, [sessionId, isAuthenticated, currentRound, voteByProvider]); // Refetch when votes change
+  }, [sessionId, isAuthenticated, currentRound]); // Removed voteByProvider dependency
 
   // public API -----------------------------------------------------
   const hasVoted = (providerId: string) => providerId in voteByProvider;
@@ -79,6 +80,9 @@ export function useSessionVoting({
         providerId,
         voteType: type,
       });
+      
+      // Manually refresh remaining votes after successful vote
+      await fetchRemainingVotes();
     } catch (error) {
       // rollback on failure ----------------------------------------
       setVoteByProvider((prev) => {

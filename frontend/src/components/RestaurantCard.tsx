@@ -14,6 +14,7 @@ export interface Restaurant {
   category: string;
   address: string;
   likeCount: number;
+  voteCount?: number; // For winner data from backend
   round: number;
   photos?: string[];
   priceLevel?: string | null;

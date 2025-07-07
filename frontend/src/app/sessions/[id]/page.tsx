@@ -15,13 +15,14 @@ import { SessionHeader } from "@/components/SessionHeader";
 import { SessionStatusBanners } from "@/components/SessionStatusBanners";
 import { ParticipantsSection } from "@/components/ParticipantsSection";
 import { RestaurantNavigation } from "@/components/RestaurantNavigation";
+import { FinalResultsScreen } from "@/components/FinalResultsScreen";
 import { VoteType } from "@/api/voteApi";
 
 /* -------------------- types & constants ----------------------- */
 
 const API_BASE_URL = "http://localhost:8080/api";
 const IMAGES_LIMIT = 6;
-const INITIAL_TIMER = { minutes: 5, seconds: 0 };
+const INITIAL_TIMER = { minutes: 0, seconds: 0 };
 
 /* ----------------------- api helpers ----------------------------- */
 const fetchRestaurantsWithPhotos = async (
@@ -82,7 +83,7 @@ export default function SessionPage() {
   const [roundTransitioning, setRoundTransitioning] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [winner, setWinner] = useState<Restaurant | null>(null);
-  const [votingStatus, setVotingStatus] = useState<{allVotesIn: boolean; totalParticipants: number; participantsWithNoVotesLeft: number}>({allVotesIn: false, totalParticipants: 0, participantsWithNoVotesLeft: 0});
+  const [votingStatus, setVotingStatus] = useState<{allVotesIn: boolean; totalParticipants: number; participantsWithNoVotesLeft: number; totalVotesCast: number; totalPossibleVotes: number; currentRound: number}>({allVotesIn: false, totalParticipants: 0, participantsWithNoVotesLeft: 0, totalVotesCast: 0, totalPossibleVotes: 0, currentRound: 1});
 
   const { event, send } = useSessionWebSocket(sessionId);
 
@@ -198,10 +199,19 @@ export default function SessionPage() {
       case "roundTransition":
         setCurrentRound(event.payload.newRound);
         setRoundTransitioning(true);
-        // Refetch restaurants for new round
+        // Refetch restaurants for new round without page reload
         if (event.payload.newRound === 2) {
-          setTimeout(() => {
-            window.location.reload(); // Simple approach to reload round 2 restaurants
+          setTimeout(async () => {
+            try {
+              // Refetch restaurants for round 2
+              const enriched = await fetchRestaurantsWithPhotos(sessionId);
+              setRestaurants(enriched);
+              setCurrentRestaurantIdx(0);
+              setRoundTransitioning(false);
+            } catch (error) {
+              console.error('Failed to load round 2 restaurants:', error);
+              setRoundTransitioning(false);
+            }
           }, 2000);
         }
         break;
@@ -220,10 +230,10 @@ export default function SessionPage() {
   /* -------------------- derived state --------------------------- */
   const likeProgressPct = useMemo(
     () =>
-      restaurants.length
-        ? (likedRestaurants.length / restaurants.length) * 100
+      votingStatus.totalPossibleVotes > 0
+        ? (votingStatus.totalVotesCast / votingStatus.totalPossibleVotes) * 100
         : 0,
-    [restaurants.length, likedRestaurants.length],
+    [votingStatus.totalVotesCast, votingStatus.totalPossibleVotes],
   );
 
   const currentRestaurant = restaurants[currentRestaurantIdx];
@@ -286,6 +296,11 @@ export default function SessionPage() {
   /* --------------------------- UI ------------------------------- */
   if (loading) return <div className="p-10">Loading…</div>;
 
+  // Show final results screen when session is complete
+  if (sessionComplete && winner) {
+    return <FinalResultsScreen winner={winner} sessionId={sessionId} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       <SessionHeader 
@@ -311,6 +326,7 @@ export default function SessionPage() {
           likeProgressPct={likeProgressPct}
           likedRestaurants={likedRestaurants}
           restaurants={restaurants}
+          votingStatus={votingStatus}
           isHost={isHost}
           sessionStarted={sessionStarted}
           startPressed={startPressed}

@@ -53,11 +53,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    
+                    // Debug logging for voting requests
+                    if (request.getRequestURI().contains("/vote")) {
+                        System.out.println("JWT Auth for vote request - User: " + userId + ", URI: " + request.getRequestURI());
+                    }
+                } else {
+                    // Debug logging for token issues
+                    if (request.getRequestURI().contains("/vote")) {
+                        System.out.println("JWT token validation failed for vote request - URI: " + request.getRequestURI() + 
+                                         ", isAccessToken: " + (token != null ? jwtService.isAccessToken(token) : "null") +
+                                         ", isExpired: " + (token != null ? jwtService.isTokenExpired(token) : "null"));
+                    }
+                }
+            } else {
+                // Debug logging for missing token
+                if (request.getRequestURI().contains("/vote")) {
+                    System.out.println("No JWT token found for vote request - URI: " + request.getRequestURI());
                 }
             }
         } catch (Exception e) {
             // Log error but don't block request - user will just be unauthenticated
             logger.warn("JWT authentication failed: " + e.getMessage());
+            if (request.getRequestURI().contains("/vote")) {
+                System.out.println("JWT authentication error for vote request: " + e.getMessage());
+            }
         }
         
         filterChain.doFilter(request, response);

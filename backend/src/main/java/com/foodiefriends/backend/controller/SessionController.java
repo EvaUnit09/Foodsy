@@ -27,15 +27,12 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/sessions")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class SessionController {
     private final SessionRepository repo;
     private final SessionRestaurantRepository restaurantRepo;
     private final SessionService sessionService;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final SessionRepository sessionRepository;
-    private final SessionRestaurantRepository sessionRestaurantRepository;
-    private final SessionRestaurantVoteRepository voteRepo;
     private final VoteService voteService;
 
     // Add DTO definition at the top or in a separate file
@@ -81,8 +78,6 @@ public class SessionController {
         this.restaurantRepo = restaurantRepo;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.sessionRepository = sessionRepository;
-        this.sessionRestaurantRepository = sessionRestaurantRepository;
-        this.voteRepo = voteRepo;
         this.voteService = voteService;
 
     }
@@ -212,11 +207,15 @@ public class SessionController {
             @RequestBody VoteRequest voteRequest,
             Principal principal) {
 
+        System.out.println("DEBUG: Vote endpoint called - sessionId: " + id + ", providerId: " + providerId + ", principal: " + (principal != null ? principal.getName() : "null"));
+
         if (principal == null) {
+            System.out.println("DEBUG: Vote rejected - principal is null");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to vote");
         }
 
         if (voteRequest == null || voteRequest.voteType() == null) {
+            System.out.println("DEBUG: Vote rejected - missing vote type");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vote type is required");
         }
 
@@ -225,18 +224,28 @@ public class SessionController {
                         HttpStatus.NOT_FOUND, "Session not found"));
 
         String normalizedUserId = principal.getName().trim().toLowerCase();
+        
+        // Auto-join user as participant if not already joined
         boolean isParticipant = sessionParticipantRepository
                 .findBySessionIdAndUserId(id, normalizedUserId)
                 .isPresent();
         if (!isParticipant) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "User is not a participant of this session");
+            // Automatically add authenticated user as participant
+            SessionParticipant participant = new SessionParticipant();
+            participant.setSession(session);
+            participant.setUserId(normalizedUserId);
+            participant.setJoinedAt(java.time.Instant.now());
+            sessionParticipantRepository.save(participant);
         }
 
+        // Find the restaurant in the current round
         SessionRestaurant restaurant = restaurantRepo
-                .findBySessionIdAndProviderId(id, providerId)
+                .findBySessionIdAndRound(id, session.getRound())
+                .stream()
+                .filter(r -> r.getProviderId().equals(providerId))
+                .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Restaurant not found"));
+                        HttpStatus.NOT_FOUND, "Restaurant not found in current round"));
 
         // Use VoteService for proper validation and processing
         VoteRequest processedRequest = new VoteRequest(
@@ -265,10 +274,46 @@ public class SessionController {
         }
         
         try {
-            int remaining = voteService.getRemainingLikes(principal.getName().trim().toLowerCase(), id);
+            String normalizedUserId = principal.getName().trim().toLowerCase();
+            
+            // Auto-join user as participant if not already joined (for vote quota creation)
+            Session session = sessionRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+                    
+            boolean isParticipant = sessionParticipantRepository
+                    .findBySessionIdAndUserId(id, normalizedUserId)
+                    .isPresent();
+            if (!isParticipant) {
+                // Automatically add authenticated user as participant
+                SessionParticipant participant = new SessionParticipant();
+                participant.setSession(session);
+                participant.setUserId(normalizedUserId);
+                participant.setJoinedAt(Instant.now());
+                sessionParticipantRepository.save(participant);
+            }
+            
+            int remaining = voteService.getRemainingLikes(normalizedUserId, id);
             return Map.of("remainingVotes", remaining);
         } catch (Exception e) {
+            System.err.println("Error getting remaining votes: " + e.getMessage());
             return Map.of("remainingVotes", 0);
+        }
+    }
+
+    // Reset user vote quota for a session (for testing/debugging)
+    @DeleteMapping("/{id}/reset-votes")
+    public ResponseEntity<Map<String, String>> resetUserVotes(@PathVariable Long id, Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        
+        try {
+            String normalizedUserId = principal.getName().trim().toLowerCase();
+            voteService.resetUserVotesForSession(normalizedUserId, id);
+            return ResponseEntity.ok(Map.of("message", "Vote quota reset successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to reset votes: " + e.getMessage()));
         }
     }
 
@@ -282,9 +327,18 @@ public class SessionController {
             List<SessionParticipant> participants = sessionParticipantRepository.findBySessionId(id);
             int totalParticipants = participants.size();
             int participantsWithNoVotesLeft = 0;
+            int totalVotesCast = 0;
+            int totalPossibleVotes = 0;
             
+            // Calculate vote statistics for current round
             for (SessionParticipant participant : participants) {
                 int remaining = voteService.getRemainingLikes(participant.getUserId(), id);
+                int maxVotes = (session.getRound() == 1) ? session.getLikesPerUser() : 1;
+                int votesUsed = maxVotes - remaining;
+                
+                totalVotesCast += votesUsed;
+                totalPossibleVotes += maxVotes;
+                
                 if (remaining == 0) {
                     participantsWithNoVotesLeft++;
                 }
@@ -295,10 +349,14 @@ public class SessionController {
             return Map.of(
                 "totalParticipants", totalParticipants,
                 "participantsWithNoVotesLeft", participantsWithNoVotesLeft,
-                "allVotesIn", allVotesIn
+                "allVotesIn", allVotesIn,
+                "totalVotesCast", totalVotesCast,
+                "totalPossibleVotes", totalPossibleVotes,
+                "currentRound", session.getRound()
             );
         } catch (Exception e) {
-            return Map.of("allVotesIn", false, "totalParticipants", 0, "participantsWithNoVotesLeft", 0);
+            return Map.of("allVotesIn", false, "totalParticipants", 0, "participantsWithNoVotesLeft", 0, 
+                         "totalVotesCast", 0, "totalPossibleVotes", 0, "currentRound", 1);
         }
     }
 

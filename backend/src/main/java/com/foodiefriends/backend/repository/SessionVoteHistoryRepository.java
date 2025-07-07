@@ -33,4 +33,6 @@ public interface SessionVoteHistoryRepository extends JpaRepository<SessionVoteH
         @Param("providerId") String providerId, 
         @Param("round") Integer round, 
         @Param("voteType") VoteType voteType);
+    
+    List<SessionVoteHistory> findBySessionIdAndUserId(Long sessionId, String userId);
 }
