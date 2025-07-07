@@ -35,39 +35,43 @@ const Index = () => {
   // MVP Homepage state
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [showPersonalizedContent, setShowPersonalizedContent] = useState(false);
   const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
 
-  // Generate session ID for anonymous users
-  useEffect(() => {
-    if (!isAuthenticated && !sessionId) {
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setSessionId(newSessionId);
-    }
-  }, [isAuthenticated, sessionId]);
-
   // Load homepage data and check onboarding status
   useEffect(() => {
-    if (isAuthenticated || sessionId) {
+    // Only load personalized data for authenticated users
+    if (isAuthenticated) {
       loadHomepageData();
     }
-  }, [isAuthenticated, sessionId]);
+  }, [isAuthenticated]);
 
   const loadHomepageData = async () => {
+    // Only proceed if user is authenticated
+    if (!isAuthenticated) {
+      setShowPersonalizedContent(false);
+      return;
+    }
+
     try {
       setIsLoadingHomepageData(true);
-      const data = await homepageApi.getHomepageData(isAuthenticated, sessionId || undefined);
+      const data = await homepageApi.getHomepageData(true, undefined);
       setHomepageData(data);
       setShowPersonalizedContent(true);
       
       // Show onboarding if user hasn't completed it
-      if (isAuthenticated && !data.hasOnboarded) {
+      if (!data.hasOnboarded) {
         setShowOnboarding(true);
       }
     } catch (err) {
       console.error("Error loading homepage data:", err);
       setShowPersonalizedContent(false);
+      // If it's a 401 error, don't show the error to user since they're not authenticated
+      if (err instanceof Error && err.message.includes('401')) {
+        console.log("User not authenticated - showing basic homepage");
+      } else {
+        showNotification("Failed to load personalized content", "error");
+      }
     } finally {
       setIsLoadingHomepageData(false);
     }
@@ -316,6 +320,46 @@ const Index = () => {
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-80 bg-gray-200 rounded-lg animate-pulse" />
                 ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Sign Up Encouragement for Anonymous Users */}
+      {!isAuthenticated && (
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 border border-orange-100">
+              <div className="inline-flex items-center space-x-2 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <Star className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">Get Personalized Recommendations</span>
+              </div>
+              <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+                Sign up to discover restaurants tailored to your taste preferences and see what's trending in NYC!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/auth/signup">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Sign Up for Free
+                  </Button>
+                </Link>
+                <Link href="/auth/signin">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
+                  >
+                    <UserIcon className="w-5 h-5 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

@@ -56,6 +56,9 @@ export class HomepageApi {
   private static async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const error = await response.text();
+      if (response.status === 401) {
+        throw new Error(`API Error: 401 - Unauthorized`);
+      }
       throw new Error(`API Error: ${response.status} - ${error}`);
     }
     return response.json();
@@ -132,17 +135,24 @@ export class HomepageApi {
     };
 
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/api/homepage/analytics/track`, {
         method: "POST",
-        headers: await this.getAuthHeaders(),
+        headers,
         body: JSON.stringify(eventWithTimestamp),
       });
 
       if (!response.ok) {
-        console.warn("Failed to track analytics event:", response.statusText);
+        // Don't log 401 errors as warnings since they're expected for anonymous users
+        if (response.status !== 401) {
+          console.warn("Failed to track analytics event:", response.statusText);
+        }
       }
     } catch (error) {
-      console.warn("Error tracking analytics event:", error);
+      // Don't log auth errors as warnings
+      if (!(error instanceof Error && error.message.includes('401'))) {
+        console.warn("Error tracking analytics event:", error);
+      }
     }
   }
 
