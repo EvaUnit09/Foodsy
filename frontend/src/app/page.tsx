@@ -1,154 +1,172 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { Badge } from "@/components/badge";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import Link from "next/link";
+import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
+import { HomepageGrid } from "@/components/HomepageGrid";
+import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto } from "@/api/homepageApi";
+import { useRouter } from "next/navigation";
 
 /* -------------------------------------------------------------------------- */
-/*  1.  Static data (kept outside the component)                               */
+/*  1.  Page component                                                         */
 /* -------------------------------------------------------------------------- */
-const cuisineCategories = [
-  {
-    name: "Italian",
-    image:
-      "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
-    count: "120+ places",
-  },
-  {
-    name: "Japanese",
-    image:
-      "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop",
-    count: "85+ places",
-  },
-  {
-    name: "Mexican",
-    image:
-      "https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=400&h=300&fit=crop",
-    count: "95+ places",
-  },
-  {
-    name: "Indian",
-    image:
-      "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&h=300&fit=crop",
-    count: "75+ places",
-  },
-  {
-    name: "American",
-    image:
-      "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop",
-    count: "150+ places",
-  },
-  {
-    name: "Thai",
-    image:
-      "https://images.unsplash.com/photo-1559314809-0f31657def5e?w=400&h=300&fit=crop",
-    count: "60+ places",
-  },
-  {
-    name: "Chinese",
-    image:
-      "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=400&h=300&fit=crop",
-    count: "110+ places",
-  },
-  {
-    name: "Mediterranean",
-    image:
-      "https://images.unsplash.com/photo-1544510795-6f93fa4d5694?w=400&h=300&fit=crop",
-    count: "45+ places",
-  },
-  {
-    name: "French",
-    image:
-      "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=300&fit=crop",
-    count: "35+ places",
-  },
-  {
-    name: "Korean",
-    image:
-      "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=400&h=300&fit=crop",
-    count: "55+ places",
-  },
-  {
-    name: "Vietnamese",
-    image:
-      "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=300&fit=crop",
-    count: "40+ places",
-  },
-  {
-    name: "Greek",
-    image:
-      "https://images.unsplash.com/photo-1563379091339-03246963d4d6?w=400&h=300&fit=crop",
-    count: "30+ places",
-  },
-];
 
-const featuredRestaurants = [
-  {
-    id: 1,
-    name: "Sakura Sushi Bar",
-    cuisine: "Japanese",
-    rating: 4.8,
-    reviews: 324,
-    image:
-      "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=600&h=400&fit=crop",
-    distance: "0.5 miles",
-    priceRange: "$$",
-    isLiked: false,
-    atmosphere: ["Cozy", "Date Night"],
-  },
-  {
-    id: 2,
-    name: "Nonna's Kitchen",
-    cuisine: "Italian",
-    rating: 4.6,
-    reviews: 198,
-    image:
-      "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=600&h=400&fit=crop",
-    distance: "1.2 miles",
-    priceRange: "$$$",
-    isLiked: true,
-    atmosphere: ["Family", "Traditional"],
-  },
-  {
-    id: 3,
-    name: "Spice Route",
-    cuisine: "Indian",
-    rating: 4.7,
-    reviews: 156,
-    image:
-      "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&h=400&fit=crop",
-    distance: "0.8 miles",
-    priceRange: "$$",
-    isLiked: false,
-    atmosphere: ["Vibrant", "Casual"],
-  },
-  {
-    id: 4,
-    name: "The Burger Joint",
-    cuisine: "American",
-    rating: 4.5,
-    reviews: 267,
-    image:
-      "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=600&h=400&fit=crop",
-    distance: "1.5 miles",
-    priceRange: "$",
-    isLiked: false,
-    atmosphere: ["Casual", "Quick Bite"],
-  },
-];
+// Simple notification utility
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+  console.log(`[${type.toUpperCase()}] ${message}`);
+  // You can replace this with your preferred notification system
+};
 
-/* -------------------------------------------------------------------------- */
-/*  2.  Page component                                                         */
-/* -------------------------------------------------------------------------- */
 const Index = () => {
   const { user, isAuthenticated, signOut } = useAuth();
+  const router = useRouter();
+  const homepageApi = useHomepageApi();
+  
+  // Existing state
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // MVP Homepage state
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showPersonalizedContent, setShowPersonalizedContent] = useState(false);
+  const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
+
+  // Generate session ID for anonymous users
+  useEffect(() => {
+    if (!isAuthenticated && !sessionId) {
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setSessionId(newSessionId);
+    }
+  }, [isAuthenticated, sessionId]);
+
+  // Load homepage data and check onboarding status
+  useEffect(() => {
+    if (isAuthenticated || sessionId) {
+      loadHomepageData();
+    }
+  }, [isAuthenticated, sessionId]);
+
+  const loadHomepageData = async () => {
+    try {
+      setIsLoadingHomepageData(true);
+      const data = await homepageApi.getHomepageData(isAuthenticated, sessionId || undefined);
+      setHomepageData(data);
+      setShowPersonalizedContent(true);
+      
+      // Show onboarding if user hasn't completed it
+      if (isAuthenticated && !data.hasOnboarded) {
+        setShowOnboarding(true);
+      }
+    } catch (err) {
+      console.error("Error loading homepage data:", err);
+      setShowPersonalizedContent(false);
+    } finally {
+      setIsLoadingHomepageData(false);
+    }
+  };
+
+  const handleOnboardingComplete = async (tasteProfile: {
+    preferredCuisines: string[];
+    priceRange: string;
+    preferredBorough: string;
+  }) => {
+    try {
+      const tasteProfileDto: TasteProfileDto = {
+        preferredCuisines: tasteProfile.preferredCuisines,
+        priceRange: tasteProfile.priceRange,
+        preferredBorough: tasteProfile.preferredBorough,
+        isVegan: tasteProfile.preferredCuisines.includes("Vegan"),
+        isVegetarian: tasteProfile.preferredCuisines.includes("Vegetarian"),
+      };
+
+      await homepageApi.createTasteProfile(tasteProfileDto);
+      await homepageApi.trackTasteProfileComplete();
+      
+      showNotification("Taste profile created successfully!", "success");
+      setShowOnboarding(false);
+      
+      // Reload homepage data with personalized recommendations
+      await loadHomepageData();
+    } catch (err) {
+      console.error("Error creating taste profile:", err);
+      showNotification("Failed to save taste profile. Please try again.", "error");
+    }
+  };
+
+  const handleOnboardingSkip = () => {
+    setShowOnboarding(false);
+    showNotification("You can set up your taste profile later from your profile page!", "success");
+  };
+
+  const handleRestaurantClick = async (restaurant: RestaurantSummaryDto) => {
+    try {
+      await homepageApi.trackRestaurantClick(restaurant.id, "homepage");
+      // For now, just show a notification - you can add restaurant detail pages later
+      showNotification(`Opening ${restaurant.name}...`, "success");
+    } catch (err) {
+      console.error("Error tracking restaurant click:", err);
+    }
+  };
+
+  const handleStartSession = async () => {
+    try {
+      await homepageApi.trackSessionStart();
+      router.push("/sessions/create");
+    } catch (err) {
+      console.error("Error tracking session start:", err);
+      router.push("/sessions/create");
+    }
+  };
+
+  const handleJoinSession = async () => {
+    try {
+      await homepageApi.trackSessionJoin();
+      router.push("/sessions/Joinpage");
+    } catch (err) {
+      console.error("Error tracking session join:", err);
+      router.push("/sessions/Joinpage");
+    }
+  };
+
+  const handleToggleLike = async (restaurantId: string) => {
+    try {
+      if (!homepageData) return;
+      
+      // Find the restaurant
+      const allRestaurants = [...homepageData.yourPicks, ...homepageData.highlights, ...homepageData.trending, ...homepageData.spotlight];
+      const restaurant = allRestaurants.find(r => r.id === restaurantId);
+      if (!restaurant) return;
+
+      const newLikedStatus = !restaurant.isLiked;
+      await homepageApi.trackRestaurantLike(restaurantId, newLikedStatus);
+      
+      showNotification(newLikedStatus ? "Added to favorites!" : "Removed from favorites", "success");
+      
+      // Refresh data to get updated like status
+      await loadHomepageData();
+    } catch (err) {
+      console.error("Error toggling like:", err);
+      showNotification("Failed to update favorite status", "error");
+    }
+  };
+
+  // Show onboarding if needed
+  if (showOnboarding) {
+    return (
+      <TasteProfileOnboarding
+        onComplete={handleOnboardingComplete}
+        onSkip={isAuthenticated ? handleOnboardingSkip : undefined}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -166,18 +184,22 @@ const Index = () => {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href={"/sessions/create"}>
-                <Button variant="ghost" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Session
-                </Button>
-              </Link>
-              <Link href={"/sessions/Joinpage"}>
-                <Button variant="ghost" size="sm">
-                  <Users className="w-4 h-4 mr-2" />
-                  Sessions
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleStartSession}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Session
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleJoinSession}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Sessions
+              </Button>
               <Button variant="ghost" size="sm">
                 <Heart className="w-4 h-4 mr-2" />
                 Favorites
@@ -214,6 +236,30 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
+      {isAuthenticated && homepageData && !homepageData.hasOnboarded && !showOnboarding && (
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                <Star className="w-4 h-4" />
+              </div>
+              <span className="font-medium">
+                Get personalized restaurant recommendations! Complete your taste profile.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white border-white/30 hover:bg-white/10"
+              onClick={() => setShowOnboarding(true)}
+            >
+              Setup Now
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative py-8 px-4 sm:px-6 lg:px-8">
@@ -255,132 +301,207 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Cuisine categories */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Explore by Cuisine
-            </h2>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="icon" className="h-10 w-10">
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-10 w-10">
-                <ChevronRight className="w-5 h-5" />
-              </Button>
+      {/* Loading indicator for personalized content */}
+      {isLoadingHomepageData && (
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center">
+              <div className="inline-flex items-center space-x-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center animate-pulse">
+                  <span className="text-white font-bold text-sm">F</span>
+                </div>
+                <span className="text-lg font-medium text-gray-600">Loading your personalized recommendations...</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-80 bg-gray-200 rounded-lg animate-pulse" />
+                ))}
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {cuisineCategories.map((cuisine) => (
-              <Card
-                key={cuisine.name}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-              >
-                <CardContent className="p-0">
-                  <div className="relative h-32 overflow-hidden">
-                    <img
-                      src={cuisine.image}
-                      alt={cuisine.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all duration-300" />
-                    <div className="absolute inset-0 flex flex-col justify-end p-4">
-                      <h3 className="text-white font-semibold text-lg">
-                        {cuisine.name}
-                      </h3>
-                      <p className="text-white/80 text-sm">{cuisine.count}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Featured restaurants */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/50">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Popular Choices Near You
-            </h2>
-            <Button
-              variant="outline"
-              className="border-orange-200 text-orange-600 hover:bg-orange-50"
-            >
-              View All
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredRestaurants.map((restaurant) => (
-              <Card
-                key={restaurant.id}
-                className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
-              >
-                <CardContent className="p-0">
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={restaurant.image}
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className={`absolute top-3 right-3 w-8 h-8 p-0 rounded-full ${
-                        restaurant.isLiked
-                          ? "bg-red-500 hover:bg-red-600 text-white"
-                          : "bg-white/80 hover:bg-white text-gray-600"
-                      }`}
-                    >
-                      <Heart
-                        className={`w-4 h-4 ${restaurant.isLiked ? "fill-current" : ""}`}
-                      />
-                    </Button>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
-                        {restaurant.name}
-                      </h3>
-                      <span className="text-sm font-medium text-gray-600">
-                        {restaurant.priceRange}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {restaurant.cuisine} • {restaurant.distance}
+      {/* Personalized Content - Only show if user has completed onboarding */}
+      {showPersonalizedContent && homepageData && !isLoadingHomepageData && (
+        <>
+          {/* Your Picks Section */}
+          {homepageData.yourPicks.length > 0 && (
+            <section className="py-16 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                      Your Picks
+                    </h2>
+                    <p className="text-gray-600">
+                      Personalized recommendations based on your taste profile
                     </p>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-sm font-medium">
-                          {restaurant.rating}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          ({restaurant.reviews})
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {restaurant.atmosphere.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="text-xs bg-orange-100 text-orange-700"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+                  <Button
+                    variant="outline"
+                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                  >
+                    View All
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {homepageData.yourPicks.slice(0, 6).map((restaurant) => (
+                    <Card
+                      key={restaurant.id}
+                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
+                      onClick={() => handleRestaurantClick(restaurant)}
+                    >
+                      <CardContent className="p-0">
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={restaurant.photos[0] || "/placeholder.svg"}
+                            alt={restaurant.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleLike(restaurant.id);
+                            }}
+                            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                              restaurant.isLiked
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "bg-white/80 hover:bg-white text-gray-600"
+                            }`}
+                          >
+                            <Heart
+                              className={`w-4 h-4 ${restaurant.isLiked ? "fill-current" : ""}`}
+                            />
+                          </button>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
+                              {restaurant.name}
+                            </h3>
+                            <span className="text-sm font-medium text-gray-600">
+                              {restaurant.priceLevel}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {restaurant.category}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                              <span className="text-sm font-medium">
+                                {restaurant.rating}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({restaurant.userRatingCount})
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Trending Now Section */}
+          {homepageData.trending.length > 0 && (
+            <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/50">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                      Trending Now in NYC
+                    </h2>
+                    <p className="text-gray-600">
+                      Most popular restaurants this week
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                  >
+                    View All
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {homepageData.trending.slice(0, 4).map((restaurant, index) => (
+                    <Card
+                      key={restaurant.id}
+                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
+                      onClick={() => handleRestaurantClick(restaurant)}
+                    >
+                      <CardContent className="p-0">
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={restaurant.photos[0] || "/placeholder.svg"}
+                            alt={restaurant.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          {/* Rank Badge */}
+                          <div className="absolute top-3 left-3 w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">#{index + 1}</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleLike(restaurant.id);
+                            }}
+                            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                              restaurant.isLiked
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "bg-white/80 hover:bg-white text-gray-600"
+                            }`}
+                          >
+                            <Heart
+                              className={`w-4 h-4 ${restaurant.isLiked ? "fill-current" : ""}`}
+                            />
+                          </button>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
+                              {restaurant.name}
+                            </h3>
+                            <span className="text-sm font-medium text-gray-600">
+                              {restaurant.priceLevel}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {restaurant.category}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                              <span className="text-sm font-medium">
+                                {restaurant.rating}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({restaurant.userRatingCount})
+                              </span>
+                            </div>
+                          </div>
+                          {restaurant.clickCount && (
+                            <div className="flex items-center text-sm text-orange-600 font-medium mt-2">
+                              <Users className="w-4 h-4 mr-1" />
+                              {restaurant.clickCount} people interested
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+
 
       {/* Call to Action */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -395,17 +516,20 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
+              onClick={handleStartSession}
               className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
             >
-              Start Building Your List
+              <Plus className="w-5 h-5 mr-2" />
+              Start New Session
             </Button>
             <Button
               size="lg"
+              onClick={handleJoinSession}
               variant="outline"
               className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
             >
               <Users className="w-5 h-5 mr-2" />
-              See How Voting Works
+              Join Session
             </Button>
           </div>
         </div>
