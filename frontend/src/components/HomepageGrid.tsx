@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Heart, Star, MapPin, Clock, Users, Plus, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Star, MapPin, Users, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/button";
 import { Card, CardContent } from "@/components/card";
 import { Badge } from "@/components/badge";
@@ -70,7 +70,7 @@ export function HomepageGrid({
         <HeroSection onStartSession={onStartSession} onJoinSession={onJoinSession} />
 
         {/* Your Picks Section */}
-        <Section title="Your Picks" subtitle="Personalized recommendations based on your taste">
+        <Section title="Curated Picks" subtitle="Personalized recommendations based on your taste">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.yourPicks.map((restaurant) => (
               <RestaurantCard
@@ -225,10 +225,8 @@ function RestaurantCard({ restaurant, onClick, onToggleLike, compact = false }: 
               <div className="flex items-center space-x-2 mb-2">
                 <div className="flex items-center space-x-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium">{restaurant.rating}</span>
+                  <span className="text-sm font-medium">{restaurant.rating} ({restaurant.userRatingCount})</span>
                 </div>
-                <span className="text-gray-400">·</span>
-                <span className="text-sm text-gray-600">{restaurant.userRatingCount} reviews</span>
                 <span className="text-gray-400">·</span>
                 <span className="text-sm font-medium text-gray-700">{restaurant.priceLevel}</span>
               </div>
@@ -299,7 +297,7 @@ function TrendingCard({ restaurant, rank, onClick, onToggleLike }: { restaurant:
               <div className="flex items-center space-x-2 mb-2">
                 <div className="flex items-center space-x-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium">{restaurant.rating}</span>
+                  <span className="text-sm font-medium">{restaurant.rating} ({restaurant.userRatingCount})</span>
                 </div>
                 <span className="text-gray-400">·</span>
                 <span className="text-sm text-gray-600">{restaurant.priceLevel}</span>
@@ -427,8 +425,7 @@ function SpotlightCarousel({
                 <div className="flex items-center space-x-4 mb-6">
                   <div className="flex items-center space-x-1">
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{currentRestaurant.rating}</span>
-                    <span className="text-gray-500">({currentRestaurant.userRatingCount} reviews)</span>
+                    <span className="font-medium">{currentRestaurant.rating} ({currentRestaurant.userRatingCount})</span>
                   </div>
                   <span className="text-gray-400">·</span>
                   <span className="font-medium text-gray-700">{currentRestaurant.priceLevel}</span>

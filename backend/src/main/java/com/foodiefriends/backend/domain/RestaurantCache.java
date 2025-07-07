@@ -44,7 +44,7 @@ public class RestaurantCache {
     
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "restaurant_cache_photos", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
-    @Column(name = "photo_reference")
+    @Column(name = "photo_reference", columnDefinition = "TEXT")
     private List<String> photoReferences;
     
     @Column(name = "opening_hours", columnDefinition = "TEXT")

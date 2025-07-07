@@ -66,7 +66,10 @@ public class GooglePlacesClient {
                 "123 Mock Street, Astoria, NY",
                 List.of("restaurant", "food"),
                 new GooglePlacesSearchResponse.Location(40.7645, -73.9235),
-                List.of(),
+                List.of(
+                    new GooglePlacesSearchResponse.Photo("mock_photo_1_1", 800, 600),
+                    new GooglePlacesSearchResponse.Photo("mock_photo_1_2", 800, 600)
+                ),
                 4.5,
                 100,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE,
@@ -82,7 +85,10 @@ public class GooglePlacesClient {
                 "456 Mock Avenue, Astoria, NY",
                 List.of("restaurant", "food"),
                 new GooglePlacesSearchResponse.Location(40.7646, -73.9236),
-                List.of(),
+                List.of(
+                    new GooglePlacesSearchResponse.Photo("mock_photo_2_1", 800, 600),
+                    new GooglePlacesSearchResponse.Photo("mock_photo_2_2", 800, 600)
+                ),
                 4.2,
                 85,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
@@ -98,7 +104,10 @@ public class GooglePlacesClient {
                 "789 Mock Boulevard, Astoria, NY",
                 List.of("restaurant", "food"),
                 new GooglePlacesSearchResponse.Location(40.7647, -73.9237),
-                List.of(),
+                List.of(
+                    new GooglePlacesSearchResponse.Photo("mock_photo_3_1", 800, 600),
+                    new GooglePlacesSearchResponse.Photo("mock_photo_3_2", 800, 600)
+                ),
                 4.8,
                 120,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE,

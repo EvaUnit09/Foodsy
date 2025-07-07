@@ -25,7 +25,7 @@ interface HomepageProps {
 
 export function Homepage({ initialData, forceOnboarding = false }: HomepageProps) {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const homepageApi = useHomepageApi();
 
   // State management
@@ -59,7 +59,7 @@ export function Homepage({ initialData, forceOnboarding = false }: HomepageProps
       setIsLoading(true);
       setError(null);
 
-      const data = await homepageApi.getHomepageData(isAuthenticated, sessionId || undefined);
+      const data = await homepageApi.getHomepageData(isAuthenticated);
       setHomepageData(data);
       
       // Show onboarding if user hasn't completed it

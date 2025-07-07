@@ -6,12 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
-import { Badge } from "@/components/badge";
-
 import Link from "next/link";
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
-import { HomepageGrid } from "@/components/HomepageGrid";
-import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto } from "@/api/homepageApi";
+import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
 
 /* -------------------------------------------------------------------------- */
@@ -23,6 +20,21 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
   console.log(`[${type.toUpperCase()}] ${message}`);
   // You can replace this with your preferred notification system
 };
+
+const GOOGLE_PHOTO_PROXY = `${API_BASE_URL}/restaurants/photos`;
+
+// Ensure we have a sync helper for .map()
+function enrichWithPhotoUrls(r: RestaurantSummaryDto, max = 1): RestaurantSummaryDto {
+  if (!r) return r;
+  if (r.photoReferences && !r.photos) {
+    r.photos = r.photoReferences
+      .slice(0, max)
+      .map((ref: string) =>
+        `${GOOGLE_PHOTO_PROXY}/${r.id}/${ref}?maxWidthPx=600&maxHeightPx=600`
+      );
+  }
+  return r;
+}
 
 const Index = () => {
   const { user, isAuthenticated, signOut } = useAuth();
@@ -55,8 +67,15 @@ const Index = () => {
 
     try {
       setIsLoadingHomepageData(true);
-      const data = await homepageApi.getHomepageData(true, undefined);
-      setHomepageData(data);
+      const data = await homepageApi.getHomepageData(true);
+      const hydrated = {
+        ...data,
+        yourPicks: (data.yourPicks ?? []).map(enrichWithPhotoUrls),
+        highlights: (data.highlights ?? []).map(enrichWithPhotoUrls),
+        trending: (data.trending ?? []).map(enrichWithPhotoUrls),
+        spotlight: (data.spotlight ?? []).map(enrichWithPhotoUrls),
+      };
+      setHomepageData(hydrated);
       setShowPersonalizedContent(true);
       
       // Show onboarding if user hasn't completed it
@@ -171,6 +190,8 @@ const Index = () => {
       />
     );
   }
+
+  const trendingList = homepageData?.trending ?? [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -338,7 +359,7 @@ const Index = () => {
                 <span className="text-2xl font-bold text-gray-900">Get Personalized Recommendations</span>
               </div>
               <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-                Sign up to discover restaurants tailored to your taste preferences and see what's trending in NYC!
+                Sign up to discover restaurants tailored to your taste preferences and see what&apos;s trending in NYC!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/auth/signup">
@@ -376,7 +397,7 @@ const Index = () => {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      Your Picks
+                      Curated Picks
                     </h2>
                     <p className="text-gray-600">
                       Personalized recommendations based on your taste profile
@@ -390,16 +411,16 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {homepageData.yourPicks.slice(0, 6).map((restaurant) => (
+                  {homepageData.yourPicks.slice(0, 6).map((restaurant, index) => (
                     <Card
-                      key={restaurant.id}
+                      key={`${restaurant.id}-${index}`}
                       className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
                       onClick={() => handleRestaurantClick(restaurant)}
                     >
                       <CardContent className="p-0">
                         <div className="relative h-48 overflow-hidden">
                           <img
-                            src={restaurant.photos[0] || "/placeholder.svg"}
+                            src={(restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : "/placeholder.svg")}
                             alt={restaurant.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -452,7 +473,7 @@ const Index = () => {
           )}
 
           {/* Trending Now Section */}
-          {homepageData.trending.length > 0 && (
+          {trendingList.length > 0 && (
             <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/50">
               <div className="max-w-7xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
@@ -472,16 +493,16 @@ const Index = () => {
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {homepageData.trending.slice(0, 4).map((restaurant, index) => (
+                  {trendingList.slice(0, 4).map((restaurant: RestaurantSummaryDto, index: number) => (
                     <Card
-                      key={restaurant.id}
+                      key={`${restaurant.id}-${index}`}
                       className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
                       onClick={() => handleRestaurantClick(restaurant)}
                     >
                       <CardContent className="p-0">
                         <div className="relative h-48 overflow-hidden">
                           <img
-                            src={restaurant.photos[0] || "/placeholder.svg"}
+                            src={(restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : "/placeholder.svg")}
                             alt={restaurant.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />

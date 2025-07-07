@@ -309,7 +309,11 @@ public class RestaurantCacheService {
     }
 
     private RestaurantCache convertToRestaurantCache(GooglePlacesSearchResponse.Place place, String borough) {
-        RestaurantCache cache = new RestaurantCache(place.id(), place.name());
+        // Use displayName.text() for actual restaurant name, place.id() for placeId
+        String restaurantName = place.displayName() != null && place.displayName().text() != null 
+            ? place.displayName().text() 
+            : place.name(); // Fallback to place.name() if displayName is null
+        RestaurantCache cache = new RestaurantCache(place.id(), restaurantName);
         
         // Set basic info
         cache.setCategory(extractCategory(place.types()));
@@ -334,6 +338,14 @@ public class RestaurantCacheService {
         if (place.location() != null) {
             cache.setLatitude(place.location().latitude());
             cache.setLongitude(place.location().longitude());
+        }
+        
+        // Process photos
+        if (place.photos() != null && !place.photos().isEmpty()) {
+            List<String> photoRefs = place.photos().stream()
+                .map(GooglePlacesSearchResponse.Photo::name)
+                .collect(Collectors.toList());
+            cache.setPhotoReferences(photoRefs);
         }
         
         return cache;

@@ -38,8 +38,8 @@ interface ParticipantsSectionProps {
 export function ParticipantsSection({
   participants,
   likeProgressPct,
-  likedRestaurants,
-  restaurants,
+  // likedRestaurants,
+  // restaurants,
   votingStatus,
   isHost,
   sessionStarted,

@@ -1,5 +1,6 @@
 package com.foodiefriends.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public class HomepageResponseDto {
@@ -12,7 +13,9 @@ public class HomepageResponseDto {
     
     // Homepage sections
     private List<RestaurantSummaryDto> yourPicks;
+    @JsonProperty("highlights")
     private List<RestaurantSummaryDto> neighborhoodHighlights;
+    @JsonProperty("trending")
     private List<RestaurantSummaryDto> trendingNow;
     private List<RestaurantSummaryDto> spotlight;
     
@@ -20,6 +23,7 @@ public class HomepageResponseDto {
     private String primaryBorough; // User's preferred borough or default
     private Integer totalRestaurantsInCache;
     private boolean showOnboarding; // Should show taste profile onboarding
+    private boolean hasOnboarded;   // Frontend flag (show onboarding inverse)
     
     // Performance info (for debugging/monitoring)
     private long responseTimeMs;
@@ -121,6 +125,16 @@ public class HomepageResponseDto {
     
     public void setShowOnboarding(boolean showOnboarding) {
         this.showOnboarding = showOnboarding;
+        this.hasOnboarded = !showOnboarding;
+    }
+    
+    public boolean isHasOnboarded() {
+        return hasOnboarded;
+    }
+    
+    public void setHasOnboarded(boolean hasOnboarded) {
+        this.hasOnboarded = hasOnboarded;
+        this.showOnboarding = !hasOnboarded;
     }
     
     public long getResponseTimeMs() {
@@ -218,6 +232,7 @@ public class HomepageResponseDto {
             response.setPrimaryBorough(primaryBorough);
             response.setTotalRestaurantsInCache(totalInCache);
             response.setShowOnboarding(showOnboarding);
+            response.setHasOnboarded(!showOnboarding);
             return this;
         }
         

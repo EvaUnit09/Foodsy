@@ -1,11 +1,15 @@
 package com.foodiefriends.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.foodiefriends.backend.domain.RestaurantCache;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RestaurantSummaryDto {
     
+    @JsonProperty("id")
     private String placeId;
     private String name;
     private String category;
@@ -141,6 +145,29 @@ public class RestaurantSummaryDto {
     
     public List<String> getPhotoReferences() {
         return photoReferences;
+    }
+    
+    @JsonProperty("photos")
+    @JsonGetter("photos")
+    public List<String> getPhotos() {
+        if (photoReferences == null || photoReferences.isEmpty()) {
+            return List.of();
+        }
+        // Convert photo references to full URLs using the proxy endpoint
+        return photoReferences.stream()
+                .map(ref -> {
+                    // Extract just the photo ID from the full photo name
+                    // Photo reference format: "places/{placeId}/photos/{photoId}"
+                    String photoId = ref;
+                    if (ref.startsWith("places/") && ref.contains("/photos/")) {
+                        String[] parts = ref.split("/photos/");
+                        if (parts.length > 1) {
+                            photoId = parts[1];
+                        }
+                    }
+                    return "/api/restaurants/photos/" + placeId + "/" + photoId + "?maxWidthPx=600&maxHeightPx=600";
+                })
+                .collect(Collectors.toList());
     }
     
     public void setPhotoReferences(List<String> photoReferences) {

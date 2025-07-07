@@ -1,5 +1,5 @@
 // Base API URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Types matching the backend DTOs
 export interface TasteProfileDto {
@@ -23,6 +23,8 @@ export interface RestaurantSummaryDto {
   distance?: string;
   clickCount?: number;
   lastUpdated: string;
+  // Internal field for photo references (not exposed in JSON)
+  photoReferences?: string[];
 }
 
 export interface HomepageResponseDto {
@@ -40,23 +42,34 @@ export interface HomepageAnalyticsDto {
   userId?: string;
   section?: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+// Helper to safely join base URL and path without double slashes
+function buildUrl(path: string): string {
+  const base = API_BASE_URL.endsWith("/") ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
 }
 
 // API Service Class
 export class HomepageApi {
-  private static async getAuthHeaders(): Promise<HeadersInit> {
-    const token = localStorage.getItem("token");
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
+  private static buildHeaders(includeJson: boolean = false): HeadersInit {
+    const headers: HeadersInit = {};
+    if (includeJson) {
+      headers["Content-Type"] = "application/json";
+    }
+    return headers;
+  }
+
+  private static async getAuthHeaders(includeJson: boolean = false): Promise<HeadersInit> {
+    // For now same as buildHeaders but kept async for future token reading if needed
+    return this.buildHeaders(includeJson);
   }
 
   private static async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const error = await response.text();
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         throw new Error(`API Error: 401 - Unauthorized`);
       }
       throw new Error(`API Error: ${response.status} - ${error}`);
@@ -64,11 +77,28 @@ export class HomepageApi {
     return response.json();
   }
 
+  // Attempt to refresh the access token using the refresh token cookie
+  private static async refreshAccessToken(): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) return false;
+      // Success response JSON should contain { message: "Token refreshed" }
+      // but we don't really care about content – just status 200 is enough.
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // Taste Profile Management
   static async createTasteProfile(profile: TasteProfileDto): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/homepage/taste-profile`, {
+    const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
       method: "POST",
-      headers: await this.getAuthHeaders(),
+      headers: await this.getAuthHeaders(true),
+      credentials: "include",
       body: JSON.stringify(profile),
     });
 
@@ -79,8 +109,9 @@ export class HomepageApi {
 
   static async getTasteProfile(): Promise<TasteProfileDto | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/homepage/taste-profile`, {
+      const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
         headers: await this.getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (response.status === 404) {
@@ -95,9 +126,10 @@ export class HomepageApi {
   }
 
   static async updateTasteProfile(profile: TasteProfileDto): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/homepage/taste-profile`, {
+    const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
       method: "PUT",
       headers: await this.getAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify(profile),
     });
 
@@ -108,22 +140,34 @@ export class HomepageApi {
 
   // Homepage Data
   static async getHomepageData(): Promise<HomepageResponseDto> {
-    const response = await fetch(`${API_BASE_URL}/api/homepage/data`, {
-      headers: await this.getAuthHeaders(),
-    });
+    const attemptFetch = async () =>
+      fetch(buildUrl("/api/homepage"), {
+        // No custom headers for simple GET to avoid extra CORS preflight
+        credentials: "include",
+      });
+
+    // First attempt
+    let response = await attemptFetch();
+
+    if (response.status === 401 || response.status === 403) {
+      const refreshed = await this.refreshAccessToken();
+      if (refreshed) {
+        response = await attemptFetch();
+      }
+    }
+
+    // If still unauthorized fallback to anonymous endpoint
+    if (response.status === 401 || response.status === 403) {
+      return await this.getHomepageDataAnonymous();
+    }
 
     return await this.handleResponse<HomepageResponseDto>(response);
   }
 
-  static async getHomepageDataAnonymous(sessionId?: string): Promise<HomepageResponseDto> {
-    const url = sessionId 
-      ? `${API_BASE_URL}/api/homepage/data/anonymous?sessionId=${sessionId}`
-      : `${API_BASE_URL}/api/homepage/data/anonymous`;
-
-    const response = await fetch(url, {
-      headers: { "Content-Type": "application/json" },
+  static async getHomepageDataAnonymous(): Promise<HomepageResponseDto> {
+    const response = await fetch(buildUrl("/api/homepage"), {
+      credentials: "include",
     });
-
     return await this.handleResponse<HomepageResponseDto>(response);
   }
 
@@ -135,10 +179,11 @@ export class HomepageApi {
     };
 
     try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/homepage/analytics/track`, {
+      const headers = await this.getAuthHeaders(true);
+      const response = await fetch(buildUrl("/api/homepage/analytics"), {
         method: "POST",
         headers,
+        credentials: "include",
         body: JSON.stringify(eventWithTimestamp),
       });
 
@@ -193,9 +238,10 @@ export class HomepageApi {
 
   // Restaurant Cache Management
   static async refreshRestaurantCache(): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/homepage/cache/refresh`, {
+    const response = await fetch(buildUrl("/api/homepage/cache/refresh"), {
       method: "POST",
-      headers: await this.getAuthHeaders(),
+      headers: await this.getAuthHeaders(true),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -209,8 +255,9 @@ export class HomepageApi {
     expiredCount: number;
     quotaUsage: number;
   }> {
-    const response = await fetch(`${API_BASE_URL}/api/homepage/cache/stats`, {
-      headers: await this.getAuthHeaders(),
+    const response = await fetch(buildUrl("/api/homepage/cache/stats"), {
+      headers: await this.getAuthHeaders(true),
+      credentials: 'include',
     });
 
     return await this.handleResponse(response);
@@ -231,11 +278,11 @@ export function useHomepageApi() {
     await HomepageApi.updateTasteProfile(profile);
   };
 
-  const getHomepageData = async (isAuthenticated: boolean, sessionId?: string) => {
+  const getHomepageData = async (isAuthenticated: boolean) => {
     if (isAuthenticated) {
       return await HomepageApi.getHomepageData();
     } else {
-      return await HomepageApi.getHomepageDataAnonymous(sessionId);
+      return await HomepageApi.getHomepageDataAnonymous();
     }
   };
 
@@ -290,44 +337,49 @@ export class HomepageApiError extends Error {
 }
 
 // Response validation utilities
-export function validateTasteProfile(profile: any): profile is TasteProfileDto {
+export function validateTasteProfile(profile: unknown): profile is TasteProfileDto {
   return (
     typeof profile === "object" &&
-    Array.isArray(profile.preferredCuisines) &&
-    typeof profile.priceRange === "string" &&
-    typeof profile.preferredBorough === "string" &&
-    typeof profile.isVegan === "boolean" &&
-    typeof profile.isVegetarian === "boolean"
+    profile !== null &&
+    Array.isArray((profile as Record<string, unknown>).preferredCuisines) &&
+    typeof (profile as Record<string, unknown>).priceRange === "string" &&
+    typeof (profile as Record<string, unknown>).preferredBorough === "string" &&
+    typeof (profile as Record<string, unknown>).isVegan === "boolean" &&
+    typeof (profile as Record<string, unknown>).isVegetarian === "boolean"
   );
 }
 
-export function validateRestaurantSummary(restaurant: any): restaurant is RestaurantSummaryDto {
+export function validateRestaurantSummary(restaurant: unknown): restaurant is RestaurantSummaryDto {
+  const r = restaurant as Record<string, unknown>;
   return (
     typeof restaurant === "object" &&
-    typeof restaurant.id === "string" &&
-    typeof restaurant.name === "string" &&
-    typeof restaurant.category === "string" &&
-    typeof restaurant.rating === "number" &&
-    typeof restaurant.priceLevel === "string" &&
-    Array.isArray(restaurant.photos) &&
-    typeof restaurant.address === "string" &&
-    typeof restaurant.userRatingCount === "number" &&
-    typeof restaurant.isLiked === "boolean" &&
-    typeof restaurant.lastUpdated === "string"
+    restaurant !== null &&
+    typeof r.id === "string" &&
+    typeof r.name === "string" &&
+    typeof r.category === "string" &&
+    typeof r.rating === "number" &&
+    typeof r.priceLevel === "string" &&
+    Array.isArray(r.photos) &&
+    typeof r.address === "string" &&
+    typeof r.userRatingCount === "number" &&
+    typeof r.isLiked === "boolean" &&
+    typeof r.lastUpdated === "string"
   );
 }
 
-export function validateHomepageResponse(response: any): response is HomepageResponseDto {
+export function validateHomepageResponse(response: unknown): response is HomepageResponseDto {
+  const r = response as Record<string, unknown>;
   return (
     typeof response === "object" &&
-    Array.isArray(response.yourPicks) &&
-    Array.isArray(response.highlights) &&
-    Array.isArray(response.trending) &&
-    Array.isArray(response.spotlight) &&
-    typeof response.hasOnboarded === "boolean" &&
-    response.yourPicks.every(validateRestaurantSummary) &&
-    response.highlights.every(validateRestaurantSummary) &&
-    response.trending.every(validateRestaurantSummary) &&
-    response.spotlight.every(validateRestaurantSummary)
+    response !== null &&
+    Array.isArray(r.yourPicks) &&
+    Array.isArray(r.highlights) &&
+    Array.isArray(r.trending) &&
+    Array.isArray(r.spotlight) &&
+    typeof r.hasOnboarded === "boolean" &&
+    (r.yourPicks as unknown[]).every(validateRestaurantSummary) &&
+    (r.highlights as unknown[]).every(validateRestaurantSummary) &&
+    (r.trending as unknown[]).every(validateRestaurantSummary) &&
+    (r.spotlight as unknown[]).every(validateRestaurantSummary)
   );
 } 

@@ -23,7 +23,7 @@ import java.util.Set;
 
 @RestController
 @RequestMapping("/api/homepage")
-@CrossOrigin(origins = "*") // Configure this for production
+// CORS is configured globally in SecurityConfig/WebConfig; no need for per-controller override.
 public class HomepageController {
 
     private static final Logger logger = LoggerFactory.getLogger(HomepageController.class);
@@ -43,6 +43,7 @@ public class HomepageController {
      */
     @GetMapping
     public ResponseEntity<HomepageResponseDto> getHomepage(Authentication authentication) {
+        System.out.println("DEBUG: Homepage endpoint called, authentication: " + authentication);
         try {
             if (authentication != null && authentication.isAuthenticated()) {
                 // Authenticated user
@@ -315,6 +316,15 @@ public class HomepageController {
             logger.error("Error refreshing borough data: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Test endpoint to verify security config
+     * GET /api/homepage/test
+     */
+    @GetMapping("/test")
+    public ResponseEntity<String> testEndpoint() {
+        return ResponseEntity.ok("Homepage test endpoint works!");
     }
 
     /**
