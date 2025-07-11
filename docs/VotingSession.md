@@ -1,4 +1,4 @@
-# FoodieFriends — Voting Room Feature Design
+# Foodsy — Voting Room Feature Design
 
 * * *
 
@@ -182,4 +182,4 @@ public class VotingService {
 
 * * *
 
-*This document captures the core rules, data shapes, and UX flow needed to implement the FoodieFriends voting room while leaving plenty of room for future refinements (recommendations engine, tiered rounds, gamification).*
+*This document captures the core rules, data shapes, and UX flow needed to implement the Foodsy voting room while leaving plenty of room for future refinements (recommendations engine, tiered rounds, gamification).*

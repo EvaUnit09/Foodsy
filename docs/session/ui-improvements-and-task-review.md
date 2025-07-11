@@ -4,7 +4,7 @@
 **Session Focus:** Review and update completed tasks in tasks.md, identify UI/UX improvements implemented
 
 ## Overview
-This session focused on reviewing the current state of the FoodieFriends application and updating the tasks.md file to reflect completed work, particularly in frontend UI/UX improvements, form handling, and state management.
+This session focused on reviewing the current state of the Foodsy application and updating the tasks.md file to reflect completed work, particularly in frontend UI/UX improvements, form handling, and state management.
 
 ## Tasks Completed (Identified from Codebase Analysis)
 
@@ -183,4 +183,4 @@ This session focused on reviewing the current state of the FoodieFriends applica
 
 ## Conclusion
 
-The FoodieFriends application has achieved a professional level of UI/UX implementation with comprehensive form handling, state management, and real-time features. The codebase demonstrates excellent technical practices and user experience design. The tasks.md file has been updated to reflect the significant progress made in frontend development. 
+The Foodsy application has achieved a professional level of UI/UX implementation with comprehensive form handling, state management, and real-time features. The codebase demonstrates excellent technical practices and user experience design. The tasks.md file has been updated to reflect the significant progress made in frontend development. 

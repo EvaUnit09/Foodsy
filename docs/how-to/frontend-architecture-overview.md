@@ -14,7 +14,7 @@
 
 ## Project Structure
 
-The FoodieFriends frontend follows Next.js 13+ App Router structure:
+The foodsy frontend follows Next.js 13+ App Router structure:
 
 ```
 frontend/

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the comprehensive architecture for the FoodieFriends voting session system, including authentication, vote management, real-time features, and UI components.
+This document outlines the comprehensive architecture for the foodsy voting session system, including authentication, vote management, real-time features, and UI components.
 
 ## Current Issues Identified
 

@@ -4,9 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-.env
 
-../docs
 ### STS ###
 .apt_generated
 .classpath
@@ -37,3 +35,17 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment Variables ###
+.env
+.env.local
+.env.production
+.env.staging
+
+### Logs ###
+*.log
+logs/
+
+### Application specific ###
+cookies.txt
+backend.log

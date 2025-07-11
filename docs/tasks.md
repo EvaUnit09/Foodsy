@@ -1,6 +1,6 @@
-# FoodieFriends Improvement Tasks
+# Foodsy Improvement Tasks
 
-This document contains a detailed list of actionable improvement tasks for the FoodieFriends application. Each task is logically ordered and covers both architectural and code-level improvements.
+This document contains a detailed list of actionable improvement tasks for the Foodsy application. Each task is logically ordered and covers both architectural and code-level improvements.
 
 ## Backend Improvements
 

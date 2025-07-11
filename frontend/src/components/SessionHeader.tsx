@@ -30,7 +30,7 @@ export function SessionHeader({ sessionId, currentRound, timeLeft }: SessionHead
                 <span className="text-white font-bold text-sm">F</span>
               </div>
               <span className="text-xl font-bold text-gray-900">
-                foodiefriends
+                Foodsy
               </span>
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                 NY

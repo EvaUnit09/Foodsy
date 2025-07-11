@@ -4,7 +4,7 @@
 **Session Focus:** Plan implementation of MVP homepage features based on `docs/mvp-homepage.md`
 
 ## Project Overview
-FoodieFriends MVP homepage with 5 sections (Hero, Your Picks, Highlights, Trending, Spotlight) designed to stay within Google Places API free tier limits (60% usage cap).
+Foodsy MVP homepage with 5 sections (Hero, Your Picks, Highlights, Trending, Spotlight) designed to stay within Google Places API free tier limits (60% usage cap).
 
 ## Implementation Status
 

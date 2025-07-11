@@ -49,6 +49,11 @@ export function FinalResultsScreen({ winner, sessionId }: FinalResultsScreenProp
                 <span className="text-green-800 font-semibold text-lg">
                   Final Votes: {winner.voteCount || winner.likeCount || 0}
                 </span>
+                {winner.round1Votes !== undefined && winner.round2Votes !== undefined && (
+                  <div className="text-sm text-green-600 mt-1">
+                    (Round 1: {winner.round1Votes} + Round 2: {winner.round2Votes})
+                  </div>
+                )}
               </div>
             </div>
 

@@ -42,7 +42,7 @@ Added MVP-specific state variables to your existing component:
 
 #### **Loading States**
 - Beautiful skeleton screens with your brand colors
-- Animated Foodsie logo during data loading
+- Animated Foodsy logo during data loading
 - Smooth transitions between loading and content states
 
 ### 4. **Enhanced Existing Functionality**

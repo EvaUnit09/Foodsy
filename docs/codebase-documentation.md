@@ -1,7 +1,7 @@
-# FoodieFriends Codebase Documentation (2025)
+# foodsy Codebase Documentation (2025)
 
 ## Overview
-FoodieFriends is a modern web application for group restaurant decision-making. Users create or join sessions, browse restaurants, and vote in real time. The app features a live, two-round voting flow, Google Places API integration, and a robust user system supporting both accounts and guests.
+foodsy is a modern web application for group restaurant decision-making. Users create or join sessions, browse restaurants, and vote in real time. The app features a live, two-round voting flow, Google Places API integration, and a robust user system supporting both accounts and guests.
 
 ---
 
@@ -108,4 +108,4 @@ FoodieFriends is a modern web application for group restaurant decision-making. 
 
 ---
 
-This documentation is up-to-date as of July 2024 and reflects the current architecture and feature set of FoodieFriends.
+This documentation is up-to-date as of July 2024 and reflects the current architecture and feature set of foodsy.

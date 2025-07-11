@@ -31,11 +31,6 @@ export function useSessionVoting({
   >({});
   const [remainingVotes, setRemainingVotes] = useState<number>(0);
 
-  // Reset votes when round changes
-  useEffect(() => {
-    setVoteByProvider({});
-  }, [currentRound]);
-
   // Fetch remaining votes function
   const fetchRemainingVotes = async () => {
     if (!isAuthenticated || !sessionId) return;
@@ -52,6 +47,18 @@ export function useSessionVoting({
       console.error('Failed to fetch remaining votes:', error);
     }
   };
+
+  // Reset votes when round changes and force refresh of remaining votes
+  useEffect(() => {
+    setVoteByProvider({});
+    // Force immediate refresh of remaining votes when round changes
+    if (isAuthenticated && sessionId) {
+      // Add small delay to ensure backend has processed round transition
+      setTimeout(() => {
+        fetchRemainingVotes();
+      }, 500);
+    }
+  }, [currentRound, isAuthenticated, sessionId]);
 
   // Fetch remaining votes on mount and round change
   useEffect(() => {

@@ -153,6 +153,13 @@ export default function SessionPage() {
       // Initialize round state from session
       if (sessionObj) {
         setCurrentRound(sessionObj.round || 1);
+        
+        // Sync session started state based on backend status
+        // Session is considered started if status is not 'open' (i.e., 'voting', 'round1', 'round2', etc.)
+        const isStarted = sessionObj.status && sessionObj.status !== 'open';
+        setSessionStarted(isStarted);
+        
+        console.log(`Session sync: status="${sessionObj.status}", round=${sessionObj.round}, started=${isStarted}`);
       }
       
       setCurrentRestaurantIdx(0);

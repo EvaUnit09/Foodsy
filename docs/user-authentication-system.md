@@ -1,10 +1,10 @@
 # User Authentication System Documentation
 
-This document outlines the comprehensive user authentication system implemented for FoodieFriends, including security best practices, validation rules, and implementation details.
+This document outlines the comprehensive user authentication system implemented for Foodsy, including security best practices, validation rules, and implementation details.
 
 ## Overview
 
-The FoodieFriends authentication system provides commercial-grade security with both email/password registration and Google OAuth2 integration. The system follows enterprise security standards and includes comprehensive validation, real-time feedback, and secure data handling.
+The Foodsy authentication system provides commercial-grade security with both email/password registration and Google OAuth2 integration. The system follows enterprise security standards and includes comprehensive validation, real-time feedback, and secure data handling.
 
 ## Architecture
 
@@ -165,7 +165,7 @@ CREATE TABLE user_food_allergies (
 **Response**:
 ```json
 {
-    "message": "Account created successfully! Welcome to Foodsie!",
+    "message": "Account created successfully! Welcome to Foodsy!",
     "success": true,
     "user": {
         "id": 1,

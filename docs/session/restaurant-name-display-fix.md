@@ -17,7 +17,7 @@ In the `RestaurantCacheService.convertToRestaurantCache()` method, we're using `
 Update the `convertToRestaurantCache` method in `RestaurantCacheService.java` to use the correct field for the restaurant name.
 
 ## Files to Modify
-- `backend/src/main/java/com/foodiefriends/backend/service/RestaurantCacheService.java`
+- `backend/src/main/java/com/foodsy/backend/service/RestaurantCacheService.java`
 
 ## Implementation Status
 - [x] Issue identified

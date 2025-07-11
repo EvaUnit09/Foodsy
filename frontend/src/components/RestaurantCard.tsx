@@ -15,6 +15,8 @@ export interface Restaurant {
   address: string;
   likeCount: number;
   voteCount?: number; // For winner data from backend
+  round1Votes?: number; // Votes from round 1
+  round2Votes?: number; // Votes from round 2
   round: number;
   photos?: string[];
   priceLevel?: string | null;

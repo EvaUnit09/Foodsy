@@ -317,7 +317,7 @@ const SignUpPage = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">F</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Foodsie</span>
+                <span className="text-xl font-bold text-gray-900">Foodsy</span>
                 <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                   NY
                 </span>
@@ -340,7 +340,7 @@ const SignUpPage = () => {
               Create Your Account
             </h1>
             <p className="text-lg text-gray-600">
-              Join Foodsie to create voting sessions and discover amazing restaurants with friends
+              Join Foodsy to create voting sessions and discover amazing restaurants with friends
             </p>
           </div>
 

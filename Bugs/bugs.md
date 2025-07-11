@@ -1,0 +1,4 @@
+- FinalResultsScreen.tsx -> Final votes was showing 1 in a test round . should be round 1 votes + round 2 votes 
+- After clicking start round -> Votes remaining : 0/2 "Youve used all your votes for this round!" stays until you refresh the page. Maybe a problem with page load order / hydration
+- Upon a page refresh host needs to click start voting again before a vote can be placed.
+- Homepage Restaurants should take you to restaurant url. Currently theres no redirect

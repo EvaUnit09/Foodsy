@@ -114,11 +114,18 @@ export function Homepage({ initialData, forceOnboarding = false }: HomepageProps
       // Track analytics
       await homepageApi.trackRestaurantClick(restaurant.id, getSectionFromRestaurant(restaurant));
       
-      // Navigate to restaurant details (you might want to create this page)
-      router.push(`/restaurant/${restaurant.id}`);
+      // Create Google Maps search URL with restaurant name and location
+      const searchQuery = encodeURIComponent(`${restaurant.name} ${restaurant.address || 'New York'}`);
+      const googleMapsUrl = `https://www.google.com/maps/search/${searchQuery}`;
+      
+      // Open in new tab
+      window.open(googleMapsUrl, '_blank');
     } catch (err) {
       console.error("Error tracking restaurant click:", err);
-      // Don't show error to user for analytics failure
+      // Still redirect to Google Maps even if analytics fails
+      const searchQuery = encodeURIComponent(`${restaurant.name} New York`);
+      const googleMapsUrl = `https://www.google.com/maps/search/${searchQuery}`;
+      window.open(googleMapsUrl, '_blank');
     }
   };
 

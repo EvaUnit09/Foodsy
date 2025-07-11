@@ -1,6 +1,6 @@
 # How-To Documentation Index
 
-Welcome to the FoodieFriends How-To Documentation! This folder contains comprehensive guides for developers working on the FoodieFriends codebase.
+Welcome to the foodsy How-To Documentation! This folder contains comprehensive guides for developers working on the foodsy codebase.
 
 ## 📖 Architecture Overviews
 

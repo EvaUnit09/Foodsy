@@ -12,11 +12,11 @@
 
 ## Project Structure
 
-The FoodieFriends backend follows Spring Boot's standard Maven project structure:
+The foodsy backend follows Spring Boot's standard Maven project structure:
 
 ```
 backend/
-├── src/main/java/com/foodiefriends/backend/
+├── src/main/java/com/foodsy/backend/
 │   ├── BackendApplication.java          # Main Spring Boot application class
 │   ├── client/                          # External API clients
 │   │   └── GooglePlacesClient.java      # Google Places API integration

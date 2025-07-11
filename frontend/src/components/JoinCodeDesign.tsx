@@ -70,7 +70,7 @@ const JoinSessionForm = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">F</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Foodsie</span>
+                <span className="text-xl font-bold text-gray-900">Foodsy</span>
                 <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                   NY
                 </span>
@@ -122,14 +122,7 @@ const JoinSessionForm = () => {
                   />
                   {isAuthenticated && user && username && (
                     <p className="text-sm text-gray-500 mt-1">
-                      Using your account name. Want to use a different name?{" "}
-                      <button
-                        type="button"
-                        onClick={() => setUsername("")}
-                        className="text-orange-600 hover:text-orange-500 font-medium"
-                      >
-                        Click here to change
-                      </button>
+                      Using your account name
                     </p>
                   )}
                 </div>

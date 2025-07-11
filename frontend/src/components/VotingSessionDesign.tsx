@@ -7,7 +7,7 @@ export default function VotingSessionPage() {
     <div className="max-w-screen-2xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex justify-between items-center border-b pb-4 mb-6">
-        <h1 className="text-2xl font-semibold">FoodieFriends</h1>
+        <h1 className="text-2xl font-semibold">foodsy</h1>
         <div className="flex items-center gap-6">
           <nav className="flex gap-4 text-sm">
             <a href="#">Home</a>

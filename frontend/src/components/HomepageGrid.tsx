@@ -136,7 +136,7 @@ function HeroSection({ onStartSession, onJoinSession }: { onStartSession: () => 
         <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-bold text-xl">F</span>
         </div>
-        <span className="text-3xl font-bold text-gray-900">Welcome to Foodsie</span>
+                        <span className="text-3xl font-bold text-gray-900">Welcome to Foodsy</span>
       </div>
       <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
         Discover amazing restaurants and make group decisions effortlessly

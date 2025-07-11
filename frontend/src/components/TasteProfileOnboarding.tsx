@@ -60,7 +60,7 @@ export function TasteProfileOnboarding({ onComplete, onSkip }: TasteProfileOnboa
             <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">F</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">Welcome to Foodsie!</span>
+            <span className="text-2xl font-bold text-gray-900">Welcome to Foodsy!</span>
           </div>
           <p className="text-gray-600 text-lg">
             Let's personalize your food experience in just 3 steps

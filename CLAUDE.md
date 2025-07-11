@@ -100,7 +100,7 @@ Your code must be 100% clean. No exceptions.
 
 ## Project Structure
 
-FoodieFriends is a full-stack web application for group restaurant voting sessions. It consists of:
+Foodsy is a full-stack web application for group restaurant voting sessions. It consists of:
 
 ### Backend (Java/Spring Boot)
 - **Location**: `backend/` directory
