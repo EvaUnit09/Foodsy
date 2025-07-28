@@ -19,3 +19,6 @@ logs/
 
 # Documentation (contains sensitive info)
 docs/
+
+backend/HELP.md
+*.md
