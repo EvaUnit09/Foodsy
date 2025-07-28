@@ -19,7 +19,8 @@ public record GooglePlacesSearchResponse(
             String priceRange,
             String currentOpeningHours,
             String generativeSummary,
-            String reviewSummary
+            String reviewSummary,
+            String websiteUri
     ) {}
 
     public record DisplayName(

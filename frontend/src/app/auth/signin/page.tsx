@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiClient, ApiError } from "@/api/client";
+import { AuthHeader } from "@/components/AuthHeader";
 
 const SignInPage = () => {
   const router = useRouter();
@@ -22,24 +24,12 @@ const SignInPage = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ 
-          emailOrUsername: email, 
-          password: password 
-        }),
+      const data = await ApiClient.auth.login({ 
+        emailOrUsername: email, 
+        password: password 
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Sign in failed");
-      }
-
-      const data = await res.json();
       
-      if (data.success) {
+      if (data.success && data.user) {
         // Use the auth context to sign in
         signIn(data.user);
         
@@ -50,7 +40,8 @@ const SignInPage = () => {
       }
 
     } catch (err) {
-      alert((err as Error).message);
+      const errorMessage = err instanceof ApiError ? err.message : (err as Error).message;
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -63,35 +54,7 @@ const SignInPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/"
-                className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Back to Home</span>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">Foodsy</span>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  NY
-                </span>
-              </div>
-            </div>
-
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AuthHeader />
 
       {/* Sign In Form */}
       <section className="py-8 px-4 sm:px-6 lg:px-8">

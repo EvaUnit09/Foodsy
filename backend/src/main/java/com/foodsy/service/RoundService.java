@@ -69,6 +69,7 @@ public class RoundService {
             round2Restaurant.setCurrentOpeningHours(restaurant.getCurrentOpeningHours());
             round2Restaurant.setGenerativeSummary(restaurant.getGenerativeSummary());
             round2Restaurant.setReviewSummary(restaurant.getReviewSummary());
+            round2Restaurant.setWebsiteUri(restaurant.getWebsiteUri());
             round2Restaurant.setRound(2);
             round2Restaurant.setLikeCount(0); // Reset vote count for round 2
             

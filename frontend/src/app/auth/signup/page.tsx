@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, Check, X, AlertCircle } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Check, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiClient, ApiError } from "@/api/client";
+import { AuthHeader } from "@/components/AuthHeader";
 
 interface PasswordStrength {
   score: number;
@@ -264,15 +266,9 @@ const SignUpPage = () => {
     setErrors({});
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
+      const data = await ApiClient.auth.signup(formData);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success && data.user) {
         // Sign in the user using auth context
         signIn(data.user);
         
@@ -282,8 +278,9 @@ const SignUpPage = () => {
         setErrors({ general: data.message || "Registration failed. Please try again." });
       }
 
-    } catch {
-      setErrors({ general: "Network error. Please check your connection and try again." });
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : "Network error. Please check your connection and try again.";
+      setErrors({ general: errorMessage });
     } finally {
       setSubmitting(false);
     }
@@ -302,35 +299,7 @@ const SignUpPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/auth/signin"
-                className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Back to Sign In</span>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">Foodsy</span>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  NY
-                </span>
-              </div>
-            </div>
-
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AuthHeader backLink="/auth/signin" backText="Back to Sign In" />
 
       {/* Sign Up Form */}
       <section className="py-8 px-4 sm:px-6 lg:px-8">

@@ -21,7 +21,7 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "places.id,places.name,places.displayName,places.formattedAddress,places.types,places.location,places.photos,places.rating,places.priceLevel"
+                        "places.id,places.name,places.displayName,places.formattedAddress,places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri"
                 )
                 .build();
     }
@@ -76,7 +76,8 @@ public class GooglePlacesClient {
                 "$-$$",
                 "Mon-Sun: 9am-9pm",
                 "A great place for mock food.",
-                "Loved by locals for its mock cuisine."
+                "Loved by locals for its mock cuisine.",
+                "https://www.mockrestaurant1.com"
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_2",
@@ -95,7 +96,8 @@ public class GooglePlacesClient {
                 "$",
                 "Mon-Fri: 10am-8pm",
                 "Affordable and tasty mock meals.",
-                "Great value for the price."
+                "Great value for the price.",
+                "https://www.mockrestaurant2.com"
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_3",
@@ -114,7 +116,8 @@ public class GooglePlacesClient {
                 "$$$",
                 "Sat-Sun: 11am-11pm",
                 "Fine dining mock experience.",
-                "Top-rated by mock foodies."
+                "Top-rated by mock foodies.",
+                "https://www.mockrestaurant3.com"
             )
         );
         
@@ -194,7 +197,7 @@ public class GooglePlacesClient {
             RestClient placeDetailsClient = RestClient.builder()
                     .baseUrl("https://places.googleapis.com/v1")
                     .defaultHeader("X-Goog-Api-Key", apiKey)
-                    .defaultHeader("X-Goog-FieldMask", "id,name,displayName,formattedAddress,types,location,photos,rating,priceLevel")
+                    .defaultHeader("X-Goog-FieldMask", "id,name,displayName,formattedAddress,types,location,photos,rating,priceLevel,websiteUri")
                     .build();
             
             // Get place details to access photos
@@ -239,7 +242,7 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount,priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary")
+                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount,priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary,websiteUri")
                 .build();
         return detailsClient.get()
                 .uri("/places/{placeId}", placeId)
@@ -257,6 +260,7 @@ public class GooglePlacesClient {
         String currentOpeningHours = details.get("currentOpeningHours") != null ? details.get("currentOpeningHours").toString() : null;
         String generativeSummary = getString.apply("generativeSummary");
         String reviewSummary = getString.apply("reviewSummary");
+        String websiteUri = getString.apply("websiteUri");
         return new GooglePlacesSearchResponse.Place(
                 place.id(),
                 place.name(),
@@ -271,7 +275,8 @@ public class GooglePlacesClient {
                 priceRange,
                 currentOpeningHours,
                 generativeSummary,
-                reviewSummary
+                reviewSummary,
+                websiteUri != null ? websiteUri : place.websiteUri()
         );
     }
 }

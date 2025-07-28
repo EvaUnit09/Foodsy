@@ -23,6 +23,7 @@ export interface RestaurantSummaryDto {
   distance?: string;
   clickCount?: number;
   lastUpdated: string;
+  websiteUri?: string;
   // Internal field for photo references (not exposed in JSON)
   photoReferences?: string[];
 }
@@ -363,7 +364,8 @@ export function validateRestaurantSummary(restaurant: unknown): restaurant is Re
     typeof r.address === "string" &&
     typeof r.userRatingCount === "number" &&
     typeof r.isLiked === "boolean" &&
-    typeof r.lastUpdated === "string"
+    typeof r.lastUpdated === "string" &&
+    (r.websiteUri === undefined || typeof r.websiteUri === "string")
   );
 }
 

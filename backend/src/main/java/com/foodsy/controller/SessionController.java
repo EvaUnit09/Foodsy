@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/sessions")
+@RequestMapping("/sessions")
 public class SessionController {
     private final SessionRepository repo;
     private final SessionRestaurantRepository restaurantRepo;

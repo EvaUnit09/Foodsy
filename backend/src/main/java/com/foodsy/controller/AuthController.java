@@ -4,6 +4,9 @@ import com.foodsy.domain.User;
 import com.foodsy.dto.*;
 import com.foodsy.service.UserService;
 import com.foodsy.service.JwtService;
+import com.foodsy.util.UserMapper;
+import com.foodsy.util.CookieUtil;
+import com.foodsy.util.ValidationUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -17,32 +20,30 @@ import java.util.Optional;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 public class AuthController {
     
     private final UserService userService;
     private final JwtService jwtService;
+    private final CookieUtil cookieUtil;
     
     @Autowired
-    public AuthController(UserService userService, JwtService jwtService) {
+    public AuthController(UserService userService, JwtService jwtService, CookieUtil cookieUtil) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.cookieUtil = cookieUtil;
     }
     
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody SignUpRequest signUpRequest, HttpServletResponse response) {
         try {
-            // Sanitize inputs
-            String username = sanitizeInput(signUpRequest.username());
-            String email = sanitizeInput(signUpRequest.email()).toLowerCase();
-            String firstName = sanitizeInput(signUpRequest.firstName());
-            String lastName = sanitizeInput(signUpRequest.lastName());
+            // Sanitize and validate inputs
+            SignUpRequest validatedRequest = ValidationUtil.sanitizeAndValidateSignUpRequest(signUpRequest);
             
-            // Validate password confirmation
-            if (!signUpRequest.password().equals(signUpRequest.confirmPassword())) {
-                return ResponseEntity.badRequest()
-                    .body(new AuthResponse("Passwords do not match!", false, null));
-            }
+            String username = validatedRequest.username();
+            String email = validatedRequest.email();
+            String firstName = validatedRequest.firstName();
+            String lastName = validatedRequest.lastName();
             
             // Check for existing users with detailed error messages
             if (userService.existsByEmail(email)) {
@@ -64,7 +65,7 @@ public class AuthController {
             user.setLastName(lastName);
             
             User savedUser = userService.createUser(user);
-            UserDto userDto = convertToDto(savedUser);
+            UserDto userDto = UserMapper.toDto(savedUser);
             
             // Generate JWT tokens
             String accessToken = jwtService.generateAccessToken(savedUser.getUsername(), savedUser.getEmail());
@@ -85,14 +86,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new AuthResponse("Registration failed. Please try again.", false, null));
         }
-    }
-    
-    private String sanitizeInput(String input) {
-        if (input == null) return null;
-        // Remove potentially dangerous characters and trim whitespace
-        return input.trim()
-                   .replaceAll("[<>\"'&]", "") // Remove potential XSS characters
-                   .replaceAll("\\s+", " "); // Normalize whitespace
     }
     
     @PostMapping("/login")
@@ -117,7 +110,7 @@ public class AuthController {
                     .body(new AuthResponse("Account is disabled!", false, null));
             }
             
-            UserDto userDto = convertToDto(user);
+            UserDto userDto = UserMapper.toDto(user);
             
             // Generate JWT tokens
             String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
@@ -151,7 +144,7 @@ public class AuthController {
                 return ResponseEntity.notFound().build();
             }
             
-            UserDto userDto = convertToDto(userOptional.get());
+            UserDto userDto = UserMapper.toDto(userOptional.get());
             return ResponseEntity.ok(userDto);
             
         } catch (Exception e) {
@@ -178,7 +171,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletResponse response) {
         // Clear cookies
-        clearTokenCookies(response);
+        cookieUtil.clearAuthCookies(response);
         return ResponseEntity.ok(Map.of("message", "Logout successful"));
     }
     
@@ -204,62 +197,13 @@ public class AuthController {
         String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
         
         // Set new access token cookie
-        setAccessTokenCookie(response, newAccessToken);
+        cookieUtil.setAccessTokenCookie(response, newAccessToken);
         
         return ResponseEntity.ok(Map.of("message", "Token refreshed"));
     }
     
     private void setTokenCookies(HttpServletResponse response, String accessToken, String refreshToken) {
-        setAccessTokenCookie(response, accessToken);
-        setRefreshTokenCookie(response, refreshToken);
-    }
-    
-    private void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
-        Cookie accessCookie = new Cookie("accessToken", accessToken);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(false); // Set to true in production with HTTPS
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(24 * 60 * 60); // 24 hours
-        response.addCookie(accessCookie);
-    }
-    
-    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(false); // Set to true in production with HTTPS
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
-        response.addCookie(refreshCookie);
-    }
-    
-    private void clearTokenCookies(HttpServletResponse response) {
-        Cookie accessCookie = new Cookie("accessToken", "");
-        accessCookie.setHttpOnly(true);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(0);
-        response.addCookie(accessCookie);
-        
-        Cookie refreshCookie = new Cookie("refreshToken", "");
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(0);
-        response.addCookie(refreshCookie);
-    }
-    
-    private UserDto convertToDto(User user) {
-        return new UserDto(
-            user.getId(),
-            user.getUsername(),
-            user.getEmail(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getDisplayName(),
-            user.getAvatarUrl(),
-            user.getDietaryPreferences(),
-            user.getFoodAllergies(),
-            user.getProvider(),
-            user.getEmailVerified(),
-            user.getCreatedAt()
-        );
+        cookieUtil.setAccessTokenCookie(response, accessToken);
+        cookieUtil.setRefreshTokenCookie(response, refreshToken);
     }
 }

@@ -15,7 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 @RestController
-@RequestMapping("/api/restaurants")
+@RequestMapping("/restaurants")
 public class RestaurantController {
     private final GooglePlacesClient placesClient;
     private final SessionService sessionService;
@@ -38,7 +38,8 @@ public class RestaurantController {
                         place.userRatingsTotal(),
                         place.currentOpeningHours(),
                         place.generativeSummary(),
-                        place.reviewSummary()
+                        place.reviewSummary(),
+                        place.websiteUri()
                 ))
                 .toList();
     }

@@ -8,7 +8,7 @@ import com.foodsy.dto.VoteRequest;
 
 
 @RestController
-@RequestMapping("/api/votes")
+@RequestMapping("/votes")
 public class VoteController {
 
     private final VoteService voteService;

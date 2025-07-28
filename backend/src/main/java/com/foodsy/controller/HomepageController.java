@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/homepage")
+@RequestMapping("/homepage")
 // CORS is configured globally in SecurityConfig/WebConfig; no need for per-controller override.
 public class HomepageController {
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { ApiClient } from '@/api/client';
 
 interface User {
   id: number;
@@ -48,19 +49,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8080/api/auth/me', {
-        method: 'GET',
-        credentials: 'include', // Include HTTP-only cookies
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
+      const userData = await ApiClient.auth.me();
+      setUser(userData);
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Error checking auth status:', error);
       setUser(null);
@@ -81,10 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      await fetch('http://localhost:8080/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await ApiClient.auth.logout();
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {

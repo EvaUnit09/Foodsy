@@ -132,8 +132,14 @@ const Index = () => {
   const handleRestaurantClick = async (restaurant: RestaurantSummaryDto) => {
     try {
       await homepageApi.trackRestaurantClick(restaurant.id, "homepage");
-      // For now, just show a notification - you can add restaurant detail pages later
-      showNotification(`Opening ${restaurant.name}...`, "success");
+      
+      // Open website if available
+      if (restaurant.websiteUri) {
+        window.open(restaurant.websiteUri, '_blank', 'noopener,noreferrer');
+        showNotification(`Opening ${restaurant.name} website...`, "success");
+      } else {
+        showNotification(`${restaurant.name} - No website available`, "success");
+      }
     } catch (err) {
       console.error("Error tracking restaurant click:", err);
     }

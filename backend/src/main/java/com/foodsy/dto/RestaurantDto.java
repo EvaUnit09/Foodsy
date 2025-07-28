@@ -11,7 +11,8 @@ public record RestaurantDto(
         Integer userRatingCount,
         String currentOpeningHours,
         String generativeSummary,
-        String reviewSummary
+        String reviewSummary,
+        String websiteUri
 ) {}
 
 

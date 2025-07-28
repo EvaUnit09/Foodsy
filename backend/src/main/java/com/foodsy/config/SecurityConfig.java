@@ -76,29 +76,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests(auth -> {
-                    // Allow all OPTIONS requests (CORS preflight)
-                    auth.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll();
-                    // Public endpoints - must be first and most specific
-                    auth.requestMatchers("/api/hello").permitAll();
-                    auth.requestMatchers("/api/homepage", "/api/homepage/**").permitAll();
-                    auth.requestMatchers("/api/auth/**").permitAll();
-                    auth.requestMatchers("/ws/**").permitAll();
-                    // Restaurant photos should be public
-                    auth.requestMatchers("/api/restaurants/*/photos").permitAll();
-                    auth.requestMatchers("/api/restaurants/photos/**").permitAll();
-                    // Session viewing is public, but voting requires authentication
-                    auth.requestMatchers("/api/sessions/*/restaurants").permitAll();
-                    auth.requestMatchers("/api/sessions/*/participants").permitAll();
-                    auth.requestMatchers("/api/sessions/*/voting-status").permitAll();
-                    auth.requestMatchers("/api/sessions/{sessionId}").permitAll();
-                    // Session creation and voting requires authentication
-                    auth.requestMatchers("/api/sessions").authenticated();
-                    auth.requestMatchers("/api/sessions/*/restaurants/*/vote").authenticated();
-                    auth.requestMatchers("/api/sessions/*/remaining-votes").authenticated();
-                    // All other requests require authentication
-                    auth.anyRequest().authenticated();
-                })
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 // Disable OAuth2 login for now - using JWT authentication only
                 // .oauth2Login(oauth2 -> oauth2
                 //     .authorizationEndpoint(authorization -> authorization
@@ -112,7 +90,7 @@ public class SecurityConfig {
                 //         response.sendRedirect("http://localhost:3000/auth/oauth2/success");
                 //     })
                 // )
-                // .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);
         return http.build();
@@ -122,7 +100,7 @@ public class SecurityConfig {
 
         @Override
         public void addCorsMappings(@NonNull CorsRegistry registry) {
-            registry.addMapping("/api/**")
+            registry.addMapping("/**")
                     .allowedOrigins("http://localhost:3000", "https://localhost:3000")
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")

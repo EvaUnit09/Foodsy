@@ -59,6 +59,9 @@ public class RestaurantCache {
     @Column(name = "review_summary", columnDefinition = "TEXT")
     private String reviewSummary;
     
+    @Column(name = "website_uri", columnDefinition = "TEXT")
+    private String websiteUri;
+    
     @Column(name = "borough", length = 50)
     private String borough; // Manhattan, Brooklyn, Queens, Bronx, Staten Island
     
@@ -189,6 +192,14 @@ public class RestaurantCache {
     
     public void setReviewSummary(String reviewSummary) {
         this.reviewSummary = reviewSummary;
+    }
+    
+    public String getWebsiteUri() {
+        return websiteUri;
+    }
+    
+    public void setWebsiteUri(String websiteUri) {
+        this.websiteUri = websiteUri;
     }
     
     public String getBorough() {

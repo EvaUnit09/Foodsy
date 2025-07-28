@@ -29,6 +29,8 @@ public class SessionRestaurant {
     private String generativeSummary;
     @Column(columnDefinition = "TEXT")
     private String reviewSummary;
+    @Column(columnDefinition = "TEXT")
+    private String websiteUri;
 
     public SessionRestaurant() {
 
@@ -125,6 +127,13 @@ public class SessionRestaurant {
     }
     public void setReviewSummary(String reviewSummary) {
         this.reviewSummary = reviewSummary;
+    }
+
+    public String getWebsiteUri() {
+        return websiteUri;
+    }
+    public void setWebsiteUri(String websiteUri) {
+        this.websiteUri = websiteUri;
     }
 
     public Long getId() {

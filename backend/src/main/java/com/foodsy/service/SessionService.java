@@ -78,6 +78,7 @@ public class SessionService {
                 sr.setCurrentOpeningHours(place.currentOpeningHours());
                 sr.setGenerativeSummary(place.generativeSummary());
                 sr.setReviewSummary(place.reviewSummary());
+                sr.setWebsiteUri(place.websiteUri());
 
                 SessionRestaurant savedRestaurant = restaurantRepo.save(sr);
             }
@@ -160,7 +161,8 @@ public class SessionService {
             restaurant.getUserRatingCount(),
             restaurant.getCurrentOpeningHours(),
             restaurant.getGenerativeSummary(),
-            restaurant.getReviewSummary()
+            restaurant.getReviewSummary(),
+            restaurant.getWebsiteUri()
         );
     }
 }

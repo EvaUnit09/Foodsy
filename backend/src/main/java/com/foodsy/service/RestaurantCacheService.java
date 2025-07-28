@@ -333,6 +333,9 @@ public class RestaurantCacheService {
         if (place.currentOpeningHours() != null) {
             cache.setOpeningHours(place.currentOpeningHours());
         }
+        if (place.websiteUri() != null) {
+            cache.setWebsiteUri(place.websiteUri());
+        }
         
         // Set location
         if (place.location() != null) {
