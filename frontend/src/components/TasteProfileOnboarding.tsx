@@ -63,7 +63,7 @@ export function TasteProfileOnboarding({ onComplete, onSkip }: TasteProfileOnboa
             <span className="text-2xl font-bold text-gray-900">Welcome to Foodsy!</span>
           </div>
           <p className="text-gray-600 text-lg">
-            Let's personalize your food experience in just 3 steps
+            Let&apos;s personalize your food experience in just 3 steps
           </p>
         </div>
 
@@ -285,7 +285,7 @@ function PriceRangeSelection({ selectedRange, onChange }: PriceRangeSelectionPro
     <div>
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          What's your preferred price range?
+          What&apos;s your preferred price range?
         </h2>
         <p className="text-gray-600">
           This helps us suggest restaurants that fit your budget
@@ -378,7 +378,7 @@ function BoroughSelection({ selectedBorough, onChange }: BoroughSelectionProps) 
           Which NYC borough do you prefer?
         </h2>
         <p className="text-gray-600">
-          We'll prioritize restaurants in your preferred area
+          We&apos;ll prioritize restaurants in your preferred area
         </p>
       </div>
 

@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8080/api/:path*",
+        destination: process.env.NEXT_PUBLIC_API_URL 
+          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
+          : "http://localhost:8080/api/:path*",
       },
     ];
   },
@@ -19,6 +21,11 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "localhost",
         port: "8080",
+      },
+      // Add your EC2 domain for production
+      {
+        protocol: "https",
+        hostname: "ec2-18-216-10-10.us-east-2.compute.amazonaws.com",
       },
     ],
   },

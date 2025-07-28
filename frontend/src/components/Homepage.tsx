@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { HomepageGrid } from "@/components/HomepageGrid";
@@ -35,26 +35,12 @@ export function Homepage({ initialData, forceOnboarding = false }: HomepageProps
   const [showOnboarding, setShowOnboarding] = useState(forceOnboarding);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Generate session ID for anonymous users
-  useEffect(() => {
-    if (!isAuthenticated && !sessionId) {
-      const newSessionId = generateSessionId();
-      setSessionId(newSessionId);
-    }
-  }, [isAuthenticated, sessionId]);
-
-  // Load homepage data and check onboarding status
-  useEffect(() => {
-    if (!initialData) {
-      loadHomepageData();
-    }
-  }, [isAuthenticated, sessionId, initialData]);
-
+  
   const generateSessionId = (): string => {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const loadHomepageData = async () => {
+  const loadHomepageData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -73,7 +59,21 @@ export function Homepage({ initialData, forceOnboarding = false }: HomepageProps
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [homepageApi, isAuthenticated, forceOnboarding]);
+// Generate session ID for anonymous users
+  useEffect(() => {
+    if (!isAuthenticated && !sessionId) {
+      const newSessionId = generateSessionId();
+      setSessionId(newSessionId);
+    }
+  }, [isAuthenticated, sessionId]);
+
+  // Load homepage data and check onboarding status
+  useEffect(() => {
+    if (!initialData) {
+      loadHomepageData();
+    }
+  }, [isAuthenticated, sessionId, initialData, loadHomepageData]);
 
   const handleOnboardingComplete = async (tasteProfile: {
     preferredCuisines: string[];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
@@ -51,14 +51,7 @@ const Index = () => {
   const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
 
   // Load homepage data and check onboarding status
-  useEffect(() => {
-    // Only load personalized data for authenticated users
-    if (isAuthenticated) {
-      loadHomepageData();
-    }
-  }, [isAuthenticated]);
-
-  const loadHomepageData = async () => {
+  const loadHomepageData = useCallback(async () => {
     // Only proceed if user is authenticated
     if (!isAuthenticated) {
       setShowPersonalizedContent(false);
@@ -94,7 +87,14 @@ const Index = () => {
     } finally {
       setIsLoadingHomepageData(false);
     }
-  };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Only load personalized data for authenticated users
+    if (isAuthenticated) {
+      loadHomepageData();
+    }
+  }, [isAuthenticated, loadHomepageData]);
 
   const handleOnboardingComplete = async (tasteProfile: {
     preferredCuisines: string[];

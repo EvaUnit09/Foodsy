@@ -192,22 +192,24 @@ export default function SessionPage() {
 
   // WebSocket event effect
   useEffect(() => {
-    if (!event) return;
+    if (!event || !event.payload) return;
     switch (event.type) {
       case "sessionStarted":
         setSessionStarted(true);
         break;
       case "timerUpdate":
+        const millisLeft = event.payload.millisLeft as number;
         setTimeLeft({
-          minutes: Math.floor(event.payload.millisLeft / 60000),
-          seconds: Math.floor((event.payload.millisLeft % 60000) / 1000),
+          minutes: Math.floor(millisLeft / 60000),
+          seconds: Math.floor((millisLeft % 60000) / 1000),
         });
         break;
       case "roundTransition":
-        setCurrentRound(event.payload.newRound);
+        const newRound = event.payload.newRound as number;
+        setCurrentRound(newRound);
         setRoundTransitioning(true);
         // Refetch restaurants for new round without page reload
-        if (event.payload.newRound === 2) {
+        if (newRound === 2) {
           setTimeout(async () => {
             try {
               // Refetch restaurants for round 2
@@ -224,15 +226,15 @@ export default function SessionPage() {
         break;
       case "sessionComplete":
         setSessionComplete(true);
-        setWinner(event.payload.winner);
+        setWinner(event.payload.winner as Restaurant);
         break;
       case "roundStatus":
-        setCurrentRound(event.payload.currentRound);
+        setCurrentRound(event.payload.currentRound as number);
         break;
       default:
         break;
     }
-  }, [event]);
+  }, [event, sessionId]);
 
   /* -------------------- derived state --------------------------- */
   const likeProgressPct = useMemo(

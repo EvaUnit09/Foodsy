@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
+interface WebSocketEvent {
+  type: string;
+  payload?: Record<string, unknown>;
+}
+
 export function useSessionWebSocket(sessionId: number) {
-  const [event, setEvent] = useState<any>(null);
+  const [event, setEvent] = useState<WebSocketEvent | null>(null);
   const clientRef = useRef<Client | null>(null);
 
   useEffect(() => {
@@ -29,7 +34,7 @@ export function useSessionWebSocket(sessionId: number) {
   }, [sessionId]);
 
   // Optionally, expose a send function for host actions
-  const send = (destination: string, body: any) => {
+  const send = (destination: string, body: unknown) => {
     if (clientRef.current && clientRef.current.connected) {
       clientRef.current.publish({
         destination,

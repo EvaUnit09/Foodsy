@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createVote, VoteType } from "@/api/voteApi";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,7 +32,7 @@ export function useSessionVoting({
   const [remainingVotes, setRemainingVotes] = useState<number>(0);
 
   // Fetch remaining votes function
-  const fetchRemainingVotes = async () => {
+  const fetchRemainingVotes = useCallback(async () => {
     if (!isAuthenticated || !sessionId) return;
     
     try {
@@ -46,7 +46,7 @@ export function useSessionVoting({
     } catch (error) {
       console.error('Failed to fetch remaining votes:', error);
     }
-  };
+  }, [isAuthenticated, sessionId]);
 
   // Reset votes when round changes and force refresh of remaining votes
   useEffect(() => {
@@ -63,7 +63,7 @@ export function useSessionVoting({
   // Fetch remaining votes on mount and round change
   useEffect(() => {
     fetchRemainingVotes();
-  }, [sessionId, isAuthenticated, currentRound]); // Removed voteByProvider dependency
+  }, [sessionId, isAuthenticated, currentRound, fetchRemainingVotes]); // Removed voteByProvider dependency
 
   // public API -----------------------------------------------------
   const hasVoted = (providerId: string) => providerId in voteByProvider;
