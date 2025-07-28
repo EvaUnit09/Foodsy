@@ -2,6 +2,8 @@ plugins {
 	java
 	id("org.springframework.boot") version "3.5.0"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("org.owasp.dependencycheck") version "12.1.3"
+	id("com.github.ben-manes.versions") version "0.51.0"
 }
 
 group = "com.foodsy"
@@ -28,13 +30,13 @@ dependencies {
 	implementation("com.h2database:h2")
 	
 	// JWT dependencies
-	implementation("io.jsonwebtoken:jjwt-api:0.12.3")
-	implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
-	implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
-	implementation("org.postgresql:postgresql:42.7.3")
+	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+	implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
+	implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
+	implementation("org.postgresql:postgresql:42.7.7")
 	implementation("jakarta.platform:jakarta.jakartaee-api:10.0.0")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-	testImplementation("org.mockito:mockito-core:5.12.0")
+	testImplementation("org.mockito:mockito-core:5.18.0")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -42,4 +44,10 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+// OWASP Dependency Check Configuration
+dependencyCheck {
+	failBuildOnCVSS = 7.0f
+	suppressionFile = "$projectDir/config/dependency-check-suppressions.xml"
 }
