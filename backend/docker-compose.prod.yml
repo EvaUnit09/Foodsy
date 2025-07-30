@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    image: foodsy-backend:latest
+    container_name: foodsy-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.production
+    environment:
+      # JVM optimization for production
+      - "JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+      # Mount temp directory
+      - /tmp:/tmp
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits (adjust based on your EC2 instance)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+networks:
+  app-network:
+    driver: bridge
+    name: foodsy-network
+
+# Optional: Add volumes for persistent data
+volumes:
+  app-logs:
+    driver: local
