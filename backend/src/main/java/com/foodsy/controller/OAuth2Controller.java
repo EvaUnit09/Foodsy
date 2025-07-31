@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/oauth2")
-@CrossOrigin(origins = "http://localhost:3000, https://foodsy-frontend.vercel.app")
+// @CrossOrigin removed - CORS handled by Nginx
 public class OAuth2Controller {
 
     @GetMapping("/user")
