@@ -13,12 +13,12 @@ services:
       # JVM optimization for production
       - "JAVA_OPTS=-Xmx1g -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      # healthcheck:
+      #test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      #interval: 30s
+      #timeout: 10s
+      #retries: 3
+      #start_period: 60s
     volumes:
       # Mount logs directory for persistence
       - ./logs:/app/logs

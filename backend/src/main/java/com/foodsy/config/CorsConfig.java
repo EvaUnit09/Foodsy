@@ -14,9 +14,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins("http://localhost:3000",
-                        "https://your-frontend.vercel.app",
-                        "https://foodsy-frontend-git-main-foodsy-frontend-dev.vercel.app")
+                        .allowedOrigins("https://foodsy-frontend.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
