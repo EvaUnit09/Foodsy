@@ -13,11 +13,12 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
-			registry.addMapping("/**")
-                        .allowedOrigins("https://foodsy-frontend.vercel.app")
+                        registry.addMapping("/**")
+                        .allowedOrigins("https://foodsy-frontend.vercel.api", "http://localhost:3000")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(true);
+                        .allowCredentials(true)
+                        .maxAge(3600);
             }
         };
     }
