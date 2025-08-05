@@ -58,14 +58,19 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 // Create new user
                 user = new User();
                 user.setEmail(email);
-                user.setUsername(email.split("@")[0]); // Use email prefix as username
+                String baseUsername = email.split("@")[0];
+                // Ensure username meets minimum length requirement
+                if (baseUsername.length() < 3) {
+                    baseUsername = baseUsername + "_user";
+                }
+                user.setUsername(baseUsername);
                 user.setFirstName(name != null ? name.split(" ")[0] : null);
                 user.setLastName(name != null && name.split(" ").length > 1 ? name.split(" ")[1] : null);
                 user.setAvatarUrl(picture);
                 user.setProvider(provider);
                 user.setProviderId(providerId);
                 user.setEmailVerified(true); // OAuth2 emails are considered verified
-                user.setPassword(""); // No password for OAuth2 users
+                user.setPassword("OAUTH2_USER_NO_PASSWORD"); // Placeholder for OAuth2 users
             }
         }
         
