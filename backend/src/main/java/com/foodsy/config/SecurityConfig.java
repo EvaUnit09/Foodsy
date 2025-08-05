@@ -66,11 +66,6 @@ public class SecurityConfig {
     }
     
     @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
-    
-    @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
         return new HttpSessionOAuth2AuthorizationRequestRepository();
     }
@@ -78,11 +73,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORS handled by Nginx
-                .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                    .ignoringRequestMatchers("/api/**") // Disable CSRF for API endpoints but keep for OAuth2
-                )
+                // CORS handled by Nginx  
+                .csrf(AbstractHttpConfigurer::disable)
                 // Configure OAuth2 login first
                 .oauth2Login(oauth2 -> oauth2
                     .authorizationEndpoint(authorization -> authorization
@@ -101,8 +93,12 @@ public class SecurityConfig {
                         response.sendRedirect(frontendUrl + "/auth/oauth2/success");
                     })
                     .failureHandler((request, response, exception) -> {
-                        // Log OAuth2 failure and redirect to error page
+                        // Log OAuth2 failure with detailed session info
                         logger.error("OAuth2 authentication failed: " + exception.getMessage());
+                        logger.error("Session ID: " + request.getSession(false) != null ? request.getSession(false).getId() : "null");
+                        logger.error("Request URI: " + request.getRequestURI());
+                        logger.error("Query String: " + request.getQueryString());
+                        
                         String frontendUrl = System.getenv("FRONTEND_URL");
                         if (frontendUrl == null || frontendUrl.isEmpty()) {
                             frontendUrl = "https://foodsy-frontend.vercel.app";
@@ -112,10 +108,7 @@ public class SecurityConfig {
                 )
                 // Configure other security settings after OAuth2
                 .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-                    .maximumSessions(10)
-                    .maxSessionsPreventsLogin(false)
-                    .sessionRegistry(sessionRegistry()))
+                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
                     .anyRequest().permitAll())
