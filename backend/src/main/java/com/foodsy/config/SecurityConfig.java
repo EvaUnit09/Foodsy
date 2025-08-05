@@ -60,12 +60,16 @@ public class SecurityConfig {
         http
                 // CORS handled by Nginx
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session
+                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                    .maximumSessions(1)
+                    .maxSessionsPreventsLogin(false))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                     .anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
+                    .loginPage("/oauth2/authorization/google") // Prevent default login page
                     .authorizationEndpoint(authorization -> authorization
                         .baseUri("/oauth2/authorization"))
                     .redirectionEndpoint(redirection -> redirection
