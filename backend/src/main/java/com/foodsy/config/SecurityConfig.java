@@ -76,7 +76,7 @@ public class SecurityConfig {
                         // Redirect to frontend after successful OAuth2 login
                         String frontendUrl = System.getenv("FRONTEND_URL");
                         if (frontendUrl == null || frontendUrl.isEmpty()) {
-                            frontendUrl = "http://localhost:3000";
+                            frontendUrl = "https://foodsy-frontend.vercel.app";
                         }
                         response.sendRedirect(frontendUrl + "/auth/oauth2/success");
                     })
@@ -85,7 +85,7 @@ public class SecurityConfig {
                         logger.error("OAuth2 authentication failed: " + exception.getMessage());
                         String frontendUrl = System.getenv("FRONTEND_URL");
                         if (frontendUrl == null || frontendUrl.isEmpty()) {
-                            frontendUrl = "http://localhost:3000";
+                            frontendUrl = "https://foodsy-frontend.vercel.app";
                         }
                         response.sendRedirect(frontendUrl + "/auth/signin?error=oauth2_failed");
                     })
