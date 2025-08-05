@@ -38,6 +38,14 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         String picture = oauth2User.getAttribute("picture");
         String providerId = oauth2User.getAttribute("sub"); // Google's user ID
         
+        // Validate required fields
+        if (email == null || email.trim().isEmpty()) {
+            throw new OAuth2AuthenticationException("Email not provided by OAuth2 provider");
+        }
+        if (providerId == null || providerId.trim().isEmpty()) {
+            throw new OAuth2AuthenticationException("Provider ID not provided by OAuth2 provider");
+        }
+        
         Optional<User> userOptional = userRepository.findByProviderAndProviderId(provider, providerId);
         User user;
         
@@ -63,7 +71,15 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 if (baseUsername.length() < 3) {
                     baseUsername = baseUsername + "_user";
                 }
-                user.setUsername(baseUsername);
+                
+                // Handle duplicate usernames by appending a number
+                String uniqueUsername = baseUsername;
+                int counter = 1;
+                while (userRepository.findByUsername(uniqueUsername).isPresent()) {
+                    uniqueUsername = baseUsername + "_" + counter;
+                    counter++;
+                }
+                user.setUsername(uniqueUsername);
                 user.setFirstName(name != null ? name.split(" ")[0] : null);
                 user.setLastName(name != null && name.split(" ").length > 1 ? name.split(" ")[1] : null);
                 user.setAvatarUrl(picture);
@@ -74,7 +90,11 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
             }
         }
         
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (Exception e) {
+            throw new OAuth2AuthenticationException("Failed to save user: " + e.getMessage());
+        }
         
         return new CustomOAuth2User(oauth2User, user);
     }
