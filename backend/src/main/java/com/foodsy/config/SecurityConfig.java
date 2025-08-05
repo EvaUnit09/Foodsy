@@ -51,63 +51,32 @@ public class SecurityConfig {
     
     // CORS configuration removed - handled by Nginx
     
-    @Bean
-    public AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, authException) -> {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
-        };
-    }
+    // Removed authenticationEntryPoint - using default behavior
     
     // Remove custom authorization request repository - use Spring's default
     
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // CORS handled by Nginx  
+        return http
                 .csrf(AbstractHttpConfigurer::disable)
-                // Configure OAuth2 login first
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error", "/").permitAll()
+                    .anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
-                    .authorizationEndpoint(authorization -> authorization
-                        .baseUri("/oauth2/authorization"))
-                    .redirectionEndpoint(redirection -> redirection
-                        .baseUri("/login/oauth2/code/*"))
-                    .userInfoEndpoint(userInfo -> userInfo
-                        .userService(oauth2UserService))
+                    .userInfoEndpoint(userInfo -> userInfo.userService(oauth2UserService))
                     .successHandler((request, response, authentication) -> {
-                        // Redirect to frontend after successful OAuth2 login
-                        String frontendUrl = System.getenv("FRONTEND_URL");
-                        if (frontendUrl == null || frontendUrl.isEmpty()) {
-                            frontendUrl = "https://foodsy-frontend.vercel.app";
-                        }
-                        response.sendRedirect(frontendUrl + "/auth/oauth2/success");
+                        response.sendRedirect("https://foodsy-frontend.vercel.app/auth/oauth2/success");
                     })
                     .failureHandler((request, response, exception) -> {
-                        // Log OAuth2 failure with detailed session info
-                        logger.error("OAuth2 authentication failed: " + exception.getMessage());
-                        logger.error("Session ID: " + request.getSession(false) != null ? request.getSession(false).getId() : "null");
-                        logger.error("Request URI: " + request.getRequestURI());
-                        logger.error("Query String: " + request.getQueryString());
-                        
-                        String frontendUrl = System.getenv("FRONTEND_URL");
-                        if (frontendUrl == null || frontendUrl.isEmpty()) {
-                            frontendUrl = "https://foodsy-frontend.vercel.app";
-                        }
-                        response.sendRedirect(frontendUrl + "/auth/signin?error=oauth2_failed");
+                        logger.error("OAuth2 failed: " + exception.getMessage());
+                        response.sendRedirect("https://foodsy-frontend.vercel.app/auth/signin?error=oauth2_failed");
                     })
                 )
-                // Configure other security settings after OAuth2
-                .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-                .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
-                    .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
+                .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable);
-        return http.build();
+                .build();
     }
     // WebConfig removed - CORS handled by Nginx
 
