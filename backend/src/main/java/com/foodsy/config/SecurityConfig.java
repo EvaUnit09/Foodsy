@@ -61,19 +61,22 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                // Disable OAuth2 login for now - using JWT authentication only
-                // .oauth2Login(oauth2 -> oauth2
-                //     .authorizationEndpoint(authorization -> authorization
-                //         .baseUri("/oauth2/authorization"))
-                //     .redirectionEndpoint(redirection -> redirection
-                //         .baseUri("/login/oauth2/code/*"))
-                //     .userInfoEndpoint(userInfo -> userInfo
-                //         .userService(oauth2UserService))
-                //     .successHandler((request, response, authentication) -> {
-                //         // Redirect to frontend after successful OAuth2 login
-                //         response.sendRedirect("http://localhost:3000/auth/oauth2/success");
-                //     })
-                // )
+                .oauth2Login(oauth2 -> oauth2
+                    .authorizationEndpoint(authorization -> authorization
+                        .baseUri("/oauth2/authorization"))
+                    .redirectionEndpoint(redirection -> redirection
+                        .baseUri("/login/oauth2/code/*"))
+                    .userInfoEndpoint(userInfo -> userInfo
+                        .userService(oauth2UserService))
+                    .successHandler((request, response, authentication) -> {
+                        // Redirect to frontend after successful OAuth2 login
+                        String frontendUrl = System.getenv("FRONTEND_URL");
+                        if (frontendUrl == null || frontendUrl.isEmpty()) {
+                            frontendUrl = "http://localhost:3000";
+                        }
+                        response.sendRedirect(frontendUrl + "/auth/oauth2/success");
+                    })
+                )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);
