@@ -12,7 +12,8 @@ const OAuth2SuccessPage = () => {
     const handleOAuth2Success = async () => {
       try {
         // Fetch user data from backend after OAuth2 login
-        const response = await fetch("http://localhost:8080/api/oauth2/user", {
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const response = await fetch(`${backendUrl}/oauth2/user`, {
           method: "GET",
           credentials: "include", // Include cookies for session
         });

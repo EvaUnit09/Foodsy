@@ -48,7 +48,8 @@ const SignInPage = () => {
   };
 
   const handleGoogleSignIn = () => {
-    alert("Google sign-in is temporarily disabled. Please use email/password sign-in.");
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    window.location.href = `${backendUrl}/oauth2/authorization/google`;
   };
 
   return (
