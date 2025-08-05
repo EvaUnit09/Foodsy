@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.lang.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,6 +26,8 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
     
     private final OAuth2UserService oauth2UserService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -60,16 +64,8 @@ public class SecurityConfig {
         http
                 // CORS handled by Nginx
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session
-                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                    .maximumSessions(1)
-                    .maxSessionsPreventsLogin(false))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
-                    .anyRequest().permitAll())
+                // Configure OAuth2 login first
                 .oauth2Login(oauth2 -> oauth2
-                    .loginPage("/oauth2/authorization/google") // Prevent default login page
                     .authorizationEndpoint(authorization -> authorization
                         .baseUri("/oauth2/authorization"))
                     .redirectionEndpoint(redirection -> redirection
@@ -84,7 +80,25 @@ public class SecurityConfig {
                         }
                         response.sendRedirect(frontendUrl + "/auth/oauth2/success");
                     })
+                    .failureHandler((request, response, exception) -> {
+                        // Log OAuth2 failure and redirect to error page
+                        logger.error("OAuth2 authentication failed: " + exception.getMessage());
+                        String frontendUrl = System.getenv("FRONTEND_URL");
+                        if (frontendUrl == null || frontendUrl.isEmpty()) {
+                            frontendUrl = "http://localhost:3000";
+                        }
+                        response.sendRedirect(frontendUrl + "/auth/signin?error=oauth2_failed");
+                    })
                 )
+                // Configure other security settings after OAuth2
+                .sessionManagement(session -> session
+                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                    .maximumSessions(1)
+                    .maxSessionsPreventsLogin(false))
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
+                    .anyRequest().permitAll())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable);
