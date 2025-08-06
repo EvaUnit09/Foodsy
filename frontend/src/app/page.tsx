@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
-import Link from "next/link";
+
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
@@ -254,14 +254,13 @@ const Index = () => {
                   </Button>
                 </div>
               ) : (
-                <Link href="/auth/signin">
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                  onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://apifoodsy-backend.com'}/oauth2/authorization/google`}
+                >
+                  Sign In with Google
+                </Button>
               )}
             </div>
           </div>
@@ -368,25 +367,14 @@ const Index = () => {
                 Sign up to discover restaurants tailored to your taste preferences and see what&apos;s trending in NYC!
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/auth/signup">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Sign Up for Free
-                  </Button>
-                </Link>
-                <Link href="/auth/signin">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
-                  >
-                    <UserIcon className="w-5 h-5 mr-2" />
-                    Sign In
-                  </Button>
-                </Link>
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
+                  onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://apifoodsy-backend.com'}/oauth2/authorization/google`}
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Sign Up with Google
+                </Button>
               </div>
             </div>
           </div>

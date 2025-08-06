@@ -4,7 +4,6 @@ import com.foodsy.domain.User;
 import com.foodsy.domain.AuthProvider;
 import com.foodsy.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,20 +14,13 @@ import java.util.Optional;
 public class UserService {
     
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
     }
     
     public User createUser(User user) {
-        // Encode password before saving
-        if (user.getPassword() != null) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        }
-        
         // Normalize username and email
         user.setUsername(user.getUsername().toLowerCase().trim());
         user.setEmail(user.getEmail().toLowerCase().trim());
@@ -67,15 +59,6 @@ public class UserService {
     
     public void deleteUser(Long userId) {
         userRepository.deleteById(userId);
-    }
-    
-    public boolean checkPassword(User user, String rawPassword) {
-        return passwordEncoder.matches(rawPassword, user.getPassword());
-    }
-    
-    public User changePassword(User user, String newPassword) {
-        user.setPassword(passwordEncoder.encode(newPassword));
-        return userRepository.save(user);
     }
     
     // Helper method to convert username to user ID for backward compatibility

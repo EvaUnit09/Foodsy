@@ -1,6 +1,4 @@
 package com.foodsy.exception;
-
-import com.foodsy.dto.AuthResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

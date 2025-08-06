@@ -27,12 +27,12 @@ const OAuth2SuccessPage = () => {
           // Redirect to home page
           router.push("/");
         } else {
-          // If failed to get user data, redirect to sign in page
-          router.push("/auth/signin");
+          // If failed to get user data, redirect to home page
+          router.push("/");
         }
       } catch (error) {
         console.error("OAuth2 success handling failed:", error);
-        router.push("/auth/signin");
+        router.push("/");
       }
     };
 

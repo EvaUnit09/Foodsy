@@ -24,10 +24,8 @@ public class User {
     @NotBlank(message = "Email is required")
     private String email;
 
-    @Column(nullable = false)
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
-    private String password;
+    @Column(nullable = true)
+    private String password; // OAuth2 users don't need passwords
 
     @Column(name = "first_name")
     private String firstName;
