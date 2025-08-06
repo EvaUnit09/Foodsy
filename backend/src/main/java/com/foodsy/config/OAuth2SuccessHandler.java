@@ -3,7 +3,7 @@ package com.foodsy.config;
 import com.foodsy.domain.User;
 import com.foodsy.service.CustomOAuth2User;
 import com.foodsy.service.JwtService;
-
+import com.foodsy.util.CookieUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,9 +16,11 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     
     private final JwtService jwtService;
-    
-    public OAuth2SuccessHandler(JwtService jwtService) {
+    private final CookieUtil cookieUtil;
+
+    public OAuth2SuccessHandler(JwtService jwtService, CookieUtil cookieUtil) {
         this.jwtService = jwtService;
+        this.cookieUtil = cookieUtil;
     }
     
     @Override
@@ -34,12 +36,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
             String refreshToken = jwtService.generateRefreshToken(user.getUsername());
             
-            // Since we can't use cross-domain cookies, we'll pass tokens as URL parameters
-            // The frontend will need to extract these and store them
+            // Set tokens in HTTP-only cookies
+            cookieUtil.setAccessTokenCookie(response, accessToken);
+            cookieUtil.setRefreshTokenCookie(response, refreshToken);
+            
+            // Redirect to a frontend page that can handle the post-login flow
             String redirectUrl = String.format(
-                "https://foodsy-frontend.vercel.app/auth/oauth2/callback?accessToken=%s&refreshToken=%s&username=%s",
-                URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
-                URLEncoder.encode(refreshToken, StandardCharsets.UTF_8),
+                "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s",
                 URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8)
             );
             

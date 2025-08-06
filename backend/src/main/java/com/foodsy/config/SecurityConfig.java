@@ -2,6 +2,7 @@ package com.foodsy.config;
 
 import com.foodsy.service.OAuth2UserService;
 import com.foodsy.service.JwtService;
+import com.foodsy.util.CookieUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,14 +28,17 @@ public class SecurityConfig {
     private final OAuth2UserService oauth2UserService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtService jwtService;
+    private final CookieUtil cookieUtil;
     
     @Autowired
     public SecurityConfig(OAuth2UserService oauth2UserService, 
                          @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
-                         JwtService jwtService) {
+                         JwtService jwtService,
+                         CookieUtil cookieUtil) {
         this.oauth2UserService = oauth2UserService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtService = jwtService;
+        this.cookieUtil = cookieUtil;
     }
     
     @Bean
@@ -96,7 +100,7 @@ public class SecurityConfig {
                     .baseUri("/login/oauth2/code/*"))
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(oauth2UserService))
-                .successHandler(new OAuth2SuccessHandler(jwtService))
+                .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
                 .failureHandler((request, response, exception) -> {
                     // Log the error for debugging
                     System.err.println("OAuth2 authentication failed: " + exception.getMessage());
