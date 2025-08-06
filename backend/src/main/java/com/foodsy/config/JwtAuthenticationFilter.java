@@ -1,4 +1,4 @@
-package com.foodsy.security;
+package com.foodsy.config;
 
 import com.foodsy.service.JwtService;
 import jakarta.servlet.FilterChain;
