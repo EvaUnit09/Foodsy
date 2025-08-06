@@ -24,12 +24,19 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        System.out.println("=== OAuth2UserService.loadUser called ===");
+        System.out.println("Registration ID: " + userRequest.getClientRegistration().getRegistrationId());
+        
         OAuth2User oauth2User = super.loadUser(userRequest);
+        
+        System.out.println("Default OAuth2User loaded: " + oauth2User);
         
         return processOAuth2User(userRequest, oauth2User);
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest userRequest, OAuth2User oauth2User) {
+        System.out.println("=== OAuth2UserService.processOAuth2User called ===");
+        
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         AuthProvider provider = AuthProvider.valueOf(registrationId.toUpperCase());
         
@@ -37,6 +44,11 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         String name = oauth2User.getAttribute("name");
         String picture = oauth2User.getAttribute("picture");
         String providerId = oauth2User.getAttribute("sub"); // Google's user ID
+        
+        System.out.println("Email: " + email);
+        System.out.println("Name: " + name);
+        System.out.println("Picture: " + picture);
+        System.out.println("Provider ID: " + providerId);
         
         // Validate required fields
         if (email == null || email.trim().isEmpty()) {
