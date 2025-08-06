@@ -41,6 +41,9 @@ const Index = () => {
   const router = useRouter();
   const homepageApi = useHomepageApi();
   
+  // Debug logging
+  console.log("Homepage: Authentication state - isAuthenticated:", isAuthenticated, "user:", user);
+  
   // Existing state
   const [searchQuery, setSearchQuery] = useState("");
   

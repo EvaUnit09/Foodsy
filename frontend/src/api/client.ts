@@ -77,7 +77,7 @@ export class ApiError extends Error {
  * Centralized API Client
  */
 export class ApiClient {
-  private static baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+  private static baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
   
   /**
    * Generic request method with consistent error handling

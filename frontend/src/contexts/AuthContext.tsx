@@ -66,11 +66,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signIn = (userData: User) => {
+    console.log("AuthContext: Signing in user:", userData);
     setUser(userData);
     setIsAuthenticated(true);
+    console.log("AuthContext: User signed in successfully");
   };
 
   const signOut = async () => {
+    console.log("AuthContext: Signing out user");
     try {
       await ApiClient.auth.logout();
     } catch (error) {
@@ -78,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
+      console.log("AuthContext: User signed out successfully");
       
       // Clear any remaining localStorage data
       localStorage.removeItem('user');

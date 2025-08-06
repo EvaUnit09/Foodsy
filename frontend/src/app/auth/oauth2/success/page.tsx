@@ -11,22 +11,32 @@ const OAuth2SuccessPage = () => {
   useEffect(() => {
     const handleOAuth2Success = async () => {
       try {
+        console.log("OAuth2 success page: Starting authentication check");
+        
         // Fetch user data from backend after OAuth2 login
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        console.log("OAuth2 success page: Backend URL:", backendUrl);
+        
         const response = await fetch(`${backendUrl}/auth/me`, {
           method: "GET",
           credentials: "include", // Include cookies for session
         });
 
+        console.log("OAuth2 success page: Response status:", response.status);
+        console.log("OAuth2 success page: Response ok:", response.ok);
+
         if (response.ok) {
           const userData = await response.json();
+          console.log("OAuth2 success page: User data received:", userData);
           
           // Sign in the user using our auth context
           signIn(userData);
+          console.log("OAuth2 success page: User signed in, redirecting to home");
           
           // Redirect to home page
           router.push("/");
         } else {
+          console.error("OAuth2 success page: Failed to get user data, status:", response.status);
           // If failed to get user data, redirect to home page
           router.push("/");
         }
