@@ -165,12 +165,12 @@ export default function CreateSessionPage() {
                 <div className="text-center space-y-6">
                   <h2 className="text-2xl font-bold text-gray-900">Sign In Required</h2>
                   <p className="text-gray-600">You need to be signed in to create a voting session.</p>
-                  <Link
-                    href="/auth/signin"
-                    className="inline-block w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg flex items-center justify-center transition-colors"
+                  <Button
+                    onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://apifoodsy-backend.com'}/oauth2/authorization/google`}
+                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg flex items-center justify-center transition-colors"
                   >
-                    Sign In to Continue
-                  </Link>
+                    Sign In with Google
+                  </Button>
                 </div>
               ) : (
                 <form onSubmit={handleCreateSession} className="space-y-6">
