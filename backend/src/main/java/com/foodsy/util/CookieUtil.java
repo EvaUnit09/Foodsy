@@ -54,6 +54,11 @@ public class CookieUtil {
         cookie.setHttpOnly(true);
         cookie.setDomain(null); // Don't set domain to allow cross-origin
         response.addCookie(cookie);
+        
+        // Add SameSite=None for cross-origin requests (Spring Boot 3.x approach)
+        response.addHeader("Set-Cookie", 
+            String.format("%s=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
+                "accessToken", accessToken, ACCESS_TOKEN_DURATION));
     }
     
     /**
@@ -67,6 +72,11 @@ public class CookieUtil {
         cookie.setHttpOnly(true);
         cookie.setDomain(null); // Don't set domain to allow cross-origin
         response.addCookie(cookie);
+        
+        // Add SameSite=None for cross-origin requests (Spring Boot 3.x approach)
+        response.addHeader("Set-Cookie", 
+            String.format("%s=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
+                "refreshToken", refreshToken, REFRESH_TOKEN_DURATION));
     }
     
     /**
