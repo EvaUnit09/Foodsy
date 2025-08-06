@@ -81,14 +81,10 @@ logging:
     org:
       springframework:
         security: ${LOG_LEVEL_SECURITY:DEBUG}
-        security:
-          oauth2: ${LOG_LEVEL_OAUTH2:DEBUG}
-          oauth2:
-            client: ${LOG_LEVEL_OAUTH2:DEBUG}
-            client:
-              web: ${LOG_LEVEL_OAUTH2:DEBUG}
-              web:
-                server: ${LOG_LEVEL_OAUTH2:DEBUG}
+        security.oauth2: ${LOG_LEVEL_OAUTH2:DEBUG}
+        security.oauth2.client: ${LOG_LEVEL_OAUTH2:DEBUG}
+        security.oauth2.client.web: ${LOG_LEVEL_OAUTH2:DEBUG}
+        security.oauth2.client.web.server: ${LOG_LEVEL_OAUTH2:DEBUG}
         web: ${LOG_LEVEL_SECURITY:DEBUG}
   file:
     name: ${LOG_FILE_PATH:./logs/application.log}
