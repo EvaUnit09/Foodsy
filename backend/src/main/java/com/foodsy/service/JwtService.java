@@ -18,9 +18,14 @@ public class JwtService {
     private final long refreshExpirationHours;
     
     public JwtService(
-            @Value("${jwt.secret:foodsy-super-secret-key-that-should-be-in-env-vars}") String secret,
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-hours:24}") long expirationHours,
             @Value("${jwt.refresh-expiration-hours:168}") long refreshExpirationHours) {
+        
+        if (secret.getBytes().length < 32) {
+            throw new IllegalArgumentException("JWT secret key must be at least 32 bytes long");
+        }
+        
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.expirationHours = expirationHours;
         this.refreshExpirationHours = refreshExpirationHours;
