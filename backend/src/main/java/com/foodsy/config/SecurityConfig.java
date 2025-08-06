@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -43,7 +44,7 @@ public class SecurityConfig {
             })
             .authorizeHttpRequests(auth -> {
                 System.out.println("Configuring authorization rules...");
-                auth.requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**").permitAll()
+                auth.requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout").permitAll()
                     .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                     .requestMatchers("/favicon.ico").denyAll()
                     .anyRequest().authenticated();
@@ -51,6 +52,7 @@ public class SecurityConfig {
             })
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
+            .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
             .oauth2Login(oauth2 -> {
                 System.out.println("Configuring OAuth2 login with defaults...");
                 oauth2

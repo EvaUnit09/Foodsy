@@ -47,14 +47,26 @@ public class CookieUtil {
      * Set an HTTP-only access token cookie
      */
     public void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
-        setCookie(response, "accessToken", accessToken, ACCESS_TOKEN_DURATION, "/", secure, true);
+        Cookie cookie = new Cookie("accessToken", accessToken);
+        cookie.setMaxAge(ACCESS_TOKEN_DURATION);
+        cookie.setPath("/");
+        cookie.setSecure(secure);
+        cookie.setHttpOnly(true);
+        cookie.setDomain(null); // Don't set domain to allow cross-origin
+        response.addCookie(cookie);
     }
     
     /**
      * Set an HTTP-only refresh token cookie
      */
     public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        setCookie(response, "refreshToken", refreshToken, REFRESH_TOKEN_DURATION, "/", secure, true);
+        Cookie cookie = new Cookie("refreshToken", refreshToken);
+        cookie.setMaxAge(REFRESH_TOKEN_DURATION);
+        cookie.setPath("/");
+        cookie.setSecure(secure);
+        cookie.setHttpOnly(true);
+        cookie.setDomain(null); // Don't set domain to allow cross-origin
+        response.addCookie(cookie);
     }
     
     /**
