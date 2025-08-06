@@ -3,7 +3,7 @@ package com.foodsy.config;
 import com.foodsy.domain.User;
 import com.foodsy.service.CustomOAuth2User;
 import com.foodsy.service.JwtService;
-import com.foodsy.service.UserService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,11 +16,9 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     
     private final JwtService jwtService;
-    private final UserService userService;
     
-    public OAuth2SuccessHandler(JwtService jwtService, UserService userService) {
+    public OAuth2SuccessHandler(JwtService jwtService) {
         this.jwtService = jwtService;
-        this.userService = userService;
     }
     
     @Override

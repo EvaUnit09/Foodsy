@@ -52,7 +52,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtService.isAccessToken(token) && !jwtService.isTokenExpired(token)) {
                     String userId = jwtService.extractUserId(token);
-                    String email = jwtService.extractEmail(token);
                     
                     UserDetails userDetails = User.builder()
                             .username(userId)
