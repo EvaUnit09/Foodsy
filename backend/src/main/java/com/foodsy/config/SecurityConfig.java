@@ -73,12 +73,18 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**").permitAll()
+            .sessionManagement(session -> {
+                System.out.println("Configuring session management with IF_REQUIRED policy");
+                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
+            })
+            .authorizeHttpRequests(auth -> {
+                System.out.println("Configuring authorization rules...");
+                auth.requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**").permitAll()
                     .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                    .requestMatchers("/favicon.ico").denyAll()  // Ignore favicon requests
-                    .anyRequest().authenticated())
+                    .requestMatchers("/favicon.ico").denyAll()
+                    .anyRequest().authenticated();
+                System.out.println("Authorization rules configured");
+            })
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .oauth2Login(oauth2 -> {
