@@ -1,13 +1,12 @@
 package com.foodsy.config;
 
-import com.foodsy.domain.User;
-import com.foodsy.service.CustomOAuth2User;
 import com.foodsy.service.JwtService;
 import com.foodsy.util.CookieUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -17,7 +16,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
-
+    
     public OAuth2SuccessHandler(JwtService jwtService, CookieUtil cookieUtil) {
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
@@ -33,15 +32,20 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         System.out.println("Authentication: " + authentication);
         
         try {
-            CustomOAuth2User oauth2User = (CustomOAuth2User) authentication.getPrincipal();
-            User user = oauth2User.getUser();
+            DefaultOidcUser oidcUser = (DefaultOidcUser) authentication.getPrincipal();
             
-            System.out.println("OAuth2User: " + oauth2User);
-            System.out.println("User: " + user);
+            System.out.println("OidcUser: " + oidcUser);
+            System.out.println("User email: " + oidcUser.getEmail());
+            System.out.println("User name: " + oidcUser.getName());
             
-            // Generate JWT tokens
-            String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
-            String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+            // Extract user information from OIDC user
+            String email = oidcUser.getEmail();
+            String name = oidcUser.getName();
+            String sub = oidcUser.getSubject(); // This is the unique Google ID
+            
+            // Generate JWT tokens using the Google ID as username
+            String accessToken = jwtService.generateAccessToken(sub, email);
+            String refreshToken = jwtService.generateRefreshToken(sub);
             
             System.out.println("Generated access token: " + accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
             System.out.println("Generated refresh token: " + refreshToken.substring(0, Math.min(20, refreshToken.length())) + "...");
@@ -53,13 +57,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             // Redirect to a frontend page that can handle the post-login flow
             String redirectUrl = String.format(
                 "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s",
-                URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8)
+                URLEncoder.encode(name, StandardCharsets.UTF_8)
             );
             
             System.out.println("Redirecting to: " + redirectUrl);
             
             // Log success for debugging
-            System.out.println("OAuth2 authentication successful for user: " + user.getEmail());
+            System.out.println("OAuth2 authentication successful for user: " + email);
             
             response.sendRedirect(redirectUrl);
             
