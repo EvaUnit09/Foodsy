@@ -2,6 +2,18 @@
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  servlet:
+    session:
+      cookie:
+        same-site: lax
+        secure: true
+        http-only: false
+      timeout: 30m
 
 # Database Configuration
 spring:
@@ -39,6 +51,10 @@ spring:
   # Session Configuration for OAuth2
   session:
     store-type: none
+  
+  # Application Configuration
+  application:
+    name: backend
 
 # External API Configuration
 google:
@@ -93,24 +109,4 @@ management:
       show-components: always
       show-details-on-failure: when-authorized
       show-details-on-success: when-authorized
-      show-details-on-error: when-authorized
-
-# Application Configuration
-spring:
-  application:
-    name: backend
-
-# Production Configuration
-server:
-  error:
-    include-message: never
-    include-binding-errors: never
-    include-stacktrace: never
-    include-exception: false
-  servlet:
-    session:
-      cookie:
-        same-site: lax
-        secure: true
-        http-only: false
-      timeout: 30m 
+      show-details-on-error: when-authorized 
