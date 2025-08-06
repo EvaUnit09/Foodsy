@@ -68,7 +68,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**").permitAll()
+                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**").permitAll()
                     .anyRequest().authenticated())
             .oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
