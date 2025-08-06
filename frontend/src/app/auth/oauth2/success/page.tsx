@@ -13,7 +13,7 @@ const OAuth2SuccessPage = () => {
       try {
         // Fetch user data from backend after OAuth2 login
         const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-        const response = await fetch(`${backendUrl}/oauth2/user`, {
+        const response = await fetch(`${backendUrl}/auth/me`, {
           method: "GET",
           credentials: "include", // Include cookies for session
         });
