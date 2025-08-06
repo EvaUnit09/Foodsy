@@ -69,7 +69,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**").permitAll()
-                    .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
+                    .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                    .requestMatchers("/favicon.ico").denyAll()  // Ignore favicon requests
                     .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)

@@ -78,6 +78,8 @@ public class GlobalExceptionHandler {
             .body(new ErrorResponse(e.getMessage()));
     }
     
+
+
     /**
      * Handle all other unexpected exceptions
      */
