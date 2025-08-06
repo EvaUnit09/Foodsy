@@ -22,6 +22,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 
+import org.springframework.context.annotation.Lazy;
+
 @Configuration
 public class SecurityConfig {
     
@@ -32,7 +34,7 @@ public class SecurityConfig {
     
     @Autowired
     public SecurityConfig(OAuth2UserService oauth2UserService, 
-                         JwtAuthenticationFilter jwtAuthenticationFilter,
+                         @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
                          JwtService jwtService,
                          UserService userService) {
         this.oauth2UserService = oauth2UserService;
@@ -41,10 +43,7 @@ public class SecurityConfig {
         this.userService = userService;
     }
     
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+
     
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -105,7 +104,7 @@ public class SecurityConfig {
                     .baseUri("/login/oauth2/code/*"))
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(oauth2UserService))
-                .successHandler(new OAuth2SuccessHandler(jwtService, userService))
+                .successHandler(new OAuth2SuccessHandler(jwtService))
                 .failureHandler((request, response, exception) -> {
                     // Log the error for debugging
                     System.err.println("OAuth2 authentication failed: " + exception.getMessage());
