@@ -1,119 +1,79 @@
 package com.foodsy.config;
 
-import com.foodsy.service.OAuth2UserService;
 import com.foodsy.service.JwtService;
+import com.foodsy.service.OAuth2UserService;
 import com.foodsy.util.CookieUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import jakarta.servlet.http.HttpServletResponse;
-import java.util.Arrays;
 
-import org.springframework.context.annotation.Lazy;
+import java.util.Arrays;
 
 @Configuration
 public class SecurityConfig {
-    
-    private final OAuth2UserService oauth2UserService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final OAuth2UserService oAuth2UserService;
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
-    
+
     @Autowired
-    public SecurityConfig(OAuth2UserService oauth2UserService, 
-                         @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
-                         JwtService jwtService,
-                         CookieUtil cookieUtil) {
-        this.oauth2UserService = oauth2UserService;
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    public SecurityConfig(OAuth2UserService oAuth2UserService,
+                          JwtService jwtService,
+                          CookieUtil cookieUtil) {
+        this.oAuth2UserService = oAuth2UserService;
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
     }
-    
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
-    
+
+    /**
+     * Minimal CORS configuration so the frontend (localhost & vercel) can
+     * reach the backend during OAuth2 redirects.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // FIX: Corrected the Vercel URL
-        configuration.setAllowedOrigins(Arrays.asList(
-            "https://foodsy-frontend.vercel.app",  // Fixed from .api to .app
-            "http://localhost:3000"
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "https://foodsy-frontend.vercel.app"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
-        
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
-    
+
+    /**
+     * Bare-minimum Spring-Security configuration recommended by the official
+     * docs to enable OAuth2 Login.
+     *
+     * 1.  Everything under /oauth2/** and /login/** is publicly accessible
+     *     because the framework needs those endpoints for the OAuth2 flow.
+     * 2.  All other requests require authentication.
+     * 3.  We keep sessions IF_REQUIRED so Spring can store the OAuth2
+     *     AuthorizationRequest between redirects.
+     */
     @Bean
-    public AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, authException) -> {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
-        };
-    }
-    
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/", "/hello", "/error").permitAll()
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/oauth2/**").permitAll()
-                .requestMatchers("/login/**").permitAll()
-                .requestMatchers("/restaurants/**").permitAll()
-                .requestMatchers("/sessions/**").permitAll()
-                .requestMatchers("/votes/**").permitAll()
-                .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/homepage/**").permitAll()
-                // All other endpoints require authentication
-                .anyRequest().authenticated()
-            )
+                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**").permitAll()
+                    .anyRequest().authenticated())
             .oauth2Login(oauth2 -> oauth2
-                .authorizationEndpoint(authorization -> authorization
-                    .baseUri("/oauth2/authorization"))
-                .redirectionEndpoint(redirection -> redirection
-                    .baseUri("/login/oauth2/code/*"))
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(oauth2UserService))
-                .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
-                .failureHandler((request, response, exception) -> {
-                    // Log the error for debugging
-                    System.err.println("OAuth2 authentication failed: " + exception.getMessage());
-                    exception.printStackTrace();
-                    // Redirect to frontend with error
-                    response.sendRedirect("https://foodsy-frontend.vercel.app/auth/error?message=" + 
-                        exception.getMessage());
-                })
-            )
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-            // Add JWT filter but skip for OAuth endpoints
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-            
+                    .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
+                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
+            );
         return http.build();
     }
 }
