@@ -30,6 +30,11 @@ public class SecurityConfig {
         this.oAuth2UserService = oAuth2UserService;
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
+        
+        // Debug logging
+        System.out.println("SecurityConfig initialized with OAuth2UserService: " + oAuth2UserService);
+        System.out.println("SecurityConfig initialized with JwtService: " + jwtService);
+        System.out.println("SecurityConfig initialized with CookieUtil: " + cookieUtil);
     }
 
     /**
@@ -63,6 +68,8 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        System.out.println("Configuring SecurityFilterChain...");
+        
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
@@ -74,10 +81,18 @@ public class SecurityConfig {
                     .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
-            .oauth2Login(oauth2 -> oauth2
-                    .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
-                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
-            );
+            .oauth2Login(oauth2 -> {
+                System.out.println("Configuring OAuth2 login...");
+                oauth2
+                    .userInfoEndpoint(userInfo -> {
+                        System.out.println("Configuring userInfo endpoint with: " + oAuth2UserService);
+                        userInfo.userService(oAuth2UserService);
+                    })
+                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil));
+                System.out.println("OAuth2 login configured successfully");
+            });
+        
+        System.out.println("SecurityFilterChain configuration completed");
         return http.build();
     }
 }

@@ -28,13 +28,23 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                                        HttpServletResponse response, 
                                        Authentication authentication) throws IOException, ServletException {
         
+        System.out.println("=== OAuth2SuccessHandler.onAuthenticationSuccess called ===");
+        System.out.println("Request URI: " + request.getRequestURI());
+        System.out.println("Authentication: " + authentication);
+        
         try {
             CustomOAuth2User oauth2User = (CustomOAuth2User) authentication.getPrincipal();
             User user = oauth2User.getUser();
             
+            System.out.println("OAuth2User: " + oauth2User);
+            System.out.println("User: " + user);
+            
             // Generate JWT tokens
             String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
             String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+            
+            System.out.println("Generated access token: " + accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
+            System.out.println("Generated refresh token: " + refreshToken.substring(0, Math.min(20, refreshToken.length())) + "...");
             
             // Set tokens in HTTP-only cookies
             cookieUtil.setAccessTokenCookie(response, accessToken);
@@ -45,6 +55,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s",
                 URLEncoder.encode(user.getUsername(), StandardCharsets.UTF_8)
             );
+            
+            System.out.println("Redirecting to: " + redirectUrl);
             
             // Log success for debugging
             System.out.println("OAuth2 authentication successful for user: " + user.getEmail());
