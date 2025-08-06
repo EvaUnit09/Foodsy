@@ -31,16 +31,11 @@ public class SecurityConfig {
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
         
-        // Debug logging
         System.out.println("SecurityConfig initialized with OAuth2UserService: " + oAuth2UserService);
         System.out.println("SecurityConfig initialized with JwtService: " + jwtService);
         System.out.println("SecurityConfig initialized with CookieUtil: " + cookieUtil);
     }
 
-    /**
-     * Minimal CORS configuration so the frontend (localhost & vercel) can
-     * reach the backend during OAuth2 redirects.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -56,16 +51,6 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * Bare-minimum Spring-Security configuration recommended by the official
-     * docs to enable OAuth2 Login.
-     *
-     * 1.  Everything under /oauth2/** and /login/** is publicly accessible
-     *     because the framework needs those endpoints for the OAuth2 flow.
-     * 2.  All other requests require authentication.
-     * 3.  We keep sessions IF_REQUIRED so Spring can store the OAuth2
-     *     AuthorizationRequest between redirects.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         System.out.println("Configuring SecurityFilterChain...");
@@ -88,7 +73,7 @@ public class SecurityConfig {
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .oauth2Login(oauth2 -> {
-                System.out.println("Configuring OAuth2 login...");
+                System.out.println("Configuring OAuth2 login with defaults...");
                 oauth2
                     .userInfoEndpoint(userInfo -> {
                         System.out.println("Configuring userInfo endpoint with: " + oAuth2UserService);
