@@ -1,7 +1,6 @@
 package com.foodsy.config;
 
 import com.foodsy.service.OAuth2UserService;
-import com.foodsy.config.JwtAuthenticationFilter;
 import com.foodsy.service.JwtService;
 import com.foodsy.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
