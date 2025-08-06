@@ -2,7 +2,6 @@ package com.foodsy.config;
 
 import com.foodsy.service.OAuth2UserService;
 import com.foodsy.service.JwtService;
-import com.foodsy.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,8 +10,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -30,20 +27,15 @@ public class SecurityConfig {
     private final OAuth2UserService oauth2UserService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtService jwtService;
-    private final UserService userService;
     
     @Autowired
     public SecurityConfig(OAuth2UserService oauth2UserService, 
                          @Lazy JwtAuthenticationFilter jwtAuthenticationFilter,
-                         JwtService jwtService,
-                         UserService userService) {
+                         JwtService jwtService) {
         this.oauth2UserService = oauth2UserService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtService = jwtService;
-        this.userService = userService;
     }
-    
-
     
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
