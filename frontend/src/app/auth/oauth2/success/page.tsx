@@ -14,6 +14,10 @@ export default function OAuth2SuccessPage() {
       console.log("OAuth2 success page: Starting authentication check");
       
       try {
+        // Add a small delay to ensure cookies are set
+        console.log("OAuth2 success page: Waiting for cookies to be set...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Step 1: Try to refresh the token first
         console.log("OAuth2 success page: Attempting to refresh token...");
         const refreshResponse = await ApiClient.auth.refreshToken();

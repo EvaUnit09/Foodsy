@@ -10,8 +10,7 @@ import java.time.Duration;
 /**
  * Central place for creating, rotating and clearing authentication cookies.
  * <ul>
- *   <li>Adds <code>Domain=apifoodsy-backend.com</code>, <code>Secure</code> and <code>SameSite=None</code>
- *       so the browser accepts the cookie on a cross‑origin (Vercel → AWS) redirect.</li>
+ *   <li>Uses <code>Secure</code> and <code>SameSite=None</code> for cross‑origin cookies</li>
  *   <li>Provides helpers for access‑token, refresh‑token and session cookies.</li>
  *   <li>Convenience methods to clear individual or all auth cookies.</li>
  * </ul>
@@ -19,7 +18,6 @@ import java.time.Duration;
 @Component
 public class CookieUtil {
 
-    private static final String DOMAIN = "apifoodsy-backend.com";
     private static final Duration ACCESS_TOKEN_TTL = Duration.ofHours(24);
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
 
@@ -75,7 +73,6 @@ public class CookieUtil {
 
     private ResponseCookie.ResponseCookieBuilder base(String name, String value) {
         return ResponseCookie.from(name, value)
-                .domain(DOMAIN)
                 .path("/")
                 .httpOnly(true)
                 .secure(true) // required with SameSite=None
