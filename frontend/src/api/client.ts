@@ -119,7 +119,7 @@ export class ApiError extends Error {
  * Centralized API Client
  */
 export class ApiClient {
-  private static baseURL = "/api"; // Same domain - will use Vercel API routes
+  private static baseURL = "/api"; // Use Vercel API routes as proxy to backend
   
   /**
    * Generic request method with consistent error handling
