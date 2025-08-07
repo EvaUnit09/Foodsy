@@ -64,7 +64,7 @@ export class ApiError extends Error {
  * Centralized API Client
  */
 export class ApiClient {
-  private static baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  private static baseURL = "/api"; // Same domain - will use Vercel API routes
   
   /**
    * Generic request method with consistent error handling
@@ -75,9 +75,8 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Get tokens from localStorage for authentication
+    // Get access token from localStorage for authentication
     const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
     
     const headers: HeadersInit = { 
       "Content-Type": "application/json",
@@ -91,7 +90,7 @@ export class ApiClient {
     
     const config: RequestInit = {
       headers,
-      credentials: "include", // Keep for CORS preflight
+      credentials: "include", // Keep for CORS preflight and refresh token cookies
       ...options,
     };
     
