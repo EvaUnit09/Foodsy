@@ -58,7 +58,7 @@ public class SecurityConfig {
                     // Public endpoints
                     .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout", "/auth/test").permitAll()
                     .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                    .requestMatchers("/favicon.ico").denyAll()
+                    .requestMatchers("/favicon.ico").permitAll()
                     .anyRequest().authenticated();
                 System.out.println("Authorization rules configured with OPTIONS permit");
             })
