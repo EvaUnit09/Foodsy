@@ -9,14 +9,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log(`API Proxy: ${req.method} /sessions/${apiPath}`);
   
   try {
+    // Prepare headers, excluding host and content-length
+    const headers: Record<string, string> = {};
+    Object.keys(req.headers).forEach(key => {
+      if (key !== 'host' && key !== 'content-length') {
+        const value = req.headers[key];
+        if (typeof value === 'string') {
+          headers[key] = value;
+        }
+      }
+    });
+    
     // Forward the request to the AWS backend
     const response = await fetch(`${BACKEND_URL}/sessions/${apiPath}`, {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        ...req.headers as Record<string, string>,
+        ...headers,
       },
-      body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
+      body: req.method !== 'GET' && req.body ? JSON.stringify(req.body) : undefined,
     });
 
     const data = await response.json();

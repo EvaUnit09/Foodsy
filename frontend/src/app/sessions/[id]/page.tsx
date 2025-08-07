@@ -68,8 +68,9 @@ const fetchSession = (sessionId: number) => {
 
 /* --------------------------- component --------------------------- */
 export default function SessionPage() {
-  const { id } = useParams();
-  const sessionId = Number(id);
+  const params = useParams();
+  const id = params?.id;
+  const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
   const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; status: string; isHost?: boolean } | null>(null);

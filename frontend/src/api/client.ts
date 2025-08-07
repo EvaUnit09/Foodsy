@@ -12,8 +12,6 @@ export interface User {
   lastName?: string;
   displayName: string;
   avatarUrl?: string;
-  dietaryPreferences?: string[];
-  foodAllergies?: string[];
   provider: string;
   emailVerified: boolean;
   createdAt: string;
