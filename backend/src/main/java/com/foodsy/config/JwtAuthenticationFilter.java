@@ -97,12 +97,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private String extractTokenFromCookies(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
+        System.out.println("JWT Filter - Extracting cookies from request to: " + request.getRequestURI());
+        
         if (cookies != null) {
+            System.out.println("JWT Filter - Found " + cookies.length + " cookies:");
             for (Cookie cookie : cookies) {
+                System.out.println("JWT Filter - Cookie: " + cookie.getName() + " = " + (cookie.getValue() != null ? cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "..." : "null"));
                 if ("accessToken".equals(cookie.getName())) {
+                    System.out.println("JWT Filter - Found accessToken cookie!");
                     return cookie.getValue();
                 }
             }
+        } else {
+            System.out.println("JWT Filter - No cookies found in request");
         }
         return null;
     }

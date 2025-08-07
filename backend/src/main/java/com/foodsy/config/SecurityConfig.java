@@ -56,7 +56,7 @@ public class SecurityConfig {
                     // CRITICAL: Permit ALL OPTIONS requests first (for CORS preflight)
                     .requestMatchers("OPTIONS", "/**").permitAll()
                     // Public endpoints
-                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout").permitAll()
+                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout", "/auth/test").permitAll()
                     .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                     .requestMatchers("/favicon.ico").denyAll()
                     .anyRequest().authenticated();
