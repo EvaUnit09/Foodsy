@@ -33,7 +33,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Skip JWT validation for OAuth and public endpoints
         String requestPath = request.getRequestURI();
+        System.out.println("=== JWT FILTER DEBUG ===");
+        System.out.println("Request Path: " + requestPath);
+        System.out.println("Should Skip: " + shouldSkipAuthentication(requestPath));
+        
         if (shouldSkipAuthentication(requestPath)) {
+            System.out.println("Skipping JWT validation for: " + requestPath);
             filterChain.doFilter(request, response);
             return;
         }
@@ -41,15 +46,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // Try to extract token from Authorization header first (preferred method)
             String token = extractTokenFromHeader(request);
+            System.out.println("Token from header: " + (token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null"));
             
             // Fallback to cookies if no Authorization header
             if (token == null) {
                 token = extractTokenFromCookies(request);
+                System.out.println("Token from cookies: " + (token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null"));
             }
             
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                System.out.println("Processing JWT token...");
+                System.out.println("Is access token: " + jwtService.isAccessToken(token));
+                System.out.println("Is token expired: " + jwtService.isTokenExpired(token));
+                
                 if (jwtService.isAccessToken(token) && !jwtService.isTokenExpired(token)) {
                     String userId = jwtService.extractUserId(token);
+                    System.out.println("Extracted user ID: " + userId);
                     
                     UserDetails userDetails = User.builder()
                             .username(userId)
@@ -63,9 +75,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println("JWT authentication successful for user: " + userId);
+                } else {
+                    System.out.println("JWT token validation failed");
                 }
+            } else {
+                System.out.println("No token found or authentication already exists");
             }
         } catch (Exception e) {
+            System.err.println("JWT authentication failed: " + e.getMessage());
+            e.printStackTrace();
             logger.warn("JWT authentication failed: " + e.getMessage());
         }
         
