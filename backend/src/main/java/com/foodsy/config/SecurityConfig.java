@@ -38,6 +38,8 @@ public class SecurityConfig {
         
         http
             .csrf(AbstractHttpConfigurer::disable)
+            // CRITICAL: Disable CORS in Spring Boot - let Nginx handle it completely
+            .cors(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> {
                 System.out.println("Configuring session management with IF_REQUIRED policy");
                 session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
