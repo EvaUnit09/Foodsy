@@ -2,6 +2,7 @@ package com.foodsy.controller;
 
 import com.foodsy.dto.UserDto;
 import com.foodsy.service.UserService;
+import com.foodsy.service.JwtService;
 import com.foodsy.util.UserMapper;
 import com.foodsy.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,11 +24,68 @@ public class AuthController {
     
     private final UserService userService;
     private final CookieUtil cookieUtil;
+    private final JwtService jwtService;
     
     @Autowired
-    public AuthController(UserService userService, CookieUtil cookieUtil) {
+    public AuthController(UserService userService, CookieUtil cookieUtil, JwtService jwtService) {
         this.userService = userService;
         this.cookieUtil = cookieUtil;
+        this.jwtService = jwtService;
+    }
+    
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, String>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        System.out.println("AuthController - /auth/refresh called");
+        
+        // Extract refresh token from cookies
+        Cookie[] cookies = request.getCookies();
+        String refreshToken = null;
+        
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        
+        if (refreshToken == null) {
+            System.out.println("AuthController - No refresh token found in cookies");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No refresh token"));
+        }
+        
+        try {
+            // Validate refresh token
+            if (!jwtService.isRefreshToken(refreshToken) || jwtService.isTokenExpired(refreshToken)) {
+                System.out.println("AuthController - Invalid or expired refresh token");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid refresh token"));
+            }
+            
+            // Extract user info from refresh token
+            String username = jwtService.extractUserId(refreshToken);
+            Optional<User> userOptional = userService.findByUsername(username);
+            
+            if (userOptional.isEmpty()) {
+                System.out.println("AuthController - User not found for username: " + username);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+            }
+            
+            User user = userOptional.get();
+            
+            // Generate new access token
+            String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
+            
+            // Set new access token cookie
+            cookieUtil.setAccessTokenCookie(response, newAccessToken);
+            
+            System.out.println("AuthController - Successfully refreshed token for user: " + username);
+            return ResponseEntity.ok(Map.of("message", "Token refreshed successfully"));
+            
+        } catch (Exception e) {
+            System.err.println("AuthController - Error refreshing token: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Token refresh failed"));
+        }
     }
     
     @GetMapping("/me")

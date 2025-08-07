@@ -49,11 +49,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
+      console.log('AuthContext: Starting auth check with refresh token flow');
+      
+      // Step 1: Try to refresh the token first
+      console.log('AuthContext: Attempting to refresh token...');
+      const refreshResponse = await ApiClient.auth.refreshToken();
+      console.log('AuthContext: Refresh token response:', refreshResponse);
+      
+      // Step 2: If refresh successful, get user data
+      console.log('AuthContext: Getting user data...');
       const userData = await ApiClient.auth.me();
+      console.log('AuthContext: User data received:', userData);
+      
       setUser(userData);
       setIsAuthenticated(true);
+      console.log('AuthContext: Authentication successful');
+      
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('AuthContext: Error checking auth status:', error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
