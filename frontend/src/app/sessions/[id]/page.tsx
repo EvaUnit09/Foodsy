@@ -30,6 +30,7 @@ const fetchRestaurantsWithPhotos = async (
 ): Promise<Restaurant[]> => {
   const base: Restaurant[] = await fetch(
     `${API_BASE_URL}/sessions/${sessionId}/restaurants`,
+    { credentials: "include" }
   ).then((r) => r.json());
 
   return Promise.all(
@@ -37,6 +38,7 @@ const fetchRestaurantsWithPhotos = async (
       try {
         const photoIds: string[] = await fetch(
           `${API_BASE_URL}/restaurants/${restaurant.providerId}/photos?limit=${IMAGES_LIMIT}`,
+          { credentials: "include" }
         ).then((pr) => pr.json());
         
         // Convert photo IDs to proxy URLs
@@ -53,9 +55,9 @@ const fetchRestaurantsWithPhotos = async (
 };
 
 const fetchParticipants = (sessionId: number) =>
-  fetch(`${API_BASE_URL}/sessions/${sessionId}/participants`).then((res) =>
-    res.json(),
-  );
+  fetch(`${API_BASE_URL}/sessions/${sessionId}/participants`, {
+    credentials: "include"
+  }).then((res) => res.json());
 
 const fetchSession = (sessionId: number) => {
   return fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
