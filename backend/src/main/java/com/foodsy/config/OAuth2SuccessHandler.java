@@ -96,6 +96,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                         newUser.setProvider(AuthProvider.GOOGLE);
                         newUser.setProviderId(oidcUser.getSubject());
                         newUser.setEmailVerified(true);
+                        newUser.setPassword("OAUTH2_USER"); // OAuth2 users don't use passwords
                         
                         userService.createUser(newUser);
                         System.out.println("OAuth2SuccessHandler: Created new user: " + username);
