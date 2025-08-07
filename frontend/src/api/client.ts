@@ -46,12 +46,69 @@ export interface VoteRequest {
   voteType: 'LIKE' | 'DISLIKE';
 }
 
+// Additional DTOs for API responses
+export interface ParticipantDto {
+  userId: string;
+  username: string;
+  isHost: boolean;
+}
+
+export interface RestaurantDto {
+  id: string;
+  name: string;
+  address: string;
+  providerId: string;
+  likeCount: number;
+  photoUrl?: string;
+}
+
+export interface VoteDto {
+  id: string;
+  sessionId: string;
+  restaurantId: string;
+  userId: string;
+  voteType: 'LIKE' | 'DISLIKE';
+  createdAt: string;
+}
+
+// Homepage DTOs
+export interface HomepageResponseDto {
+  message: string;
+  user?: User;
+  analytics?: HomepageAnalyticsDto;
+}
+
+export interface TasteProfileDto {
+  dietaryPreferences: string[];
+  foodAllergies: string[];
+  favoriteCuisines: string[];
+}
+
+export interface CacheStatsDto {
+  totalCached: number;
+  lastUpdated: string;
+  cacheHitRate: number;
+}
+
+export interface HomepageAnalyticsDto {
+  totalSessions: number;
+  totalVotes: number;
+  averageSessionDuration: number;
+}
+
+export interface AnalyticsEventDto {
+  eventType: string;
+  eventData: Record<string, unknown>;
+  userId?: string;
+  sessionId?: string;
+}
+
 // API Error class for better error handling
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
-    public originalError?: any
+    public originalError?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -131,7 +188,7 @@ export class ApiClient {
       }),
       
     me: (): Promise<User> => 
-      ApiClient.request<any>("/auth/me"),
+      ApiClient.request<User>("/auth/me"),
       
     google: (): string => `${ApiClient.baseURL}/auth/google`,
     
@@ -159,8 +216,8 @@ export class ApiClient {
     get: (sessionId: string): Promise<Session> =>
       ApiClient.request<Session>(`/sessions/${sessionId}`),
       
-    getParticipants: (sessionId: string): Promise<unknown[]> =>
-      ApiClient.request<any[]>(`/sessions/${sessionId}/participants`),
+    getParticipants: (sessionId: string): Promise<ParticipantDto[]> =>
+      ApiClient.request<ParticipantDto[]>(`/sessions/${sessionId}/participants`),
       
     start: (sessionId: string): Promise<void> =>
       ApiClient.request<void>(`/sessions/${sessionId}/start`, {
@@ -172,14 +229,14 @@ export class ApiClient {
         method: "POST"
       }),
       
-    getRestaurants: (sessionId: string): Promise<unknown[]> =>
-      ApiClient.request<any[]>(`/sessions/${sessionId}/restaurants`),
+    getRestaurants: (sessionId: string): Promise<RestaurantDto[]> =>
+      ApiClient.request<RestaurantDto[]>(`/sessions/${sessionId}/restaurants`),
       
-    getFinalRankings: (sessionId: string): Promise<unknown[]> =>
-      ApiClient.request<any[]>(`/sessions/${sessionId}/final-rankings`),
+    getFinalRankings: (sessionId: string): Promise<RestaurantDto[]> =>
+      ApiClient.request<RestaurantDto[]>(`/sessions/${sessionId}/final-rankings`),
       
     getWinner: (sessionId: string): Promise<User> =>
-      ApiClient.request<any>(`/sessions/${sessionId}/winner`)
+      ApiClient.request<User>(`/sessions/${sessionId}/winner`)
   };
   
   /**
@@ -187,44 +244,44 @@ export class ApiClient {
    */
   static votes = {
     cast: (data: VoteRequest): Promise<User> =>
-      ApiClient.request<any>("/votes", {
+      ApiClient.request<User>("/votes", {
         method: "POST",
         body: JSON.stringify(data)
       }),
       
-    getBySession: (sessionId: string): Promise<unknown[]> =>
-      ApiClient.request<any[]>(`/votes/session/${sessionId}`),
+    getBySession: (sessionId: string): Promise<VoteDto[]> =>
+      ApiClient.request<VoteDto[]>(`/votes/session/${sessionId}`),
       
-    getByUser: (sessionId: string): Promise<unknown[]> =>
-      ApiClient.request<any[]>(`/votes/session/${sessionId}/user`)
+    getByUser: (sessionId: string): Promise<VoteDto[]> =>
+      ApiClient.request<VoteDto[]>(`/votes/session/${sessionId}/user`)
   };
   
   /**
    * Homepage API endpoints (reusing existing homepageApi functionality)
    */
   static homepage = {
-    getData: (): Promise<User> =>
-      ApiClient.request<any>("/homepage"),
+    getData: (): Promise<HomepageResponseDto> =>
+      ApiClient.request<HomepageResponseDto>("/homepage"),
       
-    getDataAnonymous: (): Promise<User> =>
-      ApiClient.request<any>("/homepage"),
+    getDataAnonymous: (): Promise<HomepageResponseDto> =>
+      ApiClient.request<HomepageResponseDto>("/homepage"),
       
-    createTasteProfile: (profile: any): Promise<void> =>
+    createTasteProfile: (profile: TasteProfileDto): Promise<void> =>
       ApiClient.request<void>("/homepage/taste-profile", {
         method: "POST",
         body: JSON.stringify(profile)
       }),
       
-    getTasteProfile: (): Promise<User> =>
-      ApiClient.request<any>("/homepage/taste-profile"),
+    getTasteProfile: (): Promise<TasteProfileDto> =>
+      ApiClient.request<TasteProfileDto>("/homepage/taste-profile"),
       
-    updateTasteProfile: (profile: any): Promise<void> =>
+    updateTasteProfile: (profile: TasteProfileDto): Promise<void> =>
       ApiClient.request<void>("/homepage/taste-profile", {
         method: "PUT",
         body: JSON.stringify(profile)
       }),
       
-    trackEvent: (event: any): Promise<void> =>
+    trackEvent: (event: AnalyticsEventDto): Promise<void> =>
       ApiClient.request<void>("/homepage/analytics", {
         method: "POST",
         body: JSON.stringify({
@@ -238,8 +295,8 @@ export class ApiClient {
         method: "POST"
       }),
       
-    getCacheStats: (): Promise<User> =>
-      ApiClient.request<any>("/homepage/cache/stats")
+    getCacheStats: (): Promise<CacheStatsDto> =>
+      ApiClient.request<CacheStatsDto>("/homepage/cache/stats")
   };
   
   /**

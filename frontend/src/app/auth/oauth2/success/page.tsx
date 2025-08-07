@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ApiClient } from "@/api/client";
 
-export default function OAuth2SuccessPage() {
+function OAuth2SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
@@ -114,4 +114,21 @@ export default function OAuth2SuccessPage() {
   }
 
   return null;
+}
+
+export default function OAuth2SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">
+            Loading...
+          </h2>
+        </div>
+      </div>
+    }>
+      <OAuth2SuccessContent />
+    </Suspense>
+  );
 }
