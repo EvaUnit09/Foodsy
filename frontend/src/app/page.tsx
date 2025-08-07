@@ -260,7 +260,7 @@ const Index = () => {
                 <Button
                   size="sm"
                   className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                  onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://apifoodsy-backend.com'}/oauth2/authorization/google`}
+                  onClick={() => window.location.href = `/api/oauth2/authorization/google`}
                 >
                   Sign In with Google
                 </Button>
@@ -373,7 +373,7 @@ const Index = () => {
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
-                  onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://apifoodsy-backend.com'}/oauth2/authorization/google`}
+                  onClick={() => window.location.href = `/api/oauth2/authorization/google`}
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   Sign Up with Google
