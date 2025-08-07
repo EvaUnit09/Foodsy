@@ -82,14 +82,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             System.out.println("Generated access token: " + accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
             System.out.println("Generated refresh token: " + refreshToken.substring(0, Math.min(20, refreshToken.length())) + "...");
             
-            // Set tokens in HTTP-only cookies
-            cookieUtil.setAccessTokenCookie(response, accessToken);
-            cookieUtil.setRefreshTokenCookie(response, refreshToken);
-            
-            // Redirect to a frontend page that can handle the post-login flow
+            // For cross-domain compatibility, pass tokens as URL parameters
+            // The frontend will store them in localStorage
             String redirectUrl = String.format(
-                "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s",
-                URLEncoder.encode(displayName, StandardCharsets.UTF_8)
+                "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s&accessToken=%s&refreshToken=%s",
+                URLEncoder.encode(displayName, StandardCharsets.UTF_8),
+                URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
+                URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
             );
             
             System.out.println("Redirecting to: " + redirectUrl);

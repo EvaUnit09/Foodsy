@@ -35,35 +35,59 @@ public class AuthController {
     
     @PostMapping("/refresh")
     public ResponseEntity<Map<String, String>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
-        System.out.println("AuthController - /auth/refresh called");
+        System.out.println("=== AuthController - /auth/refresh called ===");
+        System.out.println("Request URI: " + request.getRequestURI());
+        System.out.println("Request method: " + request.getMethod());
         
-        // Extract refresh token from cookies
-        Cookie[] cookies = request.getCookies();
+        // Try to get refresh token from Authorization header first
         String refreshToken = null;
+        String authHeader = request.getHeader("Authorization");
         
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("refreshToken".equals(cookie.getName())) {
-                    refreshToken = cookie.getValue();
-                    break;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            refreshToken = authHeader.substring(7);
+            System.out.println("AuthController - Found refresh token in Authorization header");
+        } else {
+            // Fallback to cookies
+            Cookie[] cookies = request.getCookies();
+            System.out.println("AuthController - Total cookies received: " + (cookies != null ? cookies.length : 0));
+            
+            if (cookies != null) {
+                System.out.println("AuthController - Cookie names:");
+                for (Cookie cookie : cookies) {
+                    System.out.println("AuthController - Cookie: " + cookie.getName() + " = " + (cookie.getValue() != null ? cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "..." : "null"));
+                    if ("refreshToken".equals(cookie.getName())) {
+                        refreshToken = cookie.getValue();
+                        System.out.println("AuthController - Found refresh token cookie");
+                    }
                 }
+            } else {
+                System.out.println("AuthController - No cookies found in request");
             }
         }
         
         if (refreshToken == null) {
-            System.out.println("AuthController - No refresh token found in cookies");
+            System.out.println("AuthController - No refresh token found");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No refresh token"));
         }
         
         try {
+            System.out.println("AuthController - Validating refresh token...");
             // Validate refresh token
-            if (!jwtService.isRefreshToken(refreshToken) || jwtService.isTokenExpired(refreshToken)) {
-                System.out.println("AuthController - Invalid or expired refresh token");
+            if (!jwtService.isRefreshToken(refreshToken)) {
+                System.out.println("AuthController - Token is not a refresh token");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid refresh token"));
             }
             
+            if (jwtService.isTokenExpired(refreshToken)) {
+                System.out.println("AuthController - Refresh token is expired");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Expired refresh token"));
+            }
+            
+            System.out.println("AuthController - Refresh token is valid, extracting user info...");
             // Extract user info from refresh token
             String username = jwtService.extractUserId(refreshToken);
+            System.out.println("AuthController - Extracted username: " + username);
+            
             Optional<User> userOptional = userService.findByUsername(username);
             
             if (userOptional.isEmpty()) {
@@ -72,18 +96,22 @@ public class AuthController {
             }
             
             User user = userOptional.get();
+            System.out.println("AuthController - User found: " + user.getEmail());
             
             // Generate new access token
             String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
+            System.out.println("AuthController - Generated new access token");
             
-            // Set new access token cookie
-            cookieUtil.setAccessTokenCookie(response, newAccessToken);
-            
+            // Return the new access token in response body for frontend to store
             System.out.println("AuthController - Successfully refreshed token for user: " + username);
-            return ResponseEntity.ok(Map.of("message", "Token refreshed successfully"));
+            return ResponseEntity.ok(Map.of(
+                "message", "Token refreshed successfully",
+                "accessToken", newAccessToken
+            ));
             
         } catch (Exception e) {
             System.err.println("AuthController - Error refreshing token: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Token refresh failed"));
         }
     }

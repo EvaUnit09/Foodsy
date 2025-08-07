@@ -11,8 +11,10 @@ interface AuthHeaderProps {
 }
 
 /**
- * Reusable header component for authentication pages
- * Eliminates duplication between signin and signup pages
+ * Authentication Header Component
+ * 
+ * Displays user authentication status and provides login/logout functionality.
+ * Uses OAuth2 Google authentication only.
  */
 export const AuthHeader: React.FC<AuthHeaderProps> = ({ 
   showProfile = true, 

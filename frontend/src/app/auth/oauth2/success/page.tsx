@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiClient } from "@/api/client";
 
 export default function OAuth2SuccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,14 +15,36 @@ export default function OAuth2SuccessPage() {
       console.log("OAuth2 success page: Starting authentication check");
       
       try {
-        // Add a small delay to ensure cookies are set
-        console.log("OAuth2 success page: Waiting for cookies to be set...");
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Get tokens from URL parameters
+        const accessToken = searchParams.get('accessToken');
+        const refreshToken = searchParams.get('refreshToken');
+        const username = searchParams.get('username');
         
-        // Step 1: Try to refresh the token first
+        console.log("OAuth2 success page: Tokens from URL:", { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken,
+          username 
+        });
+        
+        if (!accessToken || !refreshToken) {
+          throw new Error("Missing authentication tokens");
+        }
+        
+        // Store tokens in localStorage for cross-domain requests
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        console.log("OAuth2 success page: Tokens stored in localStorage");
+        
+        // Step 1: Try to refresh the token first (this will validate the tokens)
         console.log("OAuth2 success page: Attempting to refresh token...");
         const refreshResponse = await ApiClient.auth.refreshToken();
         console.log("OAuth2 success page: Refresh token response:", refreshResponse);
+        
+        // Update access token if a new one was provided
+        if (refreshResponse.accessToken) {
+          localStorage.setItem('accessToken', refreshResponse.accessToken);
+          console.log("OAuth2 success page: Updated access token in localStorage");
+        }
         
         // Step 2: If refresh successful, get user data
         console.log("OAuth2 success page: Getting user data...");
@@ -34,6 +57,10 @@ export default function OAuth2SuccessPage() {
         
       } catch (error) {
         console.error("OAuth2 success page: Authentication failed:", error);
+        
+        // Clear any stored tokens on error
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         
         if (error instanceof Error) {
           setError(error.message);
@@ -51,7 +78,7 @@ export default function OAuth2SuccessPage() {
     };
 
     handleOAuth2Success();
-  }, [router]);
+  }, [router, searchParams]);
 
   if (isLoading) {
     return (

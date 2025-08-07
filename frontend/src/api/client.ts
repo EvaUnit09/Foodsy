@@ -3,21 +3,7 @@
  * Eliminates hardcoded URLs and provides consistent error handling
  */
 
-// Types for API requests and responses
-export interface LoginRequest {
-  emailOrUsername: string;
-  password: string;
-}
-
-export interface SignUpRequest {
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  password: string;
-  confirmPassword: string;
-}
-
+// API Types
 export interface User {
   id: number;
   username: string;
@@ -37,6 +23,7 @@ export interface AuthResponse {
   message: string;
   success: boolean;
   user?: User;
+  accessToken?: string;
 }
 
 export interface SessionRequest {
@@ -87,12 +74,24 @@ export class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
+    
+    // Get tokens from localStorage for authentication
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    
+    const headers: HeadersInit = { 
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>)
+    };
+    
+    // Add Authorization header if we have an access token
+    if (accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
     const config: RequestInit = {
-      headers: { 
-        "Content-Type": "application/json",
-        ...options.headers 
-      },
-      credentials: "include",
+      headers,
+      credentials: "include", // Keep for CORS preflight
       ...options,
     };
     
@@ -129,18 +128,6 @@ export class ApiClient {
    * Authentication API endpoints
    */
   static auth = {
-    login: (data: LoginRequest): Promise<AuthResponse> => 
-      ApiClient.request<AuthResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(data)
-      }),
-      
-    signup: (data: SignUpRequest): Promise<AuthResponse> => 
-      ApiClient.request<AuthResponse>("/auth/signup", {
-        method: "POST",
-        body: JSON.stringify(data)
-      }),
-      
     logout: (): Promise<void> => 
       ApiClient.request<void>("/auth/logout", { 
         method: "POST" 

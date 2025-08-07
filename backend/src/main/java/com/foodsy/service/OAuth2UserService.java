@@ -72,7 +72,6 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 user = existingUser.get();
                 // Link the OAuth2 account
                 user.setProvider(provider);
-                user.setProviderId(providerId);
                 user.setAvatarUrl(picture);
             } else {
                 // Create new user
@@ -96,9 +95,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 user.setLastName(name != null && name.split(" ").length > 1 ? name.split(" ")[1] : null);
                 user.setAvatarUrl(picture);
                 user.setProvider(provider);
-                user.setProviderId(providerId);
                 user.setEmailVerified(true); // OAuth2 emails are considered verified
-                user.setPassword("OAUTH2_USER_NO_PASSWORD"); // Placeholder for OAuth2 users
             }
         }
         
