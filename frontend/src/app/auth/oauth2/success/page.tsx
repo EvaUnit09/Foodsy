@@ -16,24 +16,21 @@ export default function OAuth2SuccessPage() {
       
       try {
         // Get tokens from URL parameters
-        const accessToken = searchParams.get('accessToken');
-        const refreshToken = searchParams.get('refreshToken');
-        const username = searchParams.get('username');
+        const accessToken = searchParams?.get('accessToken');
+        const username = searchParams?.get('username');
         
         console.log("OAuth2 success page: Tokens from URL:", { 
           hasAccessToken: !!accessToken, 
-          hasRefreshToken: !!refreshToken,
           username 
         });
         
-        if (!accessToken || !refreshToken) {
-          throw new Error("Missing authentication tokens");
+        if (!accessToken) {
+          throw new Error("Missing access token");
         }
         
-        // Store tokens in localStorage for cross-domain requests
+        // Store only access token in localStorage (refresh token is in HttpOnly cookie)
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        console.log("OAuth2 success page: Tokens stored in localStorage");
+        console.log("OAuth2 success page: Access token stored in localStorage");
         
         // Step 1: Try to refresh the token first (this will validate the tokens)
         console.log("OAuth2 success page: Attempting to refresh token...");
@@ -60,7 +57,6 @@ export default function OAuth2SuccessPage() {
         
         // Clear any stored tokens on error
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         
         if (error instanceof Error) {
           setError(error.message);
