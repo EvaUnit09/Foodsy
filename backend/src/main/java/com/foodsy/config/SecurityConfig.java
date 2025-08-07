@@ -3,21 +3,21 @@ package com.foodsy.config;
 import com.foodsy.service.JwtService;
 import com.foodsy.service.OAuth2UserService;
 import com.foodsy.util.CookieUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.Arrays;
-import java.util.List;
-
+/**
+ * Consolidated Spring-Security configuration without Lombok.
+ */
 @Configuration
 public class SecurityConfig {
 
@@ -25,111 +25,51 @@ public class SecurityConfig {
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
 
-    @Autowired
+    // Constructor injection – no Lombok required
     public SecurityConfig(OAuth2UserService oAuth2UserService,
                           JwtService jwtService,
                           CookieUtil cookieUtil) {
         this.oAuth2UserService = oAuth2UserService;
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
-        
-        System.out.println("SecurityConfig initialized with OAuth2UserService: " + oAuth2UserService);
-        System.out.println("SecurityConfig initialized with JwtService: " + jwtService);
-        System.out.println("SecurityConfig initialized with CookieUtil: " + cookieUtil);
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        System.out.println("Configuring SecurityFilterChain...");
-        
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // Enable CORS with custom configuration for OAuth2
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> {
-                System.out.println("Configuring session management with IF_REQUIRED policy");
-                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
-            })
-            .authorizeHttpRequests(auth -> {
-                System.out.println("Configuring authorization rules...");
-                auth
-                    // CRITICAL: Permit ALL OPTIONS requests first (for CORS preflight)
-                    .requestMatchers("OPTIONS", "/**").permitAll()
-                    // Public endpoints
-                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout", "/auth/test").permitAll()
-                    .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                    .requestMatchers("/favicon.ico").permitAll()
-                    .anyRequest().authenticated();
-                System.out.println("Authorization rules configured with OPTIONS permit");
-            })
+            .cors(Customizer.withDefaults()) // delegate to WebMvcConfigurer
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
+                    .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
-            .oauth2Login(oauth2 -> {
-                System.out.println("Configuring OAuth2 login with defaults...");
-                oauth2
-                    .userInfoEndpoint(userInfo -> {
-                        System.out.println("Configuring userInfo endpoint with: " + oAuth2UserService);
-                        userInfo.userService(oAuth2UserService);
-                    })
-                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil));
-                System.out.println("OAuth2 login configured successfully");
-            });
-        
-        System.out.println("SecurityFilterChain configuration completed");
+            .oauth2Login(oauth2 -> oauth2
+                    .userInfoEndpoint(u -> u.userService(oAuth2UserService))
+                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
+            );
+
         return http.build();
     }
-    
+
+    /**
+     * Single source of truth for CORS.
+     */
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        System.out.println("Configuring CORS for OAuth2 and API endpoints...");
-        
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Allow specific origins
-        configuration.setAllowedOrigins(Arrays.asList(
-            "https://foodsy-frontend.vercel.app",
-            "http://localhost:3000" // For development
-        ));
-        
-        // Allow credentials (required for cookies)
-        configuration.setAllowCredentials(true);
-        
-        // Allow all standard HTTP methods
-        configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
-        ));
-        
-        // Allow all standard headers plus OAuth2 specific ones
-        configuration.setAllowedHeaders(Arrays.asList(
-            "Origin",
-            "X-Requested-With", 
-            "Content-Type",
-            "Accept",
-            "Authorization",
-            "Cookie",
-            "Set-Cookie",
-            "X-Forwarded-For",
-            "X-Forwarded-Proto",
-            "X-Forwarded-Host"
-        ));
-        
-        // Expose headers that frontend might need
-        configuration.setExposedHeaders(Arrays.asList(
-            "Set-Cookie",
-            "Authorization",
-            "Location"
-        ));
-        
-        // Cache preflight for 1 hour
-        configuration.setMaxAge(3600L);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        
-        // Apply CORS to all endpoints
-        source.registerCorsConfiguration("/**", configuration);
-        
-        System.out.println("CORS configuration completed for all endpoints");
-        return source;
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("https://foodsy-frontend.vercel.app", "http://localhost:3000")
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                        .allowedHeaders("*")
+                        .allowCredentials(true)
+                        .maxAge(3600);
+            }
+        };
     }
 }
