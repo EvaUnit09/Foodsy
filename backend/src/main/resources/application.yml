@@ -10,17 +10,15 @@ server:
     include-stacktrace: never
     include-exception: false
   servlet:
+    # Session configuration removed - using JWT-based authentication instead
     session:
-      cookie:
-        same-site: none
-        secure: true
-        http-only: false
       timeout: 30m
 
 # Cookie Configuration
 app:
   cookie:
     secure: true
+    # Domain left empty for cross-domain compatibility between Vercel and backend
     domain: ""
 
 # Database Configuration

@@ -47,36 +47,22 @@ public class CookieUtil {
      * Set an HTTP-only access token cookie
      */
     public void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
-        Cookie cookie = new Cookie("accessToken", accessToken);
-        cookie.setMaxAge(ACCESS_TOKEN_DURATION);
-        cookie.setPath("/");
-        cookie.setSecure(secure);
-        cookie.setHttpOnly(true);
-        cookie.setDomain(null); // Don't set domain to allow cross-origin
-        response.addCookie(cookie);
-        
-        // Add SameSite=None for cross-origin requests (Spring Boot 3.x approach)
+        // Use Set-Cookie header directly for full control over cross-domain attributes
+        // Domain is left empty to allow cross-domain usage between Vercel and backend
         response.addHeader("Set-Cookie", 
-            String.format("%s=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
-                "accessToken", accessToken, ACCESS_TOKEN_DURATION));
+            String.format("accessToken=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
+                accessToken, ACCESS_TOKEN_DURATION));
     }
     
     /**
      * Set an HTTP-only refresh token cookie
      */
     public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie cookie = new Cookie("refreshToken", refreshToken);
-        cookie.setMaxAge(REFRESH_TOKEN_DURATION);
-        cookie.setPath("/");
-        cookie.setSecure(secure);
-        cookie.setHttpOnly(true);
-        cookie.setDomain(null); // Don't set domain to allow cross-origin
-        response.addCookie(cookie);
-        
-        // Add SameSite=None for cross-origin requests (Spring Boot 3.x approach)
+        // Use Set-Cookie header directly for full control over cross-domain attributes
+        // Domain is left empty to allow cross-domain usage between Vercel and backend
         response.addHeader("Set-Cookie", 
-            String.format("%s=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
-                "refreshToken", refreshToken, REFRESH_TOKEN_DURATION));
+            String.format("refreshToken=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
+                refreshToken, REFRESH_TOKEN_DURATION));
     }
     
     /**
