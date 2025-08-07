@@ -51,22 +51,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check if we have a user in localStorage from OAuth2 flow
       const storedUser = localStorage.getItem('user');
-      if (storedUser) {
+      const storedAccessToken = localStorage.getItem('accessToken');
+      
+      if (storedUser && storedAccessToken) {
         try {
           const userData = JSON.parse(storedUser);
           console.log('AuthContext: Found stored user data:', userData);
-          setUser(userData);
-          setIsAuthenticated(true);
-          console.log('AuthContext: Authentication successful from stored data');
-          return;
+          
+          // Verify the stored data is still valid by calling /me
+          try {
+            const currentUser = await ApiClient.auth.me();
+            console.log('AuthContext: Stored user data is still valid:', currentUser);
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            console.log('AuthContext: Authentication successful from stored data');
+            return;
+          } catch (meError: any) {
+            // If /me fails with 401, try refreshing token
+            if (meError.status === 401) {
+              console.log('AuthContext: Stored token expired, trying refresh...');
+              try {
+                const refreshResponse = await ApiClient.auth.refreshToken();
+                console.log('AuthContext: Refresh successful:', refreshResponse);
+                
+                // Update access token if provided
+                if (refreshResponse.accessToken) {
+                  localStorage.setItem('accessToken', refreshResponse.accessToken);
+                }
+                
+                // Get updated user data
+                const currentUser = await ApiClient.auth.me();
+                console.log('AuthContext: User data after refresh:', currentUser);
+                setUser(currentUser);
+                setIsAuthenticated(true);
+                console.log('AuthContext: Authentication successful after refresh');
+                return;
+              } catch (refreshError: any) {
+                console.log('AuthContext: Refresh failed, clearing stored data');
+                localStorage.removeItem('user');
+                localStorage.removeItem('accessToken');
+                setUser(null);
+                setIsAuthenticated(false);
+              }
+            } else {
+              // Other error, clear stored data
+              console.log('AuthContext: /me failed with non-401 error, clearing stored data');
+              localStorage.removeItem('user');
+              localStorage.removeItem('accessToken');
+              setUser(null);
+              setIsAuthenticated(false);
+            }
+          }
         } catch (e) {
           console.log('AuthContext: Invalid stored user data, clearing');
           localStorage.removeItem('user');
+          localStorage.removeItem('accessToken');
         }
       }
       
-      // If no stored user, try to refresh token (but don't treat 401 as error)
-      console.log('AuthContext: No stored user, checking for refresh token...');
+      // If no stored user or stored data is invalid, check for refresh token
+      console.log('AuthContext: No valid stored data, checking for refresh token...');
       try {
         const refreshResponse = await ApiClient.auth.refreshToken();
         console.log('AuthContext: Refresh token successful:', refreshResponse);

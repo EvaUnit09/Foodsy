@@ -88,7 +88,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             // Pass access token as URL parameter for immediate use
             String redirectUrl = String.format(
                 "https://foodsy-frontend.vercel.app/auth/oauth2/success?username=%s&accessToken=%s",
-                URLEncoder.encode(displayName, StandardCharsets.UTF_8),
+                URLEncoder.encode(username, StandardCharsets.UTF_8),
                 URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
             );
             
