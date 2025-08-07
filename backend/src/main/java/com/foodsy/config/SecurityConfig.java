@@ -25,14 +25,17 @@ public class SecurityConfig {
     private final OAuth2UserService oAuth2UserService;
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
+    private final com.foodsy.service.UserService userService;
 
     // Constructor injection – no Lombok required
     public SecurityConfig(OAuth2UserService oAuth2UserService,
                           JwtService jwtService,
-                          CookieUtil cookieUtil) {
+                          CookieUtil cookieUtil,
+                          com.foodsy.service.UserService userService) {
         this.oAuth2UserService = oAuth2UserService;
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
+        this.userService = userService;
     }
 
     @Bean
@@ -50,7 +53,7 @@ public class SecurityConfig {
             .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
             .oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(u -> u.userService(oAuth2UserService))
-                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil))
+                    .successHandler(new OAuth2SuccessHandler(jwtService, cookieUtil, userService))
             );
 
         return http.build();

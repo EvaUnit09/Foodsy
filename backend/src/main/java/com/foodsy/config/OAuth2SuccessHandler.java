@@ -1,8 +1,10 @@
 package com.foodsy.config;
 
 import com.foodsy.domain.User;
+import com.foodsy.domain.AuthProvider;
 import com.foodsy.service.CustomOAuth2User;
 import com.foodsy.service.JwtService;
+import com.foodsy.service.UserService;
 import com.foodsy.util.CookieUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,10 +20,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
+    private final UserService userService;
     
-    public OAuth2SuccessHandler(JwtService jwtService, CookieUtil cookieUtil) {
+    public OAuth2SuccessHandler(JwtService jwtService, CookieUtil cookieUtil, UserService userService) {
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
+        this.userService = userService;
     }
     
     @Override
@@ -75,6 +79,33 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 }
                 username = baseUsername; // This should match what OAuth2UserService creates
                 displayName = oidcUser.getGivenName() != null ? oidcUser.getGivenName() : oidcUser.getName();
+                
+                // CRITICAL FIX: Create user in database if OAuth2UserService wasn't called
+                System.out.println("OAuth2SuccessHandler: Ensuring user exists in database...");
+                try {
+                    // Check if user already exists
+                    if (userService.findByEmail(email).isEmpty()) {
+                        // Create new user
+                        User newUser = new User();
+                        newUser.setEmail(email);
+                        newUser.setUsername(username);
+                        newUser.setFirstName(oidcUser.getGivenName());
+                        newUser.setLastName(oidcUser.getFamilyName());
+                        newUser.setDisplayName(displayName);
+                        newUser.setAvatarUrl(oidcUser.getAttribute("picture"));
+                        newUser.setProvider(AuthProvider.GOOGLE);
+                        newUser.setProviderId(oidcUser.getSubject());
+                        newUser.setEmailVerified(true);
+                        
+                        userService.createUser(newUser);
+                        System.out.println("OAuth2SuccessHandler: Created new user: " + username);
+                    } else {
+                        System.out.println("OAuth2SuccessHandler: User already exists: " + username);
+                    }
+                } catch (Exception e) {
+                    System.err.println("OAuth2SuccessHandler: Failed to create user: " + e.getMessage());
+                    e.printStackTrace();
+                }
                 
             } else {
                 throw new RuntimeException("Unsupported principal type: " + authentication.getPrincipal().getClass().getName());
