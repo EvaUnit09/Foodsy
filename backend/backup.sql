@@ -379,6 +379,7 @@ CREATE TABLE public.users (
     id bigint NOT NULL,
     avatar_url character varying(255),
     created_at timestamp(6) with time zone,
+    display_name character varying(255),
     email character varying(255) NOT NULL,
     email_verified boolean,
     enabled boolean,

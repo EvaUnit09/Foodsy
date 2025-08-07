@@ -33,6 +33,9 @@ public class User {
     @Column(nullable = false)
     private AuthProvider provider = AuthProvider.GOOGLE;
     
+    @Column(name = "provider_id")
+    private String providerId;
+    
     @Column(name = "email_verified")
     private boolean emailVerified = false;
     
@@ -133,6 +136,14 @@ public class User {
         this.provider = provider;
     }
     
+    public String getProviderId() {
+        return providerId;
+    }
+    
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+    
     public boolean isEmailVerified() {
         return emailVerified;
     }
@@ -179,6 +190,7 @@ public class User {
                 ", email='" + email + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", provider=" + provider +
+                ", providerId='" + providerId + '\'' +
                 ", emailVerified=" + emailVerified +
                 '}';
     }
