@@ -68,7 +68,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 System.out.println("User subject: " + oidcUser.getSubject());
                 
                 email = oidcUser.getEmail();
-                username = oidcUser.getSubject(); // Use Google ID as username
+                // FIXED: Get the actual username from the database, not the Google subject ID
+                String baseUsername = email.split("@")[0];
+                if (baseUsername.length() < 3) {
+                    baseUsername = baseUsername + "_user";
+                }
+                username = baseUsername; // This should match what OAuth2UserService creates
                 displayName = oidcUser.getGivenName() != null ? oidcUser.getGivenName() : oidcUser.getName();
                 
             } else {

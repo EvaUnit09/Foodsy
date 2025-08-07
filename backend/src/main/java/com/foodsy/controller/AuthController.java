@@ -126,16 +126,23 @@ public class AuthController {
         }
         
         try {
-            Optional<User> userOptional = userService.findByUsername(principal.getName());
+            String username = principal.getName();
+            System.out.println("AuthController - Looking up user by username: " + username);
+            Optional<User> userOptional = userService.findByUsername(username);
             
             if (userOptional.isEmpty()) {
+                System.out.println("AuthController - User not found for username: " + username);
                 return ResponseEntity.notFound().build();
             }
             
-            UserDto userDto = UserMapper.toDto(userOptional.get());
+            User user = userOptional.get();
+            System.out.println("AuthController - Found user: " + user.getEmail() + ", username: " + user.getUsername());
+            UserDto userDto = UserMapper.toDto(user);
             return ResponseEntity.ok(userDto);
             
         } catch (Exception e) {
+            System.err.println("AuthController - Exception in /auth/me: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
