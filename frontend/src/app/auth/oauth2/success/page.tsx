@@ -42,9 +42,9 @@ function OAuth2SuccessContent() {
           localStorage.setItem('user', JSON.stringify(userData));
           console.log("OAuth2 success page: User data stored in localStorage");
           
-          // Redirect to homepage with authenticated user
+          // Redirect to homepage with authenticated user (use window.location for full reload)
           console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
-          router.push("/");
+          window.location.href = "/";
           
         } catch (meError: any) {
           // If /me fails, try refreshing token
@@ -69,7 +69,7 @@ function OAuth2SuccessContent() {
             
             // Redirect to homepage with authenticated user
             console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
-            router.push("/");
+                          window.location.href = "/";
             
           } catch (refreshError: any) {
             // Handle 401 specifically (expected when tokens are invalid)
@@ -98,7 +98,7 @@ function OAuth2SuccessContent() {
         
         // Redirect to homepage on error (user can try logging in again)
         setTimeout(() => {
-          router.push("/");
+                        window.location.href = "/";
         }, 3000);
       } finally {
         setIsLoading(false);
