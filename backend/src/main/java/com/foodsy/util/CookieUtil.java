@@ -1,113 +1,84 @@
 package com.foodsy.util;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+
 /**
- * Utility class for cookie management
- * Eliminates duplication in cookie creation and configuration
+ * Central place for creating, rotating and clearing authentication cookies.
+ * <ul>
+ *   <li>Adds <code>Domain=apifoodsy-backend.com</code>, <code>Secure</code> and <code>SameSite=None</code>
+ *       so the browser accepts the cookie on a cross‑origin (Vercel → AWS) redirect.</li>
+ *   <li>Provides helpers for access‑token, refresh‑token and session cookies.</li>
+ *   <li>Convenience methods to clear individual or all auth cookies.</li>
+ * </ul>
  */
 @Component
 public class CookieUtil {
-    
-    @Value("${app.cookie.secure:false}")
-    private boolean secure;
-    
-    @Value("${app.cookie.domain:}")
-    private String domain;
-    
-    // Cookie duration constants (in seconds)
-    public static final int ACCESS_TOKEN_DURATION = 24 * 60 * 60; // 24 hours
-    public static final int REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60; // 7 days
-    public static final int SESSION_DURATION = 30 * 60; // 30 minutes
-    
-    /**
-     * Create and set a cookie with the specified parameters
-     */
-    public static void setCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        setCookie(response, name, value, maxAge, "/", false, true);
+
+    private static final String DOMAIN = "apifoodsy-backend.com";
+    private static final Duration ACCESS_TOKEN_TTL = Duration.ofHours(24);
+    private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
+
+    /* ======================================================== */
+    /*  Public helpers                                          */
+    /* ======================================================== */
+
+    public void setAccessTokenCookie(HttpServletResponse res, String token) {
+        setCookie(res, "accessToken", token, ACCESS_TOKEN_TTL);
     }
-    
-    /**
-     * Create and set a cookie with full configuration options
-     */
-    public static void setCookie(HttpServletResponse response, String name, String value, int maxAge, 
-                                String path, boolean secure, boolean httpOnly) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setMaxAge(maxAge);
-        cookie.setPath(path);
-        cookie.setSecure(secure);
-        cookie.setHttpOnly(httpOnly);
-        response.addCookie(cookie);
+
+    public void setRefreshTokenCookie(HttpServletResponse res, String token) {
+        setCookie(res, "refreshToken", token, REFRESH_TOKEN_TTL);
     }
-    
-    /**
-     * Set an HTTP-only access token cookie
-     */
-    public void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
-        // Use Set-Cookie header directly for full control over cross-domain attributes
-        // Domain is left empty to allow cross-domain usage between Vercel and backend
-        response.addHeader("Set-Cookie", 
-            String.format("accessToken=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
-                accessToken, ACCESS_TOKEN_DURATION));
+
+    /** Browser‑session cookie (no Max‑Age) */
+    public void setSessionCookie(HttpServletResponse res, String name, String value) {
+        ResponseCookie cookie = base(name, value)
+                .build();
+        res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
-    
-    /**
-     * Set an HTTP-only refresh token cookie
-     */
-    public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        // Use Set-Cookie header directly for full control over cross-domain attributes
-        // Domain is left empty to allow cross-domain usage between Vercel and backend
-        response.addHeader("Set-Cookie", 
-            String.format("refreshToken=%s; Max-Age=%d; Path=/; Secure; HttpOnly; SameSite=None", 
-                refreshToken, REFRESH_TOKEN_DURATION));
+
+    public void clearAccessTokenCookie(HttpServletResponse res) {
+        expireCookie(res, "accessToken");
     }
-    
-    /**
-     * Set a session cookie (expires when browser closes)
-     */
-    public void setSessionCookie(HttpServletResponse response, String name, String value) {
-        setCookie(response, name, value, -1, "/", secure, false);
+
+    public void clearRefreshTokenCookie(HttpServletResponse res) {
+        expireCookie(res, "refreshToken");
     }
-    
-    /**
-     * Clear a cookie by setting its max age to 0
-     */
-    public static void clearCookie(HttpServletResponse response, String name) {
-        clearCookie(response, name, "/");
+
+    public void clearAuthCookies(HttpServletResponse res) {
+        clearAccessTokenCookie(res);
+        clearRefreshTokenCookie(res);
     }
-    
-    /**
-     * Clear a cookie with specific path
-     */
-    public static void clearCookie(HttpServletResponse response, String name, String path) {
-        Cookie cookie = new Cookie(name, "");
-        cookie.setMaxAge(0);
-        cookie.setPath(path);
-        response.addCookie(cookie);
+
+    /* ======================================================== */
+    /*  Internal helpers                                        */
+    /* ======================================================== */
+
+    private void setCookie(HttpServletResponse res, String name, String value, Duration ttl) {
+        ResponseCookie cookie = base(name, value)
+                .maxAge(ttl)
+                .build();
+        res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
-    
-    /**
-     * Clear access token cookie
-     */
-    public void clearAccessTokenCookie(HttpServletResponse response) {
-        clearCookie(response, "accessToken");
+
+    private void expireCookie(HttpServletResponse res, String name) {
+        ResponseCookie cookie = base(name, "")
+                .maxAge(Duration.ZERO)
+                .build();
+        res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
-    
-    /**
-     * Clear refresh token cookie
-     */
-    public void clearRefreshTokenCookie(HttpServletResponse response) {
-        clearCookie(response, "refreshToken");
-    }
-    
-    /**
-     * Clear all authentication cookies
-     */
-    public void clearAuthCookies(HttpServletResponse response) {
-        clearAccessTokenCookie(response);
-        clearRefreshTokenCookie(response);
+
+    private ResponseCookie.ResponseCookieBuilder base(String name, String value) {
+        return ResponseCookie.from(name, value)
+                .domain(DOMAIN)
+                .path("/")
+                .httpOnly(true)
+                .secure(true) // required with SameSite=None
+                .sameSite("None");
     }
 }
