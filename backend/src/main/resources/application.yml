@@ -2,6 +2,8 @@
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
+  # Critical for OAuth2 behind proxy
+  use-forward-headers: true
   error:
     include-message: never
     include-binding-errors: never

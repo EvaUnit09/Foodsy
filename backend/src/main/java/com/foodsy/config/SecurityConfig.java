@@ -11,6 +11,12 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -38,8 +44,8 @@ public class SecurityConfig {
         
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // CRITICAL: Disable CORS in Spring Boot - let Nginx handle it completely
-            .cors(AbstractHttpConfigurer::disable)
+            // Enable CORS with custom configuration for OAuth2
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> {
                 System.out.println("Configuring session management with IF_REQUIRED policy");
                 session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
@@ -68,5 +74,58 @@ public class SecurityConfig {
         
         System.out.println("SecurityFilterChain configuration completed");
         return http.build();
+    }
+    
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        System.out.println("Configuring CORS for OAuth2 and API endpoints...");
+        
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Allow specific origins
+        configuration.setAllowedOrigins(Arrays.asList(
+            "https://foodsy-frontend.vercel.app",
+            "http://localhost:3000" // For development
+        ));
+        
+        // Allow credentials (required for cookies)
+        configuration.setAllowCredentials(true);
+        
+        // Allow all standard HTTP methods
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
+        ));
+        
+        // Allow all standard headers plus OAuth2 specific ones
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Origin",
+            "X-Requested-With", 
+            "Content-Type",
+            "Accept",
+            "Authorization",
+            "Cookie",
+            "Set-Cookie",
+            "X-Forwarded-For",
+            "X-Forwarded-Proto",
+            "X-Forwarded-Host"
+        ));
+        
+        // Expose headers that frontend might need
+        configuration.setExposedHeaders(Arrays.asList(
+            "Set-Cookie",
+            "Authorization",
+            "Location"
+        ));
+        
+        // Cache preflight for 1 hour
+        configuration.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        
+        // Apply CORS to all endpoints
+        source.registerCorsConfiguration("/**", configuration);
+        
+        System.out.println("CORS configuration completed for all endpoints");
+        return source;
     }
 }
