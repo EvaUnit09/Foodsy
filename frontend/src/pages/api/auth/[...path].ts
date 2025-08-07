@@ -49,8 +49,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const data = await response.json();
+    // Try to parse the response
+    let data;
+    try {
+      data = await response.json();
+      console.log(`Backend response data:`, data);
+    } catch (parseError) {
+      console.log(`Backend response is not JSON, getting as text`);
+      const textData = await response.text();
+      console.log(`Backend response text:`, textData);
+      data = { message: textData };
+    }
+    
     console.log(`API Proxy: ${response.status} response for /auth/${apiPath}`);
+    console.log(`Sending response to frontend:`, data);
     
     res.status(response.status).json(data);
   } catch (error) {
