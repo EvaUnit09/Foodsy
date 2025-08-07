@@ -36,7 +36,7 @@ export function useSessionVoting({
     if (!isAuthenticated || !sessionId) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/sessions/${sessionId}/remaining-votes`, {
+      const response = await fetch(`/api/sessions/${sessionId}/remaining-votes`, {
         credentials: 'include'
       });
       if (response.ok) {

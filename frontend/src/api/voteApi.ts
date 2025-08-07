@@ -15,7 +15,7 @@ export async function createVote({
   voteType,
 }: CreateVotePayload): Promise<void> {
   const res = await fetch(
-    `http://localhost:8080/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
+    `/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

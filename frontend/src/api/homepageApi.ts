@@ -1,5 +1,5 @@
-// Base API URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// Base API URL - Use Vercel API routes as proxy to backend
+export const API_BASE_URL = "/api";
 
 // Types matching the backend DTOs
 export interface TasteProfileDto {
@@ -81,7 +81,7 @@ export class HomepageApi {
   // Attempt to refresh the access token using the refresh token cookie
   private static async refreshAccessToken(): Promise<boolean> {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
       });
@@ -96,7 +96,7 @@ export class HomepageApi {
 
   // Taste Profile Management
   static async createTasteProfile(profile: TasteProfileDto): Promise<void> {
-    const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
+    const response = await fetch(buildUrl("/homepage/taste-profile"), {
       method: "POST",
       headers: await this.getAuthHeaders(true),
       credentials: "include",
@@ -110,7 +110,7 @@ export class HomepageApi {
 
   static async getTasteProfile(): Promise<TasteProfileDto | null> {
     try {
-      const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
+      const response = await fetch(buildUrl("/homepage/taste-profile"), {
         headers: await this.getAuthHeaders(),
         credentials: 'include',
       });
@@ -127,7 +127,7 @@ export class HomepageApi {
   }
 
   static async updateTasteProfile(profile: TasteProfileDto): Promise<void> {
-    const response = await fetch(buildUrl("/api/homepage/taste-profile"), {
+    const response = await fetch(buildUrl("/homepage/taste-profile"), {
       method: "PUT",
       headers: await this.getAuthHeaders(),
       credentials: 'include',
@@ -142,7 +142,7 @@ export class HomepageApi {
   // Homepage Data
   static async getHomepageData(): Promise<HomepageResponseDto> {
     const attemptFetch = async () =>
-      fetch(buildUrl("/api/homepage"), {
+      fetch(buildUrl("/homepage"), {
         // No custom headers for simple GET to avoid extra CORS preflight
         credentials: "include",
       });
@@ -166,7 +166,7 @@ export class HomepageApi {
   }
 
   static async getHomepageDataAnonymous(): Promise<HomepageResponseDto> {
-    const response = await fetch(buildUrl("/api/homepage"), {
+    const response = await fetch(buildUrl("/homepage"), {
       credentials: "include",
     });
     return await this.handleResponse<HomepageResponseDto>(response);
@@ -181,7 +181,7 @@ export class HomepageApi {
 
     try {
       const headers = await this.getAuthHeaders(true);
-      const response = await fetch(buildUrl("/api/homepage/analytics"), {
+      const response = await fetch(buildUrl("/homepage/analytics"), {
         method: "POST",
         headers,
         credentials: "include",
@@ -239,7 +239,7 @@ export class HomepageApi {
 
   // Restaurant Cache Management
   static async refreshRestaurantCache(): Promise<void> {
-    const response = await fetch(buildUrl("/api/homepage/cache/refresh"), {
+    const response = await fetch(buildUrl("/homepage/cache/refresh"), {
       method: "POST",
       headers: await this.getAuthHeaders(true),
       credentials: 'include',
@@ -256,7 +256,7 @@ export class HomepageApi {
     expiredCount: number;
     quotaUsage: number;
   }> {
-    const response = await fetch(buildUrl("/api/homepage/cache/stats"), {
+    const response = await fetch(buildUrl("/homepage/cache/stats"), {
       headers: await this.getAuthHeaders(true),
       credentials: 'include',
     });
