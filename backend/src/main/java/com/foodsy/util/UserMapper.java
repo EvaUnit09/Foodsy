@@ -29,10 +29,8 @@ public class UserMapper {
             user.getLastName(),
             user.getDisplayName(),
             user.getAvatarUrl(),
-            user.getDietaryPreferences(),
-            user.getFoodAllergies(),
             user.getProvider(),
-            user.getEmailVerified(),
+            user.isEmailVerified(),
             user.getCreatedAt()
         );
     }

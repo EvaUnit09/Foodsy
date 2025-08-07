@@ -1,10 +1,8 @@
 package com.foodsy.dto;
 
-import com.foodsy.domain.DietaryPreference;
 import com.foodsy.domain.AuthProvider;
 
-import java.time.Instant;
-import java.util.Set;
+import java.time.LocalDateTime;
 
 public record UserDto(
         Long id,
@@ -14,9 +12,7 @@ public record UserDto(
         String lastName,
         String displayName,
         String avatarUrl,
-        Set<DietaryPreference> dietaryPreferences,
-        Set<String> foodAllergies,
         AuthProvider provider,
-        Boolean emailVerified,
-        Instant createdAt
+        boolean emailVerified,
+        LocalDateTime createdAt
 ) {}
