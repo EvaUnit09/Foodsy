@@ -28,35 +28,67 @@ function OAuth2SuccessContent() {
           throw new Error("Missing access token");
         }
         
-        // Store only access token in localStorage (refresh token is in HttpOnly cookie)
+        // Store access token in localStorage
         localStorage.setItem('accessToken', accessToken);
         console.log("OAuth2 success page: Access token stored in localStorage");
         
-        // Step 1: Try to refresh the token first (this will validate the tokens)
-        console.log("OAuth2 success page: Attempting to refresh token...");
-        const refreshResponse = await ApiClient.auth.refreshToken();
-        console.log("OAuth2 success page: Refresh token response:", refreshResponse);
-        
-        // Update access token if a new one was provided
-        if (refreshResponse.accessToken) {
-          localStorage.setItem('accessToken', refreshResponse.accessToken);
-          console.log("OAuth2 success page: Updated access token in localStorage");
-        }
-        
-        // Step 2: If refresh successful, get user data
+        // Try to get user data directly (don't refresh token immediately)
         console.log("OAuth2 success page: Getting user data...");
-        const userData = await ApiClient.auth.me();
-        console.log("OAuth2 success page: User data received:", userData);
-        
-        // Step 3: Redirect to homepage with authenticated user
-        console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
-        router.push("/");
+        try {
+          const userData = await ApiClient.auth.me();
+          console.log("OAuth2 success page: User data received:", userData);
+          
+          // Store user data in localStorage for AuthContext
+          localStorage.setItem('user', JSON.stringify(userData));
+          console.log("OAuth2 success page: User data stored in localStorage");
+          
+          // Redirect to homepage with authenticated user
+          console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
+          router.push("/");
+          
+        } catch (meError: any) {
+          // If /me fails, try refreshing token
+          console.log("OAuth2 success page: /me failed, trying refresh token...");
+          try {
+            const refreshResponse = await ApiClient.auth.refreshToken();
+            console.log("OAuth2 success page: Refresh token response:", refreshResponse);
+            
+            // Update access token if a new one was provided
+            if (refreshResponse.accessToken) {
+              localStorage.setItem('accessToken', refreshResponse.accessToken);
+              console.log("OAuth2 success page: Updated access token in localStorage");
+            }
+            
+            // Try getting user data again
+            const userData = await ApiClient.auth.me();
+            console.log("OAuth2 success page: User data received after refresh:", userData);
+            
+            // Store user data in localStorage for AuthContext
+            localStorage.setItem('user', JSON.stringify(userData));
+            console.log("OAuth2 success page: User data stored in localStorage");
+            
+            // Redirect to homepage with authenticated user
+            console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
+            router.push("/");
+            
+          } catch (refreshError: any) {
+            // Handle 401 specifically (expected when tokens are invalid)
+            if (refreshError.status === 401) {
+              console.log("OAuth2 success page: 401 from refresh - tokens may be invalid");
+              throw new Error("Authentication failed: Invalid or expired tokens");
+            } else {
+              console.error("OAuth2 success page: Unexpected error during refresh:", refreshError);
+              throw refreshError;
+            }
+          }
+        }
         
       } catch (error) {
         console.error("OAuth2 success page: Authentication failed:", error);
         
         // Clear any stored tokens on error
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
         
         if (error instanceof Error) {
           setError(error.message);

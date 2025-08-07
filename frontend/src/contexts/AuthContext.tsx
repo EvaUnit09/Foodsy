@@ -47,21 +47,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      console.log('AuthContext: Starting auth check with refresh token flow');
+      console.log('AuthContext: Starting auth check');
       
-      // Step 1: Try to refresh the token first
-      console.log('AuthContext: Attempting to refresh token...');
-      const refreshResponse = await ApiClient.auth.refreshToken();
-      console.log('AuthContext: Refresh token response:', refreshResponse);
+      // Check if we have a user in localStorage from OAuth2 flow
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          console.log('AuthContext: Found stored user data:', userData);
+          setUser(userData);
+          setIsAuthenticated(true);
+          console.log('AuthContext: Authentication successful from stored data');
+          return;
+        } catch (e) {
+          console.log('AuthContext: Invalid stored user data, clearing');
+          localStorage.removeItem('user');
+        }
+      }
       
-      // Step 2: If refresh successful, get user data
-      console.log('AuthContext: Getting user data...');
-      const userData = await ApiClient.auth.me();
-      console.log('AuthContext: User data received:', userData);
-      
-      setUser(userData);
-      setIsAuthenticated(true);
-      console.log('AuthContext: Authentication successful');
+      // If no stored user, try to refresh token (but don't treat 401 as error)
+      console.log('AuthContext: No stored user, checking for refresh token...');
+      try {
+        const refreshResponse = await ApiClient.auth.refreshToken();
+        console.log('AuthContext: Refresh token successful:', refreshResponse);
+        
+        // If refresh successful, get user data
+        const userData = await ApiClient.auth.me();
+        console.log('AuthContext: User data received:', userData);
+        
+        setUser(userData);
+        setIsAuthenticated(true);
+        console.log('AuthContext: Authentication successful');
+        
+      } catch (refreshError: any) {
+        // 401 is expected when no refresh token exists - this is not an error
+        if (refreshError.status === 401 || refreshError.message?.includes('401')) {
+          console.log('AuthContext: No refresh token available (normal for new users)');
+          setUser(null);
+          setIsAuthenticated(false);
+        } else {
+          // Only log as error if it's not a 401
+          console.error('AuthContext: Unexpected error during refresh:', refreshError);
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      }
       
     } catch (error) {
       console.error('AuthContext: Error checking auth status:', error);
