@@ -1,16 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: process.env.NEXT_PUBLIC_API_URL 
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : "http://localhost:8080/api/:path*",
-      },
-    ];
-  },
   images: {
     remotePatterns: [
       {
@@ -25,7 +15,7 @@ const nextConfig: NextConfig = {
       // Add your EC2 domain for production
       {
         protocol: "https",
-        hostname: "ec2-18-216-10-10.us-east-2.compute.amazonaws.com",
+        hostname: "ec2-52-91-255-196.compute-1.amazonaws.com",
       },
     ],
   },

@@ -6,8 +6,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { path } = req.query;
   const apiPath = Array.isArray(path) ? path.join('/') : path;
   
+  console.log(`=== API ROUTE CALLED ===`);
   console.log(`API Proxy: ${req.method} /auth/${apiPath}`);
   console.log(`Backend URL: ${BACKEND_URL}`);
+  console.log(`Full URL: ${req.url}`);
+  console.log(`Headers:`, req.headers);
   
   try {
     // Prepare headers, excluding host and content-length
@@ -22,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     
     console.log(`Forwarding to: ${BACKEND_URL}/auth/${apiPath}`);
-    console.log(`Headers:`, headers);
+    console.log(`Request body:`, req.body);
     
     // Forward the request to the AWS backend
     const response = await fetch(`${BACKEND_URL}/auth/${apiPath}`, {
@@ -35,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     console.log(`Backend response status: ${response.status}`);
+    console.log(`Backend response headers:`, Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
