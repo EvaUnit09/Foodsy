@@ -166,7 +166,7 @@ export default function CreateSessionPage() {
                   <h2 className="text-2xl font-bold text-gray-900">Sign In Required</h2>
                   <p className="text-gray-600">You need to be signed in to create a voting session.</p>
                   <Button
-                    onClick={() => window.location.href = `/api/oauth2/authorization/google`}
+                                         onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
                     className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg flex items-center justify-center transition-colors"
                   >
                     Sign In with Google
