@@ -52,11 +52,15 @@ public class SecurityConfig {
             })
             .authorizeHttpRequests(auth -> {
                 System.out.println("Configuring authorization rules...");
-                auth.requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout").permitAll()
+                auth
+                    // CRITICAL: Permit ALL OPTIONS requests first (for CORS preflight)
+                    .requestMatchers("OPTIONS", "/**").permitAll()
+                    // Public endpoints
+                    .requestMatchers("/", "/error", "/oauth2/**", "/login/**", "/auth/login", "/auth/signup", "/auth/logout").permitAll()
                     .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                     .requestMatchers("/favicon.ico").denyAll()
                     .anyRequest().authenticated();
-                System.out.println("Authorization rules configured");
+                System.out.println("Authorization rules configured with OPTIONS permit");
             })
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
