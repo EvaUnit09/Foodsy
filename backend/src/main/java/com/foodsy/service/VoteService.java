@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -17,27 +16,21 @@ import java.util.Optional;
 public class VoteService {
     private final SessionRestaurantRepository sessionRestaurantRepository;
     private final SessionRepository sessionRepository;
-    private final SessionRestaurantVoteRepository voteRepository;
     private final UserVoteQuotaRepository quotaRepository;
     private final SessionVoteHistoryRepository historyRepository;
-    private final SessionParticipantRepository participantRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionService sessionService;
 
     public VoteService(SessionRestaurantRepository sessionRestaurantRepository,
                       SessionRepository sessionRepository,
-                      SessionRestaurantVoteRepository voteRepository,
                       UserVoteQuotaRepository quotaRepository,
                       SessionVoteHistoryRepository historyRepository,
-                      SessionParticipantRepository participantRepository,
                       SimpMessagingTemplate messagingTemplate,
                       SessionService sessionService) {
         this.sessionRestaurantRepository = sessionRestaurantRepository;
         this.sessionRepository = sessionRepository;
-        this.voteRepository = voteRepository;
         this.quotaRepository = quotaRepository;
         this.historyRepository = historyRepository;
-        this.participantRepository = participantRepository;
         this.messagingTemplate = messagingTemplate;
         this.sessionService = sessionService;
     }
