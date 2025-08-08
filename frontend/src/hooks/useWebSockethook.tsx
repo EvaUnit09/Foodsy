@@ -18,11 +18,12 @@ function getWebSocketURL(useNative: boolean): string {
   
   // In production, connect through the backend directly
   if (host.includes('vercel.app') || host.includes('foodsy-frontend')) {
-    return useNative ? 'wss://apifoodsy-backend.com/ws' : 'wss://apifoodsy-backend.com/ws-sockjs';
+    // Fix: Add trailing slash for WebSocket endpoints
+    return useNative ? 'wss://apifoodsy-backend.com/ws/' : 'wss://apifoodsy-backend.com/ws-sockjs/';
   }
   
-  // Local development
-  return useNative ? 'ws://localhost:8080/ws' : 'ws://localhost:8080/ws-sockjs';
+  // Local development - also add trailing slash for consistency
+  return useNative ? 'ws://localhost:8080/ws/' : 'ws://localhost:8080/ws-sockjs/';
 }
 
 // Check if we should use native WebSocket instead of SockJS for HTTPS
@@ -40,6 +41,8 @@ export function useSessionWebSocket(sessionId: number) {
 
   // Polling fallback for when WebSocket fails
   const startPolling = () => {
+    if (usePolling) return; // Prevent multiple polling instances
+    
     console.log('Starting polling fallback for session:', sessionId);
     setUsePolling(true);
     
@@ -56,6 +59,8 @@ export function useSessionWebSocket(sessionId: number) {
               payload: data
             });
           }
+        } else {
+          console.warn('Polling response not ok:', response.status);
         }
       } catch (error) {
         console.error('Polling error:', error);
@@ -100,10 +105,21 @@ export function useSessionWebSocket(sessionId: number) {
       console.log('WebSocket connected successfully');
       setIsConnected(true);
       stopPolling(); // Stop polling if WebSocket connects
-      client.subscribe(`/topic/session/${sessionId}`, (message) => {
-        const event = JSON.parse(message.body);
-        setEvent(event);
-      });
+      
+      try {
+        client.subscribe(`/topic/session/${sessionId}`, (message) => {
+          try {
+            const event = JSON.parse(message.body);
+            setEvent(event);
+          } catch (parseError) {
+            console.error('Error parsing WebSocket message:', parseError, message.body);
+          }
+        });
+      } catch (subscribeError) {
+        console.error('Error subscribing to WebSocket topic:', subscribeError);
+        setIsConnected(false);
+        startPolling();
+      }
     };
 
     client.onDisconnect = () => {
@@ -114,23 +130,21 @@ export function useSessionWebSocket(sessionId: number) {
     client.onStompError = (frame) => {
       console.error('WebSocket STOMP error:', frame);
       setIsConnected(false);
-      // Start polling fallback after WebSocket fails
-      setTimeout(() => {
-        if (!isConnected) {
-          startPolling();
-        }
-      }, 2000);
+      // Immediately start polling fallback after WebSocket fails
+      if (!usePolling) {
+        console.log('STOMP error - immediately falling back to polling');
+        startPolling();
+      }
     };
 
     client.onWebSocketError = (error) => {
       console.error('WebSocket connection error:', error);
       setIsConnected(false);
-      // Start polling fallback after WebSocket fails
-      setTimeout(() => {
-        if (!isConnected) {
-          startPolling();
-        }
-      }, 2000);
+      // Immediately start polling fallback after WebSocket fails
+      if (!usePolling) {
+        console.log('WebSocket error - immediately falling back to polling');
+        startPolling();
+      }
     };
 
     // Try to connect
@@ -138,13 +152,13 @@ export function useSessionWebSocket(sessionId: number) {
       client.activate();
       clientRef.current = client;
       
-      // Fallback: if not connected after 10 seconds, start polling
+      // Fallback: if not connected after 3 seconds, start polling (reduced timeout)
       setTimeout(() => {
         if (!isConnected && !usePolling) {
           console.warn('WebSocket connection timeout, falling back to polling');
           startPolling();
         }
-      }, 10000);
+      }, 3000);
       
     } catch (error) {
       console.error('Failed to activate WebSocket client:', error);

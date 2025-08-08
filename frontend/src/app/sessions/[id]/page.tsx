@@ -169,29 +169,35 @@ export default function SessionPage() {
     if (!sessionId || authLoading) return; // Wait for auth to load
     
     (async () => {
-      const [enriched, fetchedParticipants, sessionObj] = await Promise.all([
-        fetchRestaurantsWithPhotos(sessionId),
-        fetchParticipants(sessionId),
-        fetchSession(sessionId),
-      ]);
-      setRestaurants(enriched);
-      setParticipants(Array.isArray(fetchedParticipants) ? fetchedParticipants : []);
-      setSession(sessionObj);
-      
-      // Initialize round state from session
-      if (sessionObj) {
-        setCurrentRound(sessionObj.round || 1);
+      try {
+        const [enriched, fetchedParticipants, sessionObj] = await Promise.all([
+          fetchRestaurantsWithPhotos(sessionId),
+          fetchParticipants(sessionId),
+          fetchSession(sessionId),
+        ]);
+        setRestaurants(enriched);
+        setParticipants(Array.isArray(fetchedParticipants) ? fetchedParticipants : []);
+        setSession(sessionObj);
         
-        // Sync session started state based on backend status
-        // Session is considered started if status is not 'open' (i.e., 'voting', 'round1', 'round2', etc.)
-        const isStarted = sessionObj.status && sessionObj.status !== 'open';
-        setSessionStarted(isStarted);
+        // Initialize round state from session
+        if (sessionObj) {
+          setCurrentRound(sessionObj.round || 1);
+          
+          // Sync session started state based on backend status
+          // Session is considered started if status is not 'open' (i.e., 'voting', 'round1', 'round2', etc.)
+          const isStarted = sessionObj.status && sessionObj.status !== 'open';
+          setSessionStarted(isStarted);
+          
+          console.log(`Session sync: status="${sessionObj.status}", round=${sessionObj.round}, started=${isStarted}`);
+        }
         
-        console.log(`Session sync: status="${sessionObj.status}", round=${sessionObj.round}, started=${isStarted}`);
+        setCurrentRestaurantIdx(0);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading session data:', error);
+        // Still stop loading to show whatever data we have or an error state
+        setLoading(false);
       }
-      
-      setCurrentRestaurantIdx(0);
-      setLoading(false);
     })();
   }, [sessionId, authLoading]);
 
@@ -331,7 +337,19 @@ export default function SessionPage() {
   }, [currentRestaurant, handleVote]);
 
   /* --------------------------- UI ------------------------------- */
-  if (loading) return <div className="p-10">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="text-xl font-semibold text-gray-700">Loading session...</div>
+          <div className="text-sm text-gray-500">
+            {!sessionId ? "Invalid session ID" : "Connecting to session and loading restaurants"}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show final results screen when session is complete
   if (sessionComplete && winner) {
