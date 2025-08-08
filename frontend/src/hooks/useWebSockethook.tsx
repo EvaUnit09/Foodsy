@@ -8,19 +8,24 @@ interface WebSocketEvent {
 }
 
 // Get WebSocket URL based on environment
-function getWebSocketURL(): string {
+function getWebSocketURL(useNative: boolean): string {
   if (typeof window === 'undefined') return '';
   
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
   
   // In production, connect through the backend directly
   if (host.includes('vercel.app') || host.includes('foodsy-frontend')) {
-    return 'wss://apifoodsy-backend.com/ws';
+    return useNative ? 'wss://apifoodsy-backend.com/ws' : 'wss://apifoodsy-backend.com/ws-sockjs';
   }
   
   // Local development
-  return 'ws://localhost:8080/ws';
+  return useNative ? 'ws://localhost:8080/ws' : 'ws://localhost:8080/ws-sockjs';
+}
+
+// Check if we should use native WebSocket instead of SockJS for HTTPS
+function shouldUseNativeWebSocket(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.protocol === 'https:';
 }
 
 export function useSessionWebSocket(sessionId: number) {
@@ -30,11 +35,20 @@ export function useSessionWebSocket(sessionId: number) {
   useEffect(() => {
     if (!sessionId) return;
     
-    const wsUrl = getWebSocketURL();
-    console.log('Connecting to WebSocket:', wsUrl);
+    const useNative = shouldUseNativeWebSocket();
+    const wsUrl = getWebSocketURL(useNative);
+    console.log('Connecting to WebSocket:', wsUrl, 'Native:', useNative);
     
     const client = new Client({
-      webSocketFactory: () => new SockJS(wsUrl),
+      webSocketFactory: () => {
+        if (useNative) {
+          // Use native WebSocket for HTTPS connections
+          return new WebSocket(wsUrl);
+        } else {
+          // Use SockJS for HTTP connections
+          return new SockJS(wsUrl);
+        }
+      },
       reconnectDelay: 5000,
       debug: (str) => console.log('STOMP:', str),
     });

@@ -28,10 +28,22 @@ const INITIAL_TIMER = { minutes: 0, seconds: 0 };
 const fetchRestaurantsWithPhotos = async (
   sessionId: number,
 ): Promise<Restaurant[]> => {
-  const base: Restaurant[] = await fetch(
+  const response = await fetch(
     `${API_BASE_URL}/sessions/${sessionId}/restaurants`,
     { credentials: "include" }
-  ).then((r) => r.json());
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch restaurants: ${response.status}`);
+  }
+  
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+  }
+  
+  const base: Restaurant[] = await response.json();
 
   return Promise.all(
     base.map(async (restaurant) => {
@@ -54,15 +66,28 @@ const fetchRestaurantsWithPhotos = async (
   );
 };
 
-const fetchParticipants = (sessionId: number) =>
-  fetch(`${API_BASE_URL}/sessions/${sessionId}/participants`, {
+const fetchParticipants = async (sessionId: number) => {
+  const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/participants`, {
     credentials: "include"
-  }).then((res) => res.json());
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch participants: ${response.status}`);
+  }
+  
+  return response.json();
+};
 
-const fetchSession = (sessionId: number) => {
-  return fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+const fetchSession = async (sessionId: number) => {
+  const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
     credentials: 'include'
-  }).then((res) => res.json());
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch session: ${response.status}`);
+  }
+  
+  return response.json();
 };
 
 

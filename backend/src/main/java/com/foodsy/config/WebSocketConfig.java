@@ -18,7 +18,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+        // Native WebSocket endpoint for HTTPS connections
         registry.addEndpoint("/ws")
+                .setAllowedOrigins("https://foodsy-frontend.vercel.app", "http://localhost:3000");
+                
+        // SockJS fallback endpoint for HTTP connections
+        registry.addEndpoint("/ws-sockjs")
                 .setAllowedOrigins("https://foodsy-frontend.vercel.app", "http://localhost:3000")
                 .withSockJS();
     }
