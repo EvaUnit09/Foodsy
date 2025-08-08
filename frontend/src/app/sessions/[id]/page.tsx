@@ -34,13 +34,19 @@ const fetchRestaurantsWithPhotos = async (
   );
   
   if (!response.ok) {
+    // Don't throw on 500 errors to prevent cascading failures
+    if (response.status >= 500) {
+      console.error(`Server error fetching restaurants: ${response.status}`);
+      return []; // Return empty array instead of throwing
+    }
     throw new Error(`Failed to fetch restaurants: ${response.status}`);
   }
   
   const contentType = response.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
     const text = await response.text();
-    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+    console.error(`Expected JSON but got: ${text.substring(0, 100)}`);
+    return []; // Return empty array instead of throwing
   }
   
   const base: Restaurant[] = await response.json();
@@ -48,10 +54,16 @@ const fetchRestaurantsWithPhotos = async (
   return Promise.all(
     base.map(async (restaurant) => {
       try {
-        const photoIds: string[] = await fetch(
+        const photoResponse = await fetch(
           `${API_BASE_URL}/restaurants/${restaurant.providerId}/photos?limit=${IMAGES_LIMIT}`,
           { credentials: "include" }
-        ).then((pr) => pr.json());
+        );
+        
+        if (!photoResponse.ok) {
+          return { ...restaurant, photos: [] };
+        }
+        
+        const photoIds: string[] = await photoResponse.json();
         
         // Convert photo IDs to proxy URLs
         const photos = photoIds.map(photoId => 
@@ -72,6 +84,11 @@ const fetchParticipants = async (sessionId: number) => {
   });
   
   if (!response.ok) {
+    // Don't throw on 500 errors to prevent cascading failures
+    if (response.status >= 500) {
+      console.error(`Server error fetching participants: ${response.status}`);
+      return []; // Return empty array instead of throwing
+    }
     throw new Error(`Failed to fetch participants: ${response.status}`);
   }
   
@@ -84,6 +101,11 @@ const fetchSession = async (sessionId: number) => {
   });
   
   if (!response.ok) {
+    // Don't throw on 500 errors to prevent cascading failures
+    if (response.status >= 500) {
+      console.error(`Server error fetching session: ${response.status}`);
+      return null; // Return null instead of throwing
+    }
     throw new Error(`Failed to fetch session: ${response.status}`);
   }
   
@@ -201,27 +223,67 @@ export default function SessionPage() {
     })();
   }, [sessionId, authLoading]);
 
-  // Voting status polling effect
+  // Voting status polling effect with circuit breaker
   useEffect(() => {
     if (!sessionId || !sessionStarted || sessionComplete || roundTransitioning) return;
+    
+    let errorCount = 0;
+    let currentInterval = 5000; // Increased from 2 seconds to 5 seconds
+    const maxErrors = 3;
+    let timeoutId: NodeJS.Timeout;
     
     const fetchVotingStatus = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voting-status`, {
           credentials: 'include'
         });
+        
         if (response.ok) {
           const data = await response.json();
           setVotingStatus(data);
+          errorCount = 0; // Reset error count on success
+          currentInterval = 5000; // Reset interval
+        } else {
+          errorCount++;
+          console.warn(`Voting status fetch failed: ${response.status} (error count: ${errorCount})`);
+          
+          // Circuit breaker: stop polling after too many errors
+          if (errorCount >= maxErrors) {
+            console.error('Too many consecutive voting status errors, stopping polling');
+            return;
+          }
+          
+          // Exponential backoff
+          currentInterval = Math.min(currentInterval * 2, 30000);
         }
       } catch (error) {
-        console.error('Failed to fetch voting status:', error);
+        errorCount++;
+        console.error(`Failed to fetch voting status: ${error} (error count: ${errorCount})`);
+        
+        // Circuit breaker: stop polling after too many errors
+        if (errorCount >= maxErrors) {
+          console.error('Too many consecutive voting status errors, stopping polling');
+          return;
+        }
+        
+        // Exponential backoff
+        currentInterval = Math.min(currentInterval * 2, 30000);
+      }
+      
+      // Schedule next poll if we haven't hit the circuit breaker
+      if (errorCount < maxErrors) {
+        timeoutId = setTimeout(fetchVotingStatus, currentInterval);
       }
     };
 
+    // Start polling
     fetchVotingStatus();
-    const interval = setInterval(fetchVotingStatus, 2000); // Poll every 2 seconds
-    return () => clearInterval(interval);
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [sessionId, sessionStarted, sessionComplete, roundTransitioning, remainingVotes]);
 
   // WebSocket event effect

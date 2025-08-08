@@ -8,7 +8,9 @@ interface WebSocketEvent {
 }
 
 // Fallback polling interval for when WebSocket fails
-const POLLING_INTERVAL = 3000;
+const POLLING_INTERVAL = 5000; // Reduced frequency
+const MAX_CONSECUTIVE_ERRORS = 3;
+const BACKOFF_MULTIPLIER = 2;
 
 // Get WebSocket URL based on environment
 function getWebSocketURL(useNative: boolean): string {
@@ -38,6 +40,8 @@ export function useSessionWebSocket(sessionId: number) {
   const [usePolling, setUsePolling] = useState(false);
   const clientRef = useRef<Client | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const errorCountRef = useRef(0);
+  const currentIntervalRef = useRef(POLLING_INTERVAL);
 
   // Polling fallback for when WebSocket fails
   const startPolling = () => {
@@ -45,14 +49,20 @@ export function useSessionWebSocket(sessionId: number) {
     
     console.log('Starting polling fallback for session:', sessionId);
     setUsePolling(true);
+    errorCountRef.current = 0; // Reset error count
+    currentIntervalRef.current = POLLING_INTERVAL; // Reset interval
     
     const poll = async () => {
       try {
         const response = await fetch(`/api/sessions/${sessionId}/status`, {
           credentials: 'include'
         });
+        
         if (response.ok) {
           const data = await response.json();
+          errorCountRef.current = 0; // Reset error count on success
+          currentIntervalRef.current = POLLING_INTERVAL; // Reset interval
+          
           if (data.lastUpdate) {
             setEvent({
               type: 'session_update',
@@ -60,24 +70,62 @@ export function useSessionWebSocket(sessionId: number) {
             });
           }
         } else {
-          console.warn('Polling response not ok:', response.status);
+          // Handle HTTP errors (including 500s)
+          errorCountRef.current++;
+          console.warn(`Polling response not ok: ${response.status} (error count: ${errorCountRef.current})`);
+          
+          // Circuit breaker: stop polling after too many errors
+          if (errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) {
+            console.error('Too many consecutive polling errors, stopping polling');
+            stopPolling();
+            return;
+          }
+          
+          // Exponential backoff
+          currentIntervalRef.current = Math.min(
+            currentIntervalRef.current * BACKOFF_MULTIPLIER, 
+            30000 // Max 30 seconds
+          );
         }
       } catch (error) {
-        console.error('Polling error:', error);
+        errorCountRef.current++;
+        console.error(`Polling error: ${error} (error count: ${errorCountRef.current})`);
+        
+        // Circuit breaker: stop polling after too many errors
+        if (errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) {
+          console.error('Too many consecutive polling errors, stopping polling');
+          stopPolling();
+          return;
+        }
+        
+        // Exponential backoff
+        currentIntervalRef.current = Math.min(
+          currentIntervalRef.current * BACKOFF_MULTIPLIER, 
+          30000 // Max 30 seconds
+        );
       }
     };
     
-    // Poll immediately, then every interval
+    // Poll immediately, then schedule next poll with current interval
     poll();
-    pollingRef.current = setInterval(poll, POLLING_INTERVAL);
+    
+    const scheduleNextPoll = () => {
+      pollingRef.current = setTimeout(() => {
+        poll();
+        scheduleNextPoll();
+      }, currentIntervalRef.current);
+    };
+    
+    scheduleNextPoll();
   };
 
   const stopPolling = () => {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current);
+      clearTimeout(pollingRef.current); // Changed from clearInterval to clearTimeout
       pollingRef.current = null;
     }
     setUsePolling(false);
+    errorCountRef.current = 0; // Reset error count when stopping
   };
 
   useEffect(() => {
