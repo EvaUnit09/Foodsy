@@ -2,9 +2,9 @@ export const dynamic = "force-dynamic";
 
 const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
-async function handle(request: Request, { params }: { params: { path: string[] } }) {
+async function handle(request: Request, context: { params: { path: string[] } }) {
   try {
-    const path = Array.isArray(params?.path) ? params.path.join("/") : "";
+    const path = Array.isArray(context?.params?.path) ? context.params.path.join("/") : "";
     const url = `${BACKEND_URL}/sessions/${path}`;
 
     const method = request.method;
@@ -55,5 +55,31 @@ async function handle(request: Request, { params }: { params: { path: string[] }
   }
 }
 
-export { handle as GET, handle as POST, handle as PUT, handle as PATCH, handle as DELETE, handle as OPTIONS, handle as HEAD };
+export async function GET(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function POST(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function PUT(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function PATCH(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function DELETE(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function OPTIONS(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
+
+export async function HEAD(request: Request, context: { params: { path: string[] } }) {
+  return handle(request, context);
+}
 
