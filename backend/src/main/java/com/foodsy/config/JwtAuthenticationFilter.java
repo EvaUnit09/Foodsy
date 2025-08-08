@@ -98,8 +98,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                path.equals("/error") ||
                path.startsWith("/ws") ||
                path.startsWith("/restaurants") ||
-               path.startsWith("/sessions") ||
-               path.startsWith("/homepage");
+               path.startsWith("/homepage") ||
+               // Only skip auth for specific session endpoints that don't require authentication
+               path.matches("/sessions/\\w+") || // GET /sessions/{id} (read-only)
+               path.startsWith("/sessions/") && path.contains("/restaurants"); // GET /sessions/{id}/restaurants
     }
     
     private String extractTokenFromHeader(HttpServletRequest request) {

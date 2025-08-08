@@ -4,7 +4,8 @@ const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
 export async function POST(request: Request) {
   try {
-    const auth = request.headers.get("authorization") || undefined;
+    const auth = request.headers.get("authorization");
+    const cookies = request.headers.get("cookie");
     const body = await request.json().catch(() => ({}));
 
     const response = await fetch(`${BACKEND_URL}/sessions`, {
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
       headers: {
         "Content-Type": "application/json",
         ...(auth ? { Authorization: auth } : {}),
+        ...(cookies ? { Cookie: cookies } : {}),
       },
       body: JSON.stringify(body),
       cache: "no-store",

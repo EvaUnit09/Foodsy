@@ -13,6 +13,7 @@ async function handle(
 
     const method = request.method;
     const auth = request.headers.get("authorization");
+    const cookies = request.headers.get("cookie");
     const contentType = request.headers.get("content-type") || "";
     const isJson = contentType.includes("application/json");
 
@@ -33,6 +34,7 @@ async function handle(
       headers: {
         ...(isJson ? { "Content-Type": "application/json" } : {}),
         ...(auth ? { Authorization: auth } : {}),
+        ...(cookies ? { Cookie: cookies } : {}),
       },
       body,
       cache: "no-store",

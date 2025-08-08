@@ -8,6 +8,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiClient } from "@/api/client";
 
 export default function CreateSessionPage() {
   const [poolSize, setPoolSize] = useState(20);
@@ -16,7 +17,7 @@ export default function CreateSessionPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
-  const [createdSession, setCreatedSession] = useState<{ id: number; joinCode: string } | null>(null);
+  const [createdSession, setCreatedSession] = useState<{ id: string; joinCode: string } | null>(null);
   const { user, isAuthenticated } = useAuth();
 
   const handleCopy = (text: string, type: "code" | "link") => {
@@ -42,24 +43,15 @@ export default function CreateSessionPage() {
     };
     
     try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        credentials: "include",
-      });
-      
-      if (res.ok) {
-        const session = await res.json();
-        setCreatedSession({ id: session.id, joinCode: session.joinCode });
-      } else {
-        const errorText = await res.text();
-        console.error("Session creation failed:", res.status, errorText);
-        alert(`Failed to create session: ${res.status} ${errorText}`);
-      }
+      const session = await ApiClient.sessions.create(body);
+      setCreatedSession({ id: session.id, joinCode: session.joinCode });
     } catch (error) {
-      console.error("Network error:", error);
-      alert("Network error: Could not connect to server. Please make sure the backend is running.");
+      console.error("Session creation failed:", error);
+      if (error instanceof Error) {
+        alert(`Failed to create session: ${error.message}`);
+      } else {
+        alert("Failed to create session. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
