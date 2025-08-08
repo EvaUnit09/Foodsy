@@ -112,7 +112,15 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 throw new RuntimeException("Unsupported principal type: " + authentication.getPrincipal().getClass().getName());
             }
             
-            // Generate JWT tokens using the username
+            // Resolve the FINAL persisted username to avoid mismatches (e.g. duplicates with suffixes)
+            try {
+                var dbUserOpt = userService.findByEmail(email);
+                if (dbUserOpt.isPresent()) {
+                    username = dbUserOpt.get().getUsername();
+                }
+            } catch (Exception ignored) {}
+
+            // Generate JWT tokens using the persisted username
             String accessToken = jwtService.generateAccessToken(username, email);
             String refreshToken = jwtService.generateRefreshToken(username);
             
