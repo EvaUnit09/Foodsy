@@ -22,6 +22,7 @@ public class VoteService {
     private final SessionVoteHistoryRepository historyRepository;
     private final SessionParticipantRepository participantRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SessionService sessionService;
 
     public VoteService(SessionRestaurantRepository sessionRestaurantRepository,
                       SessionRepository sessionRepository,
@@ -29,7 +30,8 @@ public class VoteService {
                       UserVoteQuotaRepository quotaRepository,
                       SessionVoteHistoryRepository historyRepository,
                       SessionParticipantRepository participantRepository,
-                      SimpMessagingTemplate messagingTemplate) {
+                      SimpMessagingTemplate messagingTemplate,
+                      SessionService sessionService) {
         this.sessionRestaurantRepository = sessionRestaurantRepository;
         this.sessionRepository = sessionRepository;
         this.voteRepository = voteRepository;
@@ -37,6 +39,7 @@ public class VoteService {
         this.historyRepository = historyRepository;
         this.participantRepository = participantRepository;
         this.messagingTemplate = messagingTemplate;
+        this.sessionService = sessionService;
     }
 
     public void processVote(VoteRequest voteRequest) {
@@ -45,6 +48,9 @@ public class VoteService {
             .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
         System.out.println("DEBUG: processVote called - sessionId: " + voteRequest.sessionId() + ", userId: " + voteRequest.userId() + ", providerId: " + voteRequest.providerId() + ", voteType: " + voteRequest.voteType() + ", currentRound: " + session.getRound());
+
+        // Update session activity when user votes
+        sessionService.updateSessionActivity(session);
 
         // Ensure user has a vote quota for this round
         UserVoteQuota quota = ensureUserVoteQuota(voteRequest.sessionId(), voteRequest.userId(), session.getRound());

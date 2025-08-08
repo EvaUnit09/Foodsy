@@ -19,9 +19,11 @@ public class Session {
     private Integer roundTime;
     private Integer likesPerUser;
     
-    private String status; // open, voting, ended
+    private String status; // open, voting, ended, expired
     private Integer round = 1; // current round (1 or 2)
     private Instant createdAt = Instant.now();
+    private Instant lastActivityAt = Instant.now(); // Track last user activity
+    private Instant expiresAt; // When session should auto-close
 
     @Column(name = "join_code", unique = true, nullable = false, length = 6)
     private String joinCode;
@@ -82,6 +84,43 @@ public class Session {
     }
     public void setRound(Integer round) {
         this.round = round;
+    }
+
+    public Instant getLastActivityAt() {
+        return lastActivityAt;
+    }
+
+    public void setLastActivityAt(Instant lastActivityAt) {
+        this.lastActivityAt = lastActivityAt;
+    }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(Instant expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    /**
+     * Update last activity timestamp to current time
+     */
+    public void updateActivity() {
+        this.lastActivityAt = Instant.now();
+    }
+
+    /**
+     * Check if session has expired based on expiresAt timestamp
+     */
+    public boolean isExpired() {
+        return expiresAt != null && Instant.now().isAfter(expiresAt);
+    }
+
+    /**
+     * Check if session is active (not ended or expired)
+     */
+    public boolean isActive() {
+        return !"ended".equals(status) && !"expired".equals(status) && !isExpired();
     }
 
 }

@@ -290,6 +290,13 @@ export default function SessionPage() {
   useEffect(() => {
     if (!event || !event.payload) return;
     switch (event.type) {
+      case 'session_expired':
+        // Handle session expiration
+        console.log('Session has expired:', event.payload);
+        setSessionComplete(true);
+        // You could also redirect to a "session expired" page
+        // router.push('/sessions/expired');
+        break;
       case "sessionStarted":
         setSessionStarted(true);
         break;

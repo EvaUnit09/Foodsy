@@ -73,6 +73,17 @@ google:
     api:
       key: ${GOOGLE_PLACES_API_KEY}
 
+# Session Management Configuration
+session:
+  timeout:
+    # Session expires after this many minutes of inactivity
+    inactive-minutes: ${SESSION_INACTIVE_TIMEOUT_MINUTES:30}
+    # Session expires after this many hours regardless of activity (max session duration)
+    max-duration-hours: ${SESSION_MAX_DURATION_HOURS:1}
+  cleanup:
+    # How often to run session cleanup job (in minutes)
+    interval-minutes: ${SESSION_CLEANUP_INTERVAL_MINUTES:15}
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:HkriteUoZK3LXxqPdEp9/SThngHxg+zM6pzJt+OPL08=}

@@ -10,11 +10,13 @@ import com.foodsy.example.session.JoinCodeGenerator;
 import com.foodsy.repository.SessionParticipantRepository;
 import com.foodsy.repository.SessionRepository;
 import com.foodsy.repository.SessionRestaurantRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +29,10 @@ public class SessionService {
     private final SessionRestaurantRepository restaurantRepo;
     private final GooglePlacesClient placesClient;
     private final SessionParticipantRepository sessionParticipantRepository;
+
+    
+    @Value("${session.timeout.max-duration-hours:1}")
+    private int maxDurationHours;
 
     public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, GooglePlacesClient placesClient, SessionParticipantRepository sessionParticipantRepository) {
         this.sessionRepository = sessionRepo;
@@ -48,6 +54,13 @@ public class SessionService {
 
             session.setJoinCode(code);
             session.setStatus("OPEN");
+            
+            // Set session expiration time
+            Instant now = Instant.now();
+            session.setCreatedAt(now);
+            session.setLastActivityAt(now);
+            session.setExpiresAt(now.plus(maxDurationHours, ChronoUnit.HOURS));
+            
             Session saved = sessionRepository.save(session);
             
             var response = placesClient.search("Astoria, NY", "restaurants");
@@ -80,7 +93,7 @@ public class SessionService {
                 sr.setReviewSummary(place.reviewSummary());
                 sr.setWebsiteUri(place.websiteUri());
 
-                SessionRestaurant savedRestaurant = restaurantRepo.save(sr);
+                restaurantRepo.save(sr);
             }
             
             // After saving the session
@@ -103,11 +116,21 @@ public class SessionService {
 
         if (session == null) return null;
 
+        // Check if session has expired
+        if (session.isExpired()) {
+            session.setStatus("expired");
+            sessionRepository.save(session);
+            throw new ResponseStatusException(HttpStatus.GONE, "Session has expired");
+        }
+
+        // Update session activity
+        updateSessionActivity(session);
+
         // Check if user already a participant
         boolean isParticipant = sessionParticipantRepository
                 .findBySessionIdAndUserId(id, userId)
                 .isPresent();
-        if (isParticipant) {
+        if (!isParticipant) {
             SessionParticipant participant = new SessionParticipant();
             participant.setSession(session);
             participant.setUserId(userId);
@@ -164,5 +187,37 @@ public class SessionService {
             restaurant.getReviewSummary(),
             restaurant.getWebsiteUri()
         );
+    }
+    
+    /**
+     * Update session activity timestamp
+     */
+    public void updateSessionActivity(Session session) {
+        if (session != null && session.isActive()) {
+            session.updateActivity();
+            sessionRepository.save(session);
+        }
+    }
+    
+    /**
+     * Update session activity by ID
+     */
+    public void updateSessionActivity(Long sessionId) {
+        sessionRepository.findById(sessionId).ifPresent(session -> {
+            updateSessionActivity(session);
+        });
+    }
+    
+    /**
+     * Manually end a session
+     */
+    public void endSession(Long sessionId, String reason) {
+        sessionRepository.findById(sessionId).ifPresent(session -> {
+            session.setStatus("ended");
+            sessionRepository.save(session);
+            
+            // Log the reason for ending the session
+            System.out.println("Session " + sessionId + " ended: " + (reason != null ? reason : "Manual termination"));
+        });
     }
 }

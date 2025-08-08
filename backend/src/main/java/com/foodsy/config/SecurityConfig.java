@@ -26,16 +26,19 @@ public class SecurityConfig {
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
     private final com.foodsy.service.UserService userService;
+    private final ApiAuthenticationEntryPoint apiAuthenticationEntryPoint;
 
     // Constructor injection – no Lombok required
     public SecurityConfig(OAuth2UserService oAuth2UserService,
                           JwtService jwtService,
                           CookieUtil cookieUtil,
-                          com.foodsy.service.UserService userService) {
+                          com.foodsy.service.UserService userService,
+                          ApiAuthenticationEntryPoint apiAuthenticationEntryPoint) {
         this.oAuth2UserService = oAuth2UserService;
         this.jwtService = jwtService;
         this.cookieUtil = cookieUtil;
         this.userService = userService;
+        this.apiAuthenticationEntryPoint = apiAuthenticationEntryPoint;
     }
 
     @Bean
@@ -46,10 +49,13 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/", "/error", "/oauth2/**", "/auth/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
+                    .requestMatchers("/", "/error", "/oauth2/**", "/auth/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/actuator/**").permitAll()
                     .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
+            .exceptionHandling(exceptions -> exceptions
+                    .authenticationEntryPoint(apiAuthenticationEntryPoint)
+            )
             .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
             .oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(u -> u.userService(oAuth2UserService))
