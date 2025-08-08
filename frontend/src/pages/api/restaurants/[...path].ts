@@ -9,31 +9,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log(`API Proxy: ${req.method} /restaurants/${apiPath}`);
   
   try {
-    // Prepare headers, excluding host and content-length
+    // Prepare headers, excluding host and content-length. Don't force Content-Type; let upstream decide.
     const headers: Record<string, string> = {};
-    Object.keys(req.headers).forEach(key => {
+    Object.keys(req.headers).forEach((key) => {
       if (key !== 'host' && key !== 'content-length') {
         const value = req.headers[key];
-        if (typeof value === 'string') {
-          headers[key] = value;
-        }
+        if (typeof value === 'string') headers[key] = value;
       }
     });
-    
-    // Forward the request to the AWS backend
-    const response = await fetch(`${BACKEND_URL}/restaurants/${apiPath}`, {
+
+    const upstream = await fetch(`${BACKEND_URL}/restaurants/${apiPath}`, {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
+      headers,
       body: req.method !== 'GET' && req.body ? JSON.stringify(req.body) : undefined,
     });
 
-    const data = await response.json();
-    console.log(`API Proxy: ${response.status} response for /restaurants/${apiPath}`);
-    
-    res.status(response.status).json(data);
+    const contentType = upstream.headers.get('content-type') || '';
+    res.status(upstream.status);
+    if (contentType) res.setHeader('Content-Type', contentType);
+
+    if (contentType.startsWith('image/')) {
+      // Stream binary image bytes directly
+      const arrayBuffer = await upstream.arrayBuffer();
+      res.send(Buffer.from(arrayBuffer));
+      return;
+    }
+
+    // Default: JSON/text
+    const text = await upstream.text();
+    try {
+      const json = JSON.parse(text);
+      res.json(json);
+    } catch {
+      res.send(text);
+    }
   } catch (error) {
     console.error(`API Proxy error for /restaurants/${apiPath}:`, error);
     res.status(500).json({ error: 'Proxy error' });
