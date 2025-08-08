@@ -214,6 +214,7 @@ export function RestaurantCard({
                   fill
                   sizes="100vw"
                   className="object-cover"
+                  unoptimized
                 />
 
                 {/* Photo navigation */}
@@ -267,6 +268,7 @@ export function RestaurantCard({
                         width={120}
                         height={120}
                         className="w-full h-full object-cover"
+                        unoptimized
                       />
                     </button>
                   ))}
