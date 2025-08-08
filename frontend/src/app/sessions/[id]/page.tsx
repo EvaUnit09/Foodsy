@@ -20,7 +20,7 @@ import { VoteType } from "@/api/voteApi";
 
 /* -------------------- types & constants ----------------------- */
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "/api";
 const IMAGES_LIMIT = 6;
 const INITIAL_TIMER = { minutes: 0, seconds: 0 };
 
