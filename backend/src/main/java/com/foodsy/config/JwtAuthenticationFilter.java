@@ -92,13 +92,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
     
     private boolean shouldSkipAuthentication(String path) {
-        // Keep only truly public endpoints here. Do NOT skip for /sessions/**
-        return path.startsWith("/oauth2/") ||
-               path.equals("/") ||
-               path.equals("/hello") ||
-               path.equals("/error") ||
-               path.startsWith("/ws") ||
-               path.startsWith("/homepage");
+        // Public endpoints
+        if (path.startsWith("/oauth2/") ||
+            path.equals("/") ||
+            path.equals("/hello") ||
+            path.equals("/error") ||
+            path.startsWith("/ws") ||
+            path.startsWith("/homepage")) {
+            return true;
+        }
+
+        // Allow unauthenticated access to image proxy endpoints
+        if (path.startsWith("/restaurants/photos/")) {
+            return true;
+        }
+        // Allow unauthenticated access to "list photo ids" endpoint
+        if (path.matches("/restaurants/[^/]+/photos(?:/.*)?")) {
+            return true;
+        }
+
+        return false;
     }
     
     private String extractTokenFromHeader(HttpServletRequest request) {
