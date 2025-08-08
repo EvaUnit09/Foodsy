@@ -2,9 +2,13 @@ export const dynamic = "force-dynamic";
 
 const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
-async function handle(request: Request, context: { params: { path: string[] } }) {
+async function handle(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   try {
-    const path = Array.isArray(context?.params?.path) ? context.params.path.join("/") : "";
+    const params = await context.params;
+    const path = Array.isArray(params?.path) ? params.path.join("/") : "";
     const url = `${BACKEND_URL}/sessions/${path}`;
 
     const method = request.method;
@@ -55,31 +59,52 @@ async function handle(request: Request, context: { params: { path: string[] } })
   }
 }
 
-export async function GET(request: Request, context: { params: { path: string[] } }) {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function POST(request: Request, context: { params: { path: string[] } }) {
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function PUT(request: Request, context: { params: { path: string[] } }) {
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function PATCH(request: Request, context: { params: { path: string[] } }) {
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function DELETE(request: Request, context: { params: { path: string[] } }) {
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function OPTIONS(request: Request, context: { params: { path: string[] } }) {
+export async function OPTIONS(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
-export async function HEAD(request: Request, context: { params: { path: string[] } }) {
+export async function HEAD(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> }
+) {
   return handle(request, context);
 }
 
