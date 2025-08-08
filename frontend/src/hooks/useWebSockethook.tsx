@@ -54,8 +54,10 @@ export function useSessionWebSocket(sessionId: number) {
     
     const poll = async () => {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
         const response = await fetch(`/api/sessions/${sessionId}/status`, {
-          credentials: 'include'
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         
         if (response.ok) {

@@ -25,12 +25,17 @@ const IMAGES_LIMIT = 6;
 const INITIAL_TIMER = { minutes: 0, seconds: 0 };
 
 /* ----------------------- api helpers ----------------------------- */
+const getAuthHeaders = (): HeadersInit => {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 const fetchRestaurantsWithPhotos = async (
   sessionId: number,
 ): Promise<Restaurant[]> => {
   const response = await fetch(
     `${API_BASE_URL}/sessions/${sessionId}/restaurants`,
-    { credentials: "include" }
+    { credentials: "include", headers: { ...getAuthHeaders() } }
   );
   
   if (!response.ok) {
@@ -56,7 +61,7 @@ const fetchRestaurantsWithPhotos = async (
       try {
         const photoResponse = await fetch(
           `${API_BASE_URL}/restaurants/${restaurant.providerId}/photos?limit=${IMAGES_LIMIT}`,
-          { credentials: "include" }
+          { credentials: "include", headers: { ...getAuthHeaders() } }
         );
         
         if (!photoResponse.ok) {
@@ -80,7 +85,8 @@ const fetchRestaurantsWithPhotos = async (
 
 const fetchParticipants = async (sessionId: number) => {
   const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/participants`, {
-    credentials: "include"
+    credentials: "include",
+    headers: { ...getAuthHeaders() }
   });
   
   if (!response.ok) {
@@ -97,7 +103,8 @@ const fetchParticipants = async (sessionId: number) => {
 
 const fetchSession = async (sessionId: number) => {
   const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-    credentials: 'include'
+    credentials: 'include',
+    headers: { ...getAuthHeaders() }
   });
   
   if (!response.ok) {
@@ -235,7 +242,8 @@ export default function SessionPage() {
     const fetchVotingStatus = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voting-status`, {
-          credentials: 'include'
+          credentials: 'include',
+          headers: { ...getAuthHeaders() }
         });
         
         if (response.ok) {
