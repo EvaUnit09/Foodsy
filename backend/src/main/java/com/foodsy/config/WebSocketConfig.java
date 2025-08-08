@@ -18,8 +18,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
-        // CORS handled by Nginx proxy - no setAllowedOrigins() needed
         registry.addEndpoint("/ws")
+                .setAllowedOrigins("https://foodsy-frontend.vercel.app", "http://localhost:3000")
                 .withSockJS();
     }
 } 

@@ -7,15 +7,36 @@ interface WebSocketEvent {
   payload?: Record<string, unknown>;
 }
 
+// Get WebSocket URL based on environment
+function getWebSocketURL(): string {
+  if (typeof window === 'undefined') return '';
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  
+  // In production, connect through the backend directly
+  if (host.includes('vercel.app') || host.includes('foodsy-frontend')) {
+    return 'wss://apifoodsy-backend.com/ws';
+  }
+  
+  // Local development
+  return 'ws://localhost:8080/ws';
+}
+
 export function useSessionWebSocket(sessionId: number) {
   const [event, setEvent] = useState<WebSocketEvent | null>(null);
   const clientRef = useRef<Client | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
+    
+    const wsUrl = getWebSocketURL();
+    console.log('Connecting to WebSocket:', wsUrl);
+    
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      webSocketFactory: () => new SockJS(wsUrl),
       reconnectDelay: 5000,
+      debug: (str) => console.log('STOMP:', str),
     });
 
     client.onConnect = () => {
