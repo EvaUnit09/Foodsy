@@ -14,12 +14,16 @@ export async function createVote({
   providerId,
   voteType,
 }: CreateVotePayload): Promise<void> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   const res = await fetch(
     `/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: 'include', // Include HTTP-only cookies for authentication
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: 'include',
       body: JSON.stringify({ voteType }),
     },
   );
