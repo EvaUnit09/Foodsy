@@ -36,8 +36,10 @@ export function useSessionVoting({
     if (!isAuthenticated || !sessionId) return;
     
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       const response = await fetch(`/api/sessions/${sessionId}/remaining-votes`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (response.ok) {
         const data = await response.json();

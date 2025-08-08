@@ -92,16 +92,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
     
     private boolean shouldSkipAuthentication(String path) {
+        // Keep only truly public endpoints here. Do NOT skip for /sessions/**
         return path.startsWith("/oauth2/") ||
                path.equals("/") ||
                path.equals("/hello") ||
                path.equals("/error") ||
                path.startsWith("/ws") ||
-               path.startsWith("/restaurants") ||
-               path.startsWith("/homepage") ||
-               // Only skip auth for specific session endpoints that don't require authentication
-               path.matches("/sessions/\\w+") || // GET /sessions/{id} (read-only)
-               path.startsWith("/sessions/") && path.contains("/restaurants"); // GET /sessions/{id}/restaurants
+               path.startsWith("/homepage");
     }
     
     private String extractTokenFromHeader(HttpServletRequest request) {
