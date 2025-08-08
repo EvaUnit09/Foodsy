@@ -32,7 +32,8 @@ async function handle(
     const response = await fetch(url, {
       method,
       headers: {
-        ...(isJson ? { "Content-Type": "application/json" } : {}),
+        // Always set JSON for our vote POSTs; backend expects JSON
+        ...(isJson ? { "Content-Type": "application/json" } : { "Content-Type": "application/json" }),
         ...(auth ? { Authorization: auth } : {}),
         ...(cookies ? { Cookie: cookies } : {}),
       },
