@@ -15,15 +15,19 @@ export async function createVote({
   voteType,
 }: CreateVotePayload): Promise<void> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const directBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://apifoodsy-backend.com';
+  // Bypass Vercel proxy for this POST to avoid stream issues
+  const voteUrl = `${directBase}/sessions/${sessionId}/restaurants/${encodeURIComponent(providerId)}/vote`;
   const res = await fetch(
-    `/api/sessions/${sessionId}/restaurants/${providerId}/vote`,
+    voteUrl,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      // No cookies needed; auth via bearer token
+      credentials: 'omit',
       body: JSON.stringify({ voteType }),
     },
   );
