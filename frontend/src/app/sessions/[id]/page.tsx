@@ -188,6 +188,25 @@ export default function SessionPage() {
     undoLikeLocally,
   });
 
+  // Fallback fetch when round flips to 2 but WS didn’t deliver restaurants yet
+  useEffect(() => {
+    if (!sessionId) return;
+    if (currentRound === 2 && restaurants.length === 0 && !roundTransitioning) {
+      (async () => {
+        setRoundTransitioning(true);
+        try {
+          const enriched = await fetchRestaurantsWithPhotos(sessionId);
+          setRestaurants(enriched);
+          setCurrentRestaurantIdx(0);
+        } catch (e) {
+          console.error('Round 2 fallback fetch failed:', e);
+        } finally {
+          setRoundTransitioning(false);
+        }
+      })();
+    }
+  }, [currentRound, restaurants.length, roundTransitioning, sessionId]);
+
   // Track if session has started
   const [sessionStarted, setSessionStarted] = useState(false);
   // Track if the host has pressed start (for instant feedback)
@@ -323,16 +342,15 @@ export default function SessionPage() {
         if (newRound === 2) {
           setTimeout(async () => {
             try {
-              // Refetch restaurants for round 2
               const enriched = await fetchRestaurantsWithPhotos(sessionId);
               setRestaurants(enriched);
               setCurrentRestaurantIdx(0);
-              setRoundTransitioning(false);
             } catch (error) {
               console.error('Failed to load round 2 restaurants:', error);
+            } finally {
               setRoundTransitioning(false);
             }
-          }, 2000);
+          }, 1000);
         }
         break;
       case "sessionComplete":

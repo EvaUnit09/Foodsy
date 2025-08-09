@@ -133,11 +133,6 @@ export function useSessionWebSocket(sessionId: number) {
   useEffect(() => {
     if (!sessionId) return;
     
-    // EMERGENCY: Disable WebSocket connections temporarily
-    console.log('WebSocket connections temporarily disabled for debugging');
-    setUsePolling(true);
-    return;
-    
     const useNative = shouldUseNativeWebSocket();
     const wsUrl = getWebSocketURL(useNative);
     console.log('Connecting to WebSocket:', wsUrl, 'Native:', useNative);
