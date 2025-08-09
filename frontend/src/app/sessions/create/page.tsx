@@ -36,11 +36,30 @@ export default function CreateSessionPage() {
     
     setSubmitting(true);
     
-    const body = {
+    const body: any = {
       poolSize,
       roundTime,
       likesPerUser,
     };
+    
+    // Try browser geolocation; if granted, include coords
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          resolve(undefined as unknown as GeolocationPosition);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve(undefined as unknown as GeolocationPosition), {
+          enableHighAccuracy: false,
+          timeout: 3000,
+          maximumAge: 60000,
+        });
+      });
+      if (pos && pos.coords) {
+        body.lat = pos.coords.latitude;
+        body.lng = pos.coords.longitude;
+      }
+    } catch {}
     
     try {
       const session = await ApiClient.sessions.create(body);

@@ -28,6 +28,8 @@ export interface SessionRequest {
   poolSize: number;
   roundTime: number;
   likesPerUser: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface Session {

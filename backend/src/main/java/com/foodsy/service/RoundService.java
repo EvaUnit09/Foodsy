@@ -5,6 +5,7 @@ import com.foodsy.domain.SessionRestaurant;
 import com.foodsy.repository.SessionRepository;
 import com.foodsy.repository.SessionRestaurantRepository;
 import com.foodsy.repository.SessionParticipantRepository;
+import com.foodsy.repository.UserVoteQuotaRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +21,18 @@ public class RoundService {
     private final SessionRestaurantRepository sessionRestaurantRepository;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserVoteQuotaRepository userVoteQuotaRepository;
     
     public RoundService(SessionRepository sessionRepository,
                        SessionRestaurantRepository sessionRestaurantRepository,
                        SessionParticipantRepository sessionParticipantRepository,
-                       SimpMessagingTemplate messagingTemplate) {
+                       SimpMessagingTemplate messagingTemplate,
+                       UserVoteQuotaRepository userVoteQuotaRepository) {
         this.sessionRepository = sessionRepository;
         this.sessionRestaurantRepository = sessionRestaurantRepository;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.messagingTemplate = messagingTemplate;
+        this.userVoteQuotaRepository = userVoteQuotaRepository;
     }
     
     /**
@@ -43,19 +47,38 @@ public class RoundService {
             throw new RuntimeException("Can only transition to round 2 from round 1");
         }
         
-        // Calculate group size
-        int groupSize = sessionParticipantRepository.countBySessionId(sessionId);
-        int topK = Math.min(5, groupSize + 2);
-        
-        // Get top K restaurants from round 1 ordered by like count
-        List<SessionRestaurant> topRestaurants = sessionRestaurantRepository
-            .findBySessionIdAndRoundOrderByLikeCountDesc(sessionId, 1)
-            .stream()
-            .limit(topK)
+        // Aggregate round 1 votes per provider and sort with tiebreakers
+        List<SessionRestaurant> round1Restaurants = sessionRestaurantRepository
+            .findBySessionIdAndRoundOrderByLikeCountDesc(sessionId, 1);
+
+        List<SessionRestaurant> sorted = round1Restaurants.stream()
+            .sorted((a, b) -> {
+                // Primary: total likes desc
+                int cmp = Integer.compare(
+                    b.getLikeCount() != null ? b.getLikeCount() : 0,
+                    a.getLikeCount() != null ? a.getLikeCount() : 0
+                );
+                if (cmp != 0) return cmp;
+                // Tie1: rating desc
+                Double ar = a.getRating() != null ? a.getRating() : 0.0;
+                Double br = b.getRating() != null ? b.getRating() : 0.0;
+                cmp = Double.compare(br, ar);
+                if (cmp != 0) return cmp;
+                // Tie2: userRatingCount desc
+                Integer auc = a.getUserRatingCount() != null ? a.getUserRatingCount() : 0;
+                Integer buc = b.getUserRatingCount() != null ? b.getUserRatingCount() : 0;
+                cmp = Integer.compare(buc, auc);
+                if (cmp != 0) return cmp;
+                // Tie3: providerId asc
+                String ap = a.getProviderId() != null ? a.getProviderId() : "";
+                String bp = b.getProviderId() != null ? b.getProviderId() : "";
+                return ap.compareTo(bp);
+            })
+            .limit(2)
             .toList();
         
-        // Create round 2 entries for top K restaurants
-        for (SessionRestaurant restaurant : topRestaurants) {
+        // Persist only top 2 for round 2 with likeCount=0
+        for (SessionRestaurant restaurant : sorted) {
             SessionRestaurant round2Restaurant = new SessionRestaurant();
             round2Restaurant.setSessionId(sessionId);
             round2Restaurant.setProviderId(restaurant.getProviderId());
@@ -80,6 +103,17 @@ public class RoundService {
         session.setRound(2);
         session.setStatus("round2");
         sessionRepository.save(session);
+
+        // Reset round 2 user vote quotas to 1 and votesUsed=0
+        var participants = sessionParticipantRepository.findBySessionId(sessionId);
+        participants.forEach(p -> {
+            var quota = userVoteQuotaRepository
+                .findBySessionIdAndUserIdAndRound(sessionId, p.getUserId(), 2)
+                .orElse(new com.foodsy.domain.UserVoteQuota(sessionId, p.getUserId(), 2, 1));
+            quota.setTotalAllowed(1);
+            quota.setVotesUsed(0);
+            userVoteQuotaRepository.save(quota);
+        });
         
         // Broadcast round transition event
         messagingTemplate.convertAndSend(
@@ -88,9 +122,7 @@ public class RoundService {
                 "type", "roundTransition",
                 "payload", Map.of(
                     "sessionId", sessionId,
-                    "newRound", 2,
-                    "topKRestaurants", topRestaurants.size(),
-                    "message", "Round 1 complete! Top " + topK + " restaurants selected for final round."
+                    "newRound", 2
                 )
             )
         );

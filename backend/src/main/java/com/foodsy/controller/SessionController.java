@@ -8,6 +8,7 @@ import com.foodsy.repository.SessionRepository;
 import com.foodsy.repository.SessionRestaurantRepository;
 import com.foodsy.repository.SessionRestaurantVoteRepository;
 import com.foodsy.service.SessionService;
+import com.foodsy.dto.SessionRequest;
 import com.foodsy.service.VoteService;
 import com.foodsy.dto.JoinSessionResponse;
 
@@ -83,13 +84,53 @@ public class SessionController {
     }
 
     @PostMapping
-    public Session create(@RequestBody Session session, Principal principal) {
+    public Session create(@RequestBody(required = false) Object payload, Principal principal, @RequestHeader(value = "X-Forwarded-For", required = false) String xff, @RequestHeader(value = "X-Real-IP", required = false) String xRealIp, jakarta.servlet.http.HttpServletRequest request) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to create sessions");
         }
-        
-        session.setCreatorId(principal.getName().trim().toLowerCase());
-        return sessionService.createSession(session);
+        String creator = principal.getName().trim().toLowerCase();
+
+        // Accept both legacy Session body and new DTO with lat/lng
+        if (payload instanceof Session s) {
+            s.setCreatorId(creator);
+            return sessionService.createSession(s);
+        }
+
+        // Try to parse as SessionRequest
+        SessionRequest req;
+        try {
+            // Using simple manual mapping via Jackson would be ideal, but here we assume the JSON matched SessionRequest
+            // Spring will already bind to a Map when Object is used, so we convert cautiously
+            if (payload instanceof java.util.Map<?, ?> map) {
+                req = new SessionRequest();
+                Object poolSize = map.get("poolSize");
+                Object roundTime = map.get("roundTime");
+                Object likesPerUser = map.get("likesPerUser");
+                Object lat = map.get("lat");
+                Object lng = map.get("lng");
+                if (poolSize instanceof Number) req.setPoolSize(((Number) poolSize).intValue());
+                if (roundTime instanceof Number) req.setRoundTime(((Number) roundTime).intValue());
+                if (likesPerUser instanceof Number) req.setLikesPerUser(((Number) likesPerUser).intValue());
+                if (lat instanceof Number) req.setLat(((Number) lat).doubleValue());
+                if (lng instanceof Number) req.setLng(((Number) lng).doubleValue());
+            } else {
+                throw new IllegalArgumentException("Invalid payload");
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid session request payload");
+        }
+
+        // Determine client IP for geo fallback
+        String clientIp = null;
+        if (xff != null && !xff.isBlank()) {
+            clientIp = xff.split(",")[0].trim();
+        } else if (xRealIp != null && !xRealIp.isBlank()) {
+            clientIp = xRealIp.trim();
+        } else if (request.getRemoteAddr() != null) {
+            clientIp = request.getRemoteAddr();
+        }
+
+        return sessionService.createSession(req, creator, clientIp);
     }
 
     @GetMapping("/{id}")
@@ -238,14 +279,14 @@ public class SessionController {
             sessionParticipantRepository.save(participant);
         }
 
-        // Find the restaurant in the current round
-        SessionRestaurant restaurant = restaurantRepo
+        // Ensure restaurant exists in the current round
+        boolean existsInRound = restaurantRepo
                 .findBySessionIdAndRound(id, session.getRound())
                 .stream()
-                .filter(r -> r.getProviderId().equals(providerId))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Restaurant not found in current round"));
+                .anyMatch(r -> r.getProviderId().equals(providerId));
+        if (!existsInRound) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Restaurant not found in current round");
+        }
 
         // Use VoteService for proper validation and processing
         VoteRequest processedRequest = new VoteRequest(
