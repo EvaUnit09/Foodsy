@@ -17,28 +17,22 @@ async function handle(
     const contentType = request.headers.get("content-type") || "";
     const isJson = contentType.includes("application/json");
 
-    // Read body without forcing a specific format to avoid parse errors
-    let body: BodyInit | undefined = undefined;
-    if (method !== "GET" && method !== "HEAD") {
-      if (isJson) {
-        const json = await request.json().catch(() => ({}));
-        body = JSON.stringify(json);
-      } else {
-        const text = await request.text().catch(() => "");
-        body = text;
-      }
-    }
+    // Pass through the request body directly to avoid parsing issues
+    const body: BodyInit | undefined = (method !== "GET" && method !== "HEAD")
+      ? (request.body as unknown as BodyInit)
+      : undefined;
 
     const response = await fetch(url, {
       method,
       headers: {
-        // Always set JSON for our vote POSTs; backend expects JSON
-        ...(isJson ? { "Content-Type": "application/json" } : { "Content-Type": "application/json" }),
+        ...(isJson ? { "Content-Type": "application/json" } : {}),
         ...(auth ? { Authorization: auth } : {}),
         ...(cookies ? { Cookie: cookies } : {}),
       },
       body,
       cache: "no-store",
+      // Required by Node fetch when streaming a request body
+      ...(body ? { duplex: "half" as any } : {}),
     });
 
     const respType = response.headers.get("content-type") || "";
