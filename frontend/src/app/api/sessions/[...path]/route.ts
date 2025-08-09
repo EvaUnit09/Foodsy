@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
@@ -34,7 +35,9 @@ async function handle(
       }
     }
 
-    const response = await fetch(url, {
+    let response: Response;
+    try {
+      response = await fetch(url, {
       method,
       headers: {
         ...(isJson ? { "Content-Type": "application/json" } : {}),
@@ -43,7 +46,14 @@ async function handle(
       },
       body,
       cache: "no-store",
-    });
+      });
+    } catch (err: any) {
+      console.error("Proxy fetch error for", url, err);
+      return new Response(
+        JSON.stringify({ error: "Proxy fetch error", message: String(err?.message || err) }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     const respType = response.headers.get("content-type") || "";
     const status = response.status;
