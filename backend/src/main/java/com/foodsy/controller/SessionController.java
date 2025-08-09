@@ -166,6 +166,9 @@ public class SessionController {
     // GET all restaurants for a session
     @GetMapping("/{id}/restaurants")
     public List<SessionRestaurantDto> getRestaurants(@PathVariable Long id) {
+        if (!repo.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
+        }
         List<SessionRestaurant> restaurants = restaurantRepo.findBySessionId(id);
         return restaurants.stream().map(r -> new SessionRestaurantDto(
             r.getId(),
