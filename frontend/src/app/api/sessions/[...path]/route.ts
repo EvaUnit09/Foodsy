@@ -17,10 +17,22 @@ async function handle(
     const contentType = request.headers.get("content-type") || "";
     const isJson = contentType.includes("application/json");
 
-    // Pass through the request body directly to avoid parsing issues
-    const body: BodyInit | undefined = (method !== "GET" && method !== "HEAD")
-      ? (request.body as unknown as BodyInit)
-      : undefined;
+    // Robust body extraction (avoid stream reuse errors on Vercel)
+    let body: BodyInit | undefined = undefined;
+    if (method !== "GET" && method !== "HEAD") {
+      const reqClone = request.clone();
+      try {
+        if (isJson) {
+          const text = await reqClone.text();
+          body = text;
+        } else {
+          const buffer = await reqClone.arrayBuffer();
+          body = Buffer.from(buffer);
+        }
+      } catch {
+        body = undefined;
+      }
+    }
 
     const response = await fetch(url, {
       method,
@@ -31,8 +43,6 @@ async function handle(
       },
       body,
       cache: "no-store",
-      // Required by Node fetch when streaming a request body
-      ...(body ? { duplex: "half" as any } : {}),
     });
 
     const respType = response.headers.get("content-type") || "";
