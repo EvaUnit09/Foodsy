@@ -21,15 +21,9 @@ async function handle(
     // Robust body extraction (avoid stream reuse errors on Vercel)
     let body: BodyInit | undefined = undefined;
     if (method !== "GET" && method !== "HEAD") {
-      const reqClone = request.clone();
       try {
-        if (isJson) {
-          const text = await reqClone.text();
-          body = text;
-        } else {
-          const buffer = await reqClone.arrayBuffer();
-          body = Buffer.from(buffer);
-        }
+        // Read as raw text to avoid JSON/body stream pitfalls
+        body = await request.text();
       } catch {
         body = undefined;
       }
@@ -40,7 +34,7 @@ async function handle(
       response = await fetch(url, {
       method,
       headers: {
-        ...(isJson ? { "Content-Type": "application/json" } : {}),
+        ...(body ? { "Content-Type": "application/json" } : {}),
         ...(auth ? { Authorization: auth } : {}),
         ...(cookies ? { Cookie: cookies } : {}),
       },
