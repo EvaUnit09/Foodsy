@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
 } from "react";
 
 import { useSessionVoting } from "@/hooks/useSessionVoting";
@@ -250,68 +251,72 @@ export default function SessionPage() {
   }, [sessionId, authLoading]);
 
   // Voting status polling effect with circuit breaker
+  const votingPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const votingPollActiveRef = useRef(false);
   useEffect(() => {
-    if (!sessionId || !sessionStarted || sessionComplete || roundTransitioning) return;
-    
+    const stopPolling = () => {
+      if (votingPollTimeoutRef.current) {
+        clearTimeout(votingPollTimeoutRef.current);
+        votingPollTimeoutRef.current = null;
+      }
+      votingPollActiveRef.current = false;
+    };
+
+    if (!sessionId || !sessionStarted || sessionComplete || roundTransitioning) {
+      stopPolling();
+      return;
+    }
+
+    if (votingPollActiveRef.current) {
+      return; // already polling; don't start another loop
+    }
+    votingPollActiveRef.current = true;
+
     let errorCount = 0;
-    let currentInterval = 5000; // Increased from 2 seconds to 5 seconds
+    let currentInterval = 5000;
     const maxErrors = 3;
-    let timeoutId: NodeJS.Timeout;
-    
+
     const fetchVotingStatus = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voting-status`, {
           credentials: 'include',
           headers: { ...getAuthHeaders() }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setVotingStatus(data);
-          errorCount = 0; // Reset error count on success
-          currentInterval = 5000; // Reset interval
+          errorCount = 0;
+          currentInterval = 5000;
         } else {
           errorCount++;
-          console.warn(`Voting status fetch failed: ${response.status} (error count: ${errorCount})`);
-          
-          // Circuit breaker: stop polling after too many errors
           if (errorCount >= maxErrors) {
-            console.error('Too many consecutive voting status errors, stopping polling');
+            stopPolling();
             return;
           }
-          
-          // Exponential backoff
           currentInterval = Math.min(currentInterval * 2, 30000);
         }
       } catch (error) {
         errorCount++;
-        console.error(`Failed to fetch voting status: ${error} (error count: ${errorCount})`);
-        
-        // Circuit breaker: stop polling after too many errors
         if (errorCount >= maxErrors) {
-          console.error('Too many consecutive voting status errors, stopping polling');
+          stopPolling();
           return;
         }
-        
-        // Exponential backoff
         currentInterval = Math.min(currentInterval * 2, 30000);
       }
-      
-      // Schedule next poll if we haven't hit the circuit breaker
-      if (errorCount < maxErrors) {
-        timeoutId = setTimeout(fetchVotingStatus, currentInterval);
+
+      if (votingPollActiveRef.current) {
+        votingPollTimeoutRef.current = setTimeout(fetchVotingStatus, currentInterval);
       }
     };
 
-    // Start polling
+    // kick off
     fetchVotingStatus();
-    
+
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      stopPolling();
     };
-  }, [sessionId, sessionStarted, sessionComplete, roundTransitioning, remainingVotes]);
+  }, [sessionId, sessionStarted, sessionComplete, roundTransitioning]);
 
   // WebSocket event effect
   useEffect(() => {

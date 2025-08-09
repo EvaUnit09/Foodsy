@@ -133,7 +133,9 @@ public class GooglePlacesClient {
         try {
             Map<String, Object> body = new HashMap<>();
             body.put("includedTypes", List.of("restaurant"));
-            body.put("maxResultCount", maxResults * 2); // Request more to filter out non-restaurants
+            // Google Places API requires 1..20 inclusive
+            int capped = Math.max(1, Math.min(20, maxResults));
+            body.put("maxResultCount", capped);
 
             Map<String, Object> circle = new HashMap<>();
             circle.put("center", Map.of("latitude", latitude, "longitude", longitude));
