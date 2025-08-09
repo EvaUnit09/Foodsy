@@ -37,18 +37,18 @@ function shouldUseNativeWebSocket(): boolean {
 export function useSessionWebSocket(sessionId: number) {
   const [event, setEvent] = useState<WebSocketEvent | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [usePolling, setUsePolling] = useState(false);
   const clientRef = useRef<Client | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingActiveRef = useRef(false);
   const errorCountRef = useRef(0);
   const currentIntervalRef = useRef(POLLING_INTERVAL);
 
   // Polling fallback for when WebSocket fails
   const startPolling = () => {
-    if (usePolling) return; // Prevent multiple polling instances
+    if (pollingActiveRef.current) return; // Prevent multiple polling instances
     
     console.log('Starting polling fallback for session:', sessionId);
-    setUsePolling(true);
+    pollingActiveRef.current = true;
     errorCountRef.current = 0; // Reset error count
     currentIntervalRef.current = POLLING_INTERVAL; // Reset interval
     
@@ -113,6 +113,8 @@ export function useSessionWebSocket(sessionId: number) {
     
     const scheduleNextPoll = () => {
       pollingRef.current = setTimeout(() => {
+        // If polling was stopped, do not continue
+        if (!pollingActiveRef.current) return;
         poll();
         scheduleNextPoll();
       }, currentIntervalRef.current);
@@ -126,7 +128,7 @@ export function useSessionWebSocket(sessionId: number) {
       clearTimeout(pollingRef.current); // Changed from clearInterval to clearTimeout
       pollingRef.current = null;
     }
-    setUsePolling(false);
+    pollingActiveRef.current = false;
     errorCountRef.current = 0; // Reset error count when stopping
   };
 
@@ -181,7 +183,7 @@ export function useSessionWebSocket(sessionId: number) {
       console.error('WebSocket STOMP error:', frame);
       setIsConnected(false);
       // Immediately start polling fallback after WebSocket fails
-      if (!usePolling) {
+      if (!pollingActiveRef.current) {
         console.log('STOMP error - immediately falling back to polling');
         startPolling();
       }
@@ -191,7 +193,7 @@ export function useSessionWebSocket(sessionId: number) {
       console.error('WebSocket connection error:', error);
       setIsConnected(false);
       // Immediately start polling fallback after WebSocket fails
-      if (!usePolling) {
+      if (!pollingActiveRef.current) {
         console.log('WebSocket error - immediately falling back to polling');
         startPolling();
       }
@@ -204,7 +206,7 @@ export function useSessionWebSocket(sessionId: number) {
       
       // Fallback: if not connected after 3 seconds, start polling (reduced timeout)
       setTimeout(() => {
-        if (!isConnected && !usePolling) {
+        if (!isConnected && !pollingActiveRef.current) {
           console.warn('WebSocket connection timeout, falling back to polling');
           startPolling();
         }
@@ -221,7 +223,7 @@ export function useSessionWebSocket(sessionId: number) {
         clientRef.current.deactivate();
       }
     };
-  }, [sessionId, isConnected, usePolling]);
+  }, [sessionId]);
 
   // Optionally, expose a send function for host actions
   const send = (destination: string, body: unknown) => {
