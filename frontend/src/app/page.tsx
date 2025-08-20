@@ -72,9 +72,15 @@ const Index = () => {
       setHomepageData(hydrated);
       setShowPersonalizedContent(true);
       
+      console.log("Homepage data loaded - hasOnboarded:", data.hasOnboarded);
+      
       // Show onboarding if user hasn't completed it
       if (!data.hasOnboarded) {
+        console.log("Setting showOnboarding to true because hasOnboarded is false");
         setShowOnboarding(true);
+      } else {
+        console.log("User has completed onboarding, hiding onboarding");
+        setShowOnboarding(false);
       }
     } catch (err) {
       console.error("Error loading homepage data:", err);
@@ -102,6 +108,7 @@ const Index = () => {
     priceRange: string;
     preferredBorough: string;
   }) => {
+    console.log("Starting taste profile creation:", tasteProfile);
     try {
       const tasteProfileDto: TasteProfileDto = {
         preferredCuisines: tasteProfile.preferredCuisines,
@@ -111,14 +118,20 @@ const Index = () => {
         isVegetarian: tasteProfile.preferredCuisines.includes("Vegetarian"),
       };
 
+      console.log("Creating taste profile with DTO:", tasteProfileDto);
       await homepageApi.createTasteProfile(tasteProfileDto);
+      console.log("Taste profile created successfully");
+      
       await homepageApi.trackTasteProfileComplete();
+      console.log("Analytics tracked");
       
       showNotification("Taste profile created successfully!", "success");
       setShowOnboarding(false);
+      console.log("Onboarding hidden, reloading homepage data...");
       
       // Reload homepage data with personalized recommendations
       await loadHomepageData();
+      console.log("Homepage data reloaded");
     } catch (err) {
       console.error("Error creating taste profile:", err);
       showNotification("Failed to save taste profile. Please try again.", "error");
@@ -202,7 +215,7 @@ const Index = () => {
   const trendingList = homepageData?.trending ?? [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-orange-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -268,6 +281,9 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Main content wrapper with flex-1 to fill space */}
+      <main className="flex-1">
 
       {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
       {isAuthenticated && homepageData && !homepageData.hasOnboarded && !showOnboarding && (
@@ -576,6 +592,7 @@ const Index = () => {
         </div>
       </section>
       
+      </main>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
