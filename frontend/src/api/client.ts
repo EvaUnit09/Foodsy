@@ -165,13 +165,20 @@ export class ApiClient {
         throw new ApiError(response.status, errorMessage);
       }
       
-      // Handle empty responses
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return response.json();
-      } else {
+      // Handle 304 Not Modified responses (no body)
+      if (response.status === 304) {
         return {} as T;
       }
+      
+      // Handle empty responses
+      const contentType = response.headers.get('content-type');
+      const contentLength = response.headers.get('content-length');
+      
+      if (contentLength === '0' || !contentType || !contentType.includes('application/json')) {
+        return {} as T;
+      }
+      
+      return response.json();
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;

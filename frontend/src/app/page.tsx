@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
+import { Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
-import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
@@ -44,8 +43,7 @@ const Index = () => {
   // Debug logging
   console.log("Homepage: Authentication state - isAuthenticated:", isAuthenticated, "user:", user);
   
-  // Existing state
-  const [searchQuery, setSearchQuery] = useState("");
+  // Removed search functionality
   
   // MVP Homepage state
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -311,26 +309,6 @@ const Index = () => {
             back-and-forth!
           </p>
 
-          {/* Search Section */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-2xl mx-auto">
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  placeholder="Search restaurants, cuisines, dishes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 text-lg border-gray-200 focus:border-orange-300"
-                />
-              </div>
-              <Button
-                size="lg"
-                className="h-12 px-8 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                Find Places
-              </Button>
-            </div>
-          </div>
         </div>
       </section>
 

@@ -75,6 +75,20 @@ export class HomepageApi {
       }
       throw new Error(`API Error: ${response.status} - ${error}`);
     }
+    
+    // Handle 304 Not Modified responses (no body)
+    if (response.status === 304) {
+      return {} as T;
+    }
+    
+    // Check if response has content before parsing JSON
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    
+    if (contentLength === '0' || (!contentType || !contentType.includes('application/json'))) {
+      return {} as T;
+    }
+    
     return response.json();
   }
 
