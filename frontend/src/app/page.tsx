@@ -122,6 +122,7 @@ const Index = () => {
     } catch (err) {
       console.error("Error creating taste profile:", err);
       showNotification("Failed to save taste profile. Please try again.", "error");
+      // Don't hide onboarding on error - let user try again
     }
   };
 

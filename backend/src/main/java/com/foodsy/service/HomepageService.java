@@ -44,6 +44,7 @@ public class HomepageService {
             // Get user's taste profile
             Optional<TasteProfileDto> tasteProfile = tasteProfileService.getUserTasteProfile(userId);
             boolean hasTasteProfile = tasteProfile.isPresent();
+            boolean hasCompletedOnboarding = tasteProfileService.hasCompletedOnboarding(userId);
 
             // Determine primary borough (user's preference or default)
             String primaryBorough = tasteProfile
@@ -61,7 +62,7 @@ public class HomepageService {
                 .neighborhoodHighlights(getNeighborhoodHighlights(primaryBorough))
                 .trendingNow(getTrendingNow(primaryBorough))
                 .spotlight(getSpotlight(primaryBorough))
-                .metadata(primaryBorough, getTotalRestaurantsInCache(), !hasTasteProfile)
+                .metadata(primaryBorough, getTotalRestaurantsInCache(), !hasCompletedOnboarding)
                 .performance(System.currentTimeMillis() - startTime, true, "cache")
                 .build();
 
