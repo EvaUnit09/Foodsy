@@ -98,7 +98,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.equals("/hello") ||
             path.equals("/error") ||
             path.startsWith("/ws") ||
-            path.startsWith("/homepage")) {
+            path.equals("/homepage") ||
+            path.equals("/homepage/health") ||
+            path.equals("/homepage/test") ||
+            path.startsWith("/homepage/taste-profile/options")) {
             return true;
         }
 

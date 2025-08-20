@@ -63,8 +63,20 @@ export class HomepageApi {
   }
 
   private static async getAuthHeaders(includeJson: boolean = false): Promise<HeadersInit> {
-    // For now same as buildHeaders but kept async for future token reading if needed
-    return this.buildHeaders(includeJson);
+    const headers: HeadersInit = {};
+    
+    if (includeJson) {
+      headers["Content-Type"] = "application/json";
+    }
+    
+    // Get access token from localStorage for authentication
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
+    return headers;
   }
 
   private static async handleResponse<T>(response: Response): Promise<T> {

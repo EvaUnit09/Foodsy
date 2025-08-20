@@ -6,6 +6,8 @@ import com.foodsy.dto.TasteProfileDto;
 import com.foodsy.service.HomepageAnalyticsService;
 import com.foodsy.service.HomepageService;
 import com.foodsy.service.TasteProfileService;
+import com.foodsy.service.UserService;
+import com.foodsy.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -36,6 +38,9 @@ public class HomepageController {
 
     @Autowired
     private HomepageAnalyticsService analyticsService;
+
+    @Autowired
+    private UserService userService;
 
     /**
      * Get aggregated homepage data
@@ -353,14 +358,27 @@ public class HomepageController {
 
     // Helper methods
     private Long extractUserId(Authentication authentication) {
-        // This assumes the authentication contains user ID
-        // Adjust based on your authentication setup
+        if (authentication == null) {
+            throw new IllegalStateException("Authentication required but not provided");
+        }
+        
+        String username = authentication.getName();
+        if (username == null || username.trim().isEmpty()) {
+            throw new IllegalStateException("Username not found in authentication");
+        }
+        
+        // Try to parse as user ID first (for backward compatibility)
         try {
-            return Long.parseLong(authentication.getName());
+            return Long.parseLong(username);
         } catch (NumberFormatException e) {
-            // If name is not a number, you might need to look up the user
-            logger.warn("Could not extract user ID from authentication: {}", authentication.getName());
-            return 1L; // Default fallback - adjust as needed
+            // Username is not a number, look up user by username
+            Optional<User> user = userService.findByUsername(username);
+            if (user.isPresent()) {
+                return user.get().getId();
+            } else {
+                logger.error("User not found for authentication username: {}", username);
+                throw new IllegalArgumentException("User not found: " + username);
+            }
         }
     }
 
