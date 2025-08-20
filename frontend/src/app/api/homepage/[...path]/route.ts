@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
-async function proxy(request: Request, { params }: { params: { path: string[] } }): Promise<Response> {
+async function proxy(request: Request, { params }: { params: Promise<{ path: string[] }> }): Promise<Response> {
   try {
     const auth = request.headers.get("authorization");
     const cookies = request.headers.get("cookie");
@@ -21,7 +21,8 @@ async function proxy(request: Request, { params }: { params: { path: string[] } 
     }
 
     // Build the backend path from the dynamic route params
-    const subpath = params.path ? params.path.join('/') : '';
+    const resolvedParams = await params;
+    const subpath = resolvedParams.path ? resolvedParams.path.join('/') : '';
     const backendPath = `/homepage/${subpath}`;
 
     console.log(`App API Proxy: ${request.method} ${backendPath}`);
@@ -61,18 +62,18 @@ async function proxy(request: Request, { params }: { params: { path: string[] } 
   }
 }
 
-export function GET(request: Request, context: { params: { path: string[] } }) {
+export function GET(request: Request, context: { params: Promise<{ path: string[] }> }) {
   return proxy(request, context);
 }
 
-export function POST(request: Request, context: { params: { path: string[] } }) {
+export function POST(request: Request, context: { params: Promise<{ path: string[] }> }) {
   return proxy(request, context);
 }
 
-export function PUT(request: Request, context: { params: { path: string[] } }) {
+export function PUT(request: Request, context: { params: Promise<{ path: string[] }> }) {
   return proxy(request, context);
 }
 
-export function DELETE(request: Request, context: { params: { path: string[] } }) {
+export function DELETE(request: Request, context: { params: Promise<{ path: string[] }> }) {
   return proxy(request, context);
 }
