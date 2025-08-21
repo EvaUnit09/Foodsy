@@ -45,11 +45,12 @@ const Index = () => {
   
   // Removed search functionality
   
-  // MVP Homepage state
+  // Homepage/Dashboard state
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
   const [showPersonalizedContent, setShowPersonalizedContent] = useState(false);
   const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
+  const [activeTab, setActiveTab] = useState<'picks' | 'trending' | 'favorites'>('picks');
 
   // Load homepage data and check onboarding status
   const loadHomepageData = useCallback(async () => {
@@ -224,14 +225,22 @@ const Index = () => {
       <header className="bg-white/80 backdrop-blur-md border-b border-orange-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">F</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">F</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">Foodsy</span>
               </div>
-                              <span className="text-xl font-bold text-gray-900">Foodsy</span>
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                NY
-              </span>
+              {isAuthenticated ? (
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  Dashboard
+                </span>
+              ) : (
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  NY
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <Button 
@@ -289,6 +298,92 @@ const Index = () => {
       {/* Main content wrapper with flex-1 to fill space */}
       <main className="flex-1">
 
+      {/* Dashboard Welcome Section - Only for authenticated users */}
+      {isAuthenticated && (
+        <section className="py-6 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, {user?.firstName || user?.displayName || 'there'}! 👋
+              </h1>
+              <p className="text-gray-600">
+                Discover new restaurants and manage your dining sessions
+              </p>
+            </div>
+
+            {/* Quick Actions for Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleStartSession}>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                      <Plus className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Start New Session</h3>
+                      <p className="text-gray-600">Create a voting session with friends</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleJoinSession}>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Join Session</h3>
+                      <p className="text-gray-600">Join an existing voting session</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Content Tabs for Dashboard */}
+            <div className="mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('picks')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'picks'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Your Picks
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('trending')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'trending'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Trending
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('favorites')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'favorites'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Heart className="w-4 h-4 inline mr-1" />
+                    Favorites
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
       {isAuthenticated && homepageData && homepageData.hasOnboarded === false && !showOnboarding && (
         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 sm:px-6 lg:px-8">
@@ -313,29 +408,30 @@ const Index = () => {
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="relative py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            Never Ask
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">
-              {" "}
-              &#34;Where Should We Eat?&#34;{" "}
-            </span>
-            Again
-          </h1>
-          <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-            Find restaurants you love, save them to your favorites, then let
-            your group vote on tonight&#39;s dinner. No more endless
-            back-and-forth!
-          </p>
+      {/* Hero Section - Only for anonymous users */}
+      {!isAuthenticated && (
+        <section className="relative py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              Never Ask
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">
+                {" "}
+                &#34;Where Should We Eat?&#34;{" "}
+              </span>
+              Again
+            </h1>
+            <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+              Find restaurants you love, save them to your favorites, then let
+              your group vote on tonight&#39;s dinner. No more endless
+              back-and-forth!
+            </p>
+          </div>
+        </section>
+      )}
 
-        </div>
-      </section>
-
-      {/* Loading indicator for personalized content */}
-      {isLoadingHomepageData && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8">
+      {/* Loading indicator for authenticated users */}
+      {isAuthenticated && isLoadingHomepageData && (
+        <section className="py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center">
               <div className="inline-flex items-center space-x-2 mb-4">
@@ -383,28 +479,20 @@ const Index = () => {
         </section>
       )}
 
-      {/* Personalized Content - Only show if user has completed onboarding */}
-      {showPersonalizedContent && homepageData && !isLoadingHomepageData && (
-        <>
-          {/* Your Picks Section */}
-          {homepageData.yourPicks.length > 0 && (
-            <section className="py-16 px-4 sm:px-6 lg:px-8">
-              <div className="max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      Curated Picks
-                    </h2>
-                    <p className="text-gray-600">
-                      Personalized recommendations based on your taste profile
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                  >
-                    View All
-                  </Button>
+      {/* Tab-based Content for Authenticated Users */}
+      {isAuthenticated && showPersonalizedContent && homepageData && !isLoadingHomepageData && (
+        <section className="px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Your Picks Tab */}
+            {activeTab === 'picks' && homepageData.yourPicks.length > 0 && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Personalized for You
+                  </h2>
+                  <p className="text-gray-600">
+                    Curated based on your taste profile and preferences
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {homepageData.yourPicks.slice(0, 6).map((restaurant, index) => (
@@ -465,28 +553,18 @@ const Index = () => {
                   ))}
                 </div>
               </div>
-            </section>
-          )}
+            )}
 
-          {/* Trending Now Section */}
-          {trendingList.length > 0 && (
-            <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/50">
-              <div className="max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      Trending Now in NYC
-                    </h2>
-                    <p className="text-gray-600">
-                      Most popular restaurants this week
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                  >
-                    View All
-                  </Button>
+            {/* Trending Tab */}
+            {activeTab === 'trending' && trendingList.length > 0 && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Trending in NYC
+                  </h2>
+                  <p className="text-gray-600">
+                    Most popular restaurants this week
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {trendingList.slice(0, 4).map((restaurant: RestaurantSummaryDto, index: number) => (
@@ -557,44 +635,156 @@ const Index = () => {
                   ))}
                 </div>
               </div>
-            </section>
-          )}
-        </>
+            )}
+
+            {/* Favorites Tab */}
+            {activeTab === 'favorites' && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Your Favorites
+                  </h2>
+                  <p className="text-gray-600">
+                    Restaurants you've liked and saved
+                  </p>
+                </div>
+                {(() => {
+                  const favorites = [
+                    ...homepageData.yourPicks,
+                    ...homepageData.trending,
+                    ...homepageData.highlights,
+                    ...homepageData.spotlight
+                  ].filter(r => r.isLiked);
+                  
+                  if (favorites.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No favorites yet</h3>
+                        <p className="text-gray-600">Start exploring and like restaurants to see them here!</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {favorites.map((restaurant, index) => (
+                        <Card
+                          key={`${restaurant.id}-fav-${index}`}
+                          className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
+                          onClick={() => handleRestaurantClick(restaurant)}
+                        >
+                          <CardContent className="p-0">
+                            <div className="relative h-48 overflow-hidden">
+                              <img
+                                src={restaurant.photos?.length > 0 ? restaurant.photos[0] : "/placeholder.svg"}
+                                alt={restaurant.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleLike(restaurant.id);
+                                }}
+                                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
+                              >
+                                <Heart className="w-4 h-4 fill-current" />
+                              </button>
+                            </div>
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
+                                  {restaurant.name}
+                                </h3>
+                                <span className="text-sm font-medium text-gray-600">
+                                  {restaurant.priceLevel}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {restaurant.category}
+                              </p>
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                <span className="text-sm font-medium">
+                                  {restaurant.rating}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  ({restaurant.userRatingCount})
+                                </span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
 
 
-      {/* Call to Action */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            End the &#34;Where Should We Eat?&#34; Struggle
-          </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Build your list of favorite spots, then let your group vote on
-            tonight&#39;s dinner. Decision made, everyone&#39;s happy.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
+      {/* Empty State for Authenticated Users */}
+      {isAuthenticated && !isLoadingHomepageData && (!homepageData || (
+        homepageData.yourPicks.length === 0 && 
+        homepageData.trending.length === 0 && 
+        homepageData.highlights.length === 0 && 
+        homepageData.spotlight.length === 0
+      )) && (
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No recommendations available</h3>
+            <p className="text-gray-600 mb-6">We're working on getting some great restaurant recommendations for you!</p>
+            <Button 
               onClick={handleStartSession}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Start New Session
-            </Button>
-            <Button
-              size="lg"
-              onClick={handleJoinSession}
-              variant="outline"
-              className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
-            >
-              <Users className="w-5 h-5 mr-2" />
-              Join Session
+              <Plus className="w-4 h-4 mr-2" />
+              Start a Session
             </Button>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Call to Action - Only for anonymous users */}
+      {!isAuthenticated && (
+        <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              End the &#34;Where Should We Eat?&#34; Struggle
+            </h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Build your list of favorite spots, then let your group vote on
+              tonight&#39;s dinner. Decision made, everyone&#39;s happy.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                onClick={handleStartSession}
+                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Start New Session
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleJoinSession}
+                variant="outline"
+                className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
+              >
+                <Users className="w-5 h-5 mr-2" />
+                Join Session
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
       
       </main>
 
