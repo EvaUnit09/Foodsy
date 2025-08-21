@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -33,6 +36,18 @@ public class RestaurantCacheService {
     private static final int MAX_DAILY_NEARBY_SEARCHES = 100; // 60% of ~5000/month ≈ 100/day
     private static final int MAX_DAILY_PLACE_DETAILS = 200; // 60% of ~10000/month ≈ 200/day
     private static final int MAX_DAILY_TOTAL_CALLS = 300;
+    
+    // Borough neighborhoods for targeted searches
+    private static final Map<String, List<String>> BOROUGH_NEIGHBORHOODS = Map.of(
+        "Manhattan", Arrays.asList("SoHo", "Greenwich Village", "Upper East Side", "Midtown", "Lower East Side", 
+                                  "Chelsea", "Tribeca", "East Village", "West Village", "Financial District"),
+        "Brooklyn", Arrays.asList("Williamsburg", "DUMBO", "Park Slope", "Bushwick", "Crown Heights", 
+                                 "Red Hook", "Sunset Park", "Bay Ridge", "Prospect Heights", "Carroll Gardens"),
+        "Queens", Arrays.asList("Astoria", "Long Island City", "Flushing", "Jackson Heights", "Forest Hills", 
+                               "Elmhurst", "Woodside", "Sunnyside", "Corona", "Ridgewood"),
+        "Bronx", Arrays.asList("Fordham", "Mott Haven", "Riverdale", "University Heights", "Castle Hill", 
+                              "Concourse", "Morrisania", "Tremont", "Belmont", "Soundview")
+    );
 
     @Autowired
     private RestaurantCacheRepository cacheRepository;
@@ -106,28 +121,6 @@ public class RestaurantCacheService {
         return fetchAndCacheForBorough(borough, limit);
     }
 
-    /**
-     * Get trending restaurants (recently popular)
-     */
-    public List<RestaurantSummaryDto> getTrendingRestaurants(String borough, int limit) {
-        logger.debug("Getting trending restaurants for borough: {}", borough);
-        
-        Instant now = Instant.now();
-        Instant weekAgo = now.minusSeconds(7 * 24 * 60 * 60); // 7 days ago
-        
-        List<RestaurantCache> trending = cacheRepository.findRecentlyAdded(
-            weekAgo, now, PageRequest.of(0, limit));
-        
-        if (trending.isEmpty()) {
-            // Fallback to general top-rated restaurants
-            trending = cacheRepository.findTopRatedInBorough(
-                borough, 4.0, now, PageRequest.of(0, limit));
-        }
-        
-        return trending.stream()
-            .map(RestaurantSummaryDto::fromEntity)
-            .collect(Collectors.toList());
-    }
 
     /**
      * Get random high-rated restaurants for spotlight section
@@ -403,6 +396,129 @@ public class RestaurantCacheService {
             case "Staten Island" -> new BoroughCoordinates(40.5795, -74.1502);
             default -> new BoroughCoordinates(40.7831, -73.9712); // Default to Manhattan
         };
+    }
+
+    /**
+     * Calculate trending score for a restaurant based on multiple factors
+     */
+    public double calculateTrendingScore(RestaurantCache restaurant) {
+        double score = 0.0;
+        
+        // Rating trend (40% weight)
+        if (restaurant.getRating() != null) {
+            score += restaurant.getRating() * 0.4;
+        }
+        
+        // Review velocity (30% weight) 
+        if (restaurant.getUserRatingCount() != null) {
+            // Normalize review count (more recent reviews = higher score)
+            double reviewVelocity = Math.min(restaurant.getUserRatingCount() / 100.0, 5.0);
+            score += reviewVelocity * 0.3;
+        }
+        
+        // Recency (20% weight)
+        if (restaurant.getLastFetchedAt() != null) {
+            long daysSinceUpdate = ChronoUnit.DAYS.between(restaurant.getLastFetchedAt(), Instant.now());
+            double recencyScore = Math.max(5.0 - (daysSinceUpdate / 7.0), 0.0);
+            score += recencyScore * 0.2;
+        }
+        
+        // Price level popularity (10% weight)
+        if (restaurant.getPriceLevel() != null) {
+            // Mid-range restaurants tend to be more popular
+            double priceScore = restaurant.getPriceLevel() == 2 ? 5.0 : 3.0;
+            score += priceScore * 0.1;
+        }
+        
+        return Math.round(score * 100.0) / 100.0; // Round to 2 decimal places
+    }
+    
+    /**
+     * Get trending restaurants with calculated scores
+     */
+    public List<RestaurantSummaryDto> getTrendingRestaurants(String borough, int limit) {
+        logger.debug("Getting trending restaurants for borough: {} with limit: {}", borough, limit);
+        
+        Instant now = Instant.now();
+        List<RestaurantCache> cached = cacheRepository.findByBoroughNotExpired(
+            borough, now, PageRequest.of(0, limit * 2) // Get more to allow for sorting
+        ).getContent();
+        
+        if (cached.isEmpty()) {
+            logger.info("No cached restaurants found for trending in borough: {}", borough);
+            return List.of();
+        }
+        
+        // Calculate trending scores and sort
+        List<RestaurantCache> trendingRestaurants = cached.stream()
+            .peek(restaurant -> {
+                // Calculate and log trending score for debugging
+                double score = calculateTrendingScore(restaurant);
+                logger.debug("Restaurant: {} - Trending Score: {}", restaurant.getName(), score);
+            })
+            .sorted((r1, r2) -> {
+                double score1 = calculateTrendingScore(r1);
+                double score2 = calculateTrendingScore(r2);
+                return Double.compare(score2, score1); // Descending order
+            })
+            .limit(limit)
+            .collect(Collectors.toList());
+        
+        logger.info("Found {} trending restaurants for borough: {}", trendingRestaurants.size(), borough);
+        
+        return trendingRestaurants.stream()
+            .map(RestaurantSummaryDto::fromEntity)
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get neighborhoods for a specific borough
+     */
+    public List<String> getNeighborhoodsForBorough(String borough) {
+        return BOROUGH_NEIGHBORHOODS.getOrDefault(borough, List.of());
+    }
+    
+    /**
+     * Update trending scores for all restaurants in a borough
+     */
+    @Transactional
+    public void updateTrendingScores(String borough) {
+        logger.info("Updating trending scores for borough: {}", borough);
+        
+        Instant now = Instant.now();
+        List<RestaurantCache> restaurants = cacheRepository.findByBoroughNotExpired(
+            borough, now, PageRequest.of(0, 1000) // Process in batches
+        ).getContent();
+        
+        if (restaurants.isEmpty()) {
+            logger.warn("No restaurants found to update trending scores for borough: {}", borough);
+            return;
+        }
+        
+        // Calculate scores and update ranks
+        restaurants.sort((r1, r2) -> {
+            double score1 = calculateTrendingScore(r1);
+            double score2 = calculateTrendingScore(r2);
+            return Double.compare(score2, score1); // Descending order
+        });
+        
+        // Note: Since we don't have trending_score and trending_rank columns in the current entity,
+        // this is a placeholder for when those columns are added to the database
+        for (int i = 0; i < restaurants.size(); i++) {
+            RestaurantCache restaurant = restaurants.get(i);
+            double score = calculateTrendingScore(restaurant);
+            // restaurant.setTrendingScore(score);
+            // restaurant.setTrendingRank(i + 1);
+            // restaurant.setLastTrendingCalcAt(now);
+            logger.debug("Restaurant: {} - Score: {} - Rank: {}", 
+                        restaurant.getName(), score, i + 1);
+        }
+        
+        // Save updated restaurants
+        // cacheRepository.saveAll(restaurants);
+        
+        logger.info("Updated trending scores for {} restaurants in borough: {}", 
+                   restaurants.size(), borough);
     }
 
     // Helper records

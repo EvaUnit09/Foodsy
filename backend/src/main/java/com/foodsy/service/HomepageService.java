@@ -191,10 +191,12 @@ public class HomepageService {
         logger.debug("Getting trending restaurants for borough: {}", borough);
 
         try {
+            // Use the new trending calculation method
             return restaurantCacheService.getTrendingRestaurants(borough, TRENDING_NOW_SIZE);
         } catch (Exception e) {
             logger.error("Error getting trending restaurants: {}", e.getMessage());
-            return List.of();
+            // Fallback to regular restaurants if trending calculation fails
+            return restaurantCacheService.getRestaurantsForBorough(borough, TRENDING_NOW_SIZE);
         }
     }
 
