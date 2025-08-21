@@ -75,11 +75,12 @@ const Index = () => {
       console.log("Homepage data loaded - hasOnboarded:", data.hasOnboarded);
       
       // Show onboarding if user hasn't completed it
-      if (!data.hasOnboarded) {
+      // Only show onboarding if hasOnboarded is explicitly false (not undefined)
+      if (data.hasOnboarded === false) {
         console.log("Setting showOnboarding to true because hasOnboarded is false");
         setShowOnboarding(true);
       } else {
-        console.log("User has completed onboarding, hiding onboarding");
+        console.log("User has completed onboarding or data is undefined, hiding onboarding");
         setShowOnboarding(false);
       }
     } catch (err) {
@@ -128,6 +129,9 @@ const Index = () => {
       showNotification("Taste profile created successfully!", "success");
       setShowOnboarding(false);
       console.log("Onboarding hidden, reloading homepage data...");
+      
+      // Wait a moment to ensure backend transaction is committed before reloading
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Reload homepage data with personalized recommendations
       await loadHomepageData();
@@ -286,7 +290,7 @@ const Index = () => {
       <main className="flex-1">
 
       {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
-      {isAuthenticated && homepageData && !homepageData.hasOnboarded && !showOnboarding && (
+      {isAuthenticated && homepageData && homepageData.hasOnboarded === false && !showOnboarding && (
         <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center space-x-3">
