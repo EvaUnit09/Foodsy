@@ -449,20 +449,36 @@ public class RestaurantCacheService {
             return List.of();
         }
         
-        // Calculate trending scores and sort
-        List<RestaurantCache> trendingRestaurants = cached.stream()
-            .peek(restaurant -> {
-                // Calculate and log trending score for debugging
-                double score = calculateTrendingScore(restaurant);
-                logger.debug("Restaurant: {} - Trending Score: {}", restaurant.getName(), score);
-            })
-            .sorted((r1, r2) -> {
-                double score1 = calculateTrendingScore(r1);
-                double score2 = calculateTrendingScore(r2);
-                return Double.compare(score2, score1); // Descending order
-            })
-            .limit(limit)
-            .collect(Collectors.toList());
+        // Check if we have recent trending calculations (within 24 hours)
+        Instant dayAgo = now.minusSeconds(24 * 60 * 60);
+        boolean hasRecentCalculations = cached.stream()
+            .anyMatch(r -> r.getLastTrendingCalcAt() != null && r.getLastTrendingCalcAt().isAfter(dayAgo));
+        
+        List<RestaurantCache> trendingRestaurants;
+        
+        if (hasRecentCalculations) {
+            // Use optimized repository query for persisted trending data
+            logger.debug("Using persisted trending scores for borough: {}", borough);
+            trendingRestaurants = cacheRepository.findTrendingByBorough(
+                borough, now, PageRequest.of(0, limit)
+            );
+        } else {
+            // Calculate trending scores in real-time and optionally update
+            logger.debug("Calculating real-time trending scores for borough: {}", borough);
+            trendingRestaurants = cached.stream()
+                .peek(restaurant -> {
+                    // Calculate and log trending score for debugging
+                    double score = calculateTrendingScore(restaurant);
+                    logger.debug("Restaurant: {} - Trending Score: {}", restaurant.getName(), score);
+                })
+                .sorted((r1, r2) -> {
+                    double score1 = calculateTrendingScore(r1);
+                    double score2 = calculateTrendingScore(r2);
+                    return Double.compare(score2, score1); // Descending order
+                })
+                .limit(limit)
+                .collect(Collectors.toList());
+        }
         
         logger.info("Found {} trending restaurants for borough: {}", trendingRestaurants.size(), borough);
         
@@ -502,23 +518,78 @@ public class RestaurantCacheService {
             return Double.compare(score2, score1); // Descending order
         });
         
-        // Note: Since we don't have trending_score and trending_rank columns in the current entity,
-        // this is a placeholder for when those columns are added to the database
+        // Update trending scores and ranks
         for (int i = 0; i < restaurants.size(); i++) {
             RestaurantCache restaurant = restaurants.get(i);
             double score = calculateTrendingScore(restaurant);
-            // restaurant.setTrendingScore(score);
-            // restaurant.setTrendingRank(i + 1);
-            // restaurant.setLastTrendingCalcAt(now);
+            restaurant.setTrendingScore(score);
+            restaurant.setTrendingRank(i + 1);
+            restaurant.setLastTrendingCalcAt(now);
             logger.debug("Restaurant: {} - Score: {} - Rank: {}", 
                         restaurant.getName(), score, i + 1);
         }
         
         // Save updated restaurants
-        // cacheRepository.saveAll(restaurants);
+        cacheRepository.saveAll(restaurants);
         
         logger.info("Updated trending scores for {} restaurants in borough: {}", 
                    restaurants.size(), borough);
+    }
+    
+    /**
+     * Get trending statistics for a borough
+     */
+    public TrendingStats getTrendingStats(String borough) {
+        Instant now = Instant.now();
+        List<Object[]> stats = cacheRepository.getTrendingStats(borough, now);
+        
+        if (stats.isEmpty()) {
+            return new TrendingStats(0.0, 0.0, 0.0, 0L);
+        }
+        
+        Object[] result = stats.get(0);
+        Double minScore = (Double) result[0];
+        Double maxScore = (Double) result[1];
+        Double avgScore = (Double) result[2];
+        Long count = (Long) result[3];
+        
+        return new TrendingStats(
+            minScore != null ? minScore : 0.0,
+            maxScore != null ? maxScore : 0.0,
+            avgScore != null ? avgScore : 0.0,
+            count != null ? count : 0L
+        );
+    }
+    
+    /**
+     * Update trending scores for all boroughs (scheduled method)
+     */
+    @Transactional
+    public void updateAllTrendingScores() {
+        logger.info("Starting scheduled trending scores update for all boroughs");
+        
+        List<String> boroughs = BOROUGH_NEIGHBORHOODS.keySet().stream().toList();
+        
+        for (String borough : boroughs) {
+            try {
+                updateTrendingScores(borough);
+                logger.info("Updated trending scores for borough: {}", borough);
+            } catch (Exception e) {
+                logger.error("Error updating trending scores for borough {}: {}", borough, e.getMessage());
+            }
+        }
+        
+        logger.info("Completed scheduled trending scores update for all boroughs");
+    }
+    
+    /**
+     * Clean up old trending calculations (older than 7 days)
+     */
+    @Transactional
+    public void cleanupOldTrendingData() {
+        Instant threshold = Instant.now().minusSeconds(7 * 24 * 60 * 60); // 7 days ago
+        int cleared = cacheRepository.clearOldTrendingData(threshold);
+        logger.info("Cleared trending data for {} restaurants older than 7 days", cleared);
     }
 
     // Helper records
@@ -531,5 +602,12 @@ public class RestaurantCacheService {
         int dailyApiCalls,
         int nearbySearchCalls,
         int placeDetailsCalls
+    ) {}
+    
+    public record TrendingStats(
+        double minScore,
+        double maxScore,
+        double avgScore,
+        long totalRestaurants
     ) {}
 } 

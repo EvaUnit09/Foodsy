@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -334,6 +335,32 @@ public class HomepageService {
         } catch (Exception e) {
             logger.error("Error tracking anonymous homepage event: {}", e.getMessage());
         }
+    }
+    
+    /**
+     * Update trending scores for a specific borough
+     */
+    public void updateTrendingScoresForBorough(String borough) {
+        logger.info("Updating trending scores for borough: {}", borough);
+        restaurantCacheService.updateTrendingScores(borough);
+    }
+    
+    /**
+     * Get trending statistics for a borough
+     */
+    public Map<String, Object> getTrendingStatsForBorough(String borough) {
+        RestaurantCacheService.TrendingStats stats = restaurantCacheService.getTrendingStats(borough);
+        
+        return Map.of(
+            "borough", borough,
+            "trendingStats", Map.of(
+                "minScore", stats.minScore(),
+                "maxScore", stats.maxScore(),
+                "avgScore", Math.round(stats.avgScore() * 100.0) / 100.0, // Round to 2 decimals
+                "totalRestaurants", stats.totalRestaurants()
+            ),
+            "lastUpdated", System.currentTimeMillis()
+        );
     }
 
     // Helper records

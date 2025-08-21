@@ -322,6 +322,71 @@ public class HomepageController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    
+    /**
+     * Update trending scores for a specific borough (admin endpoint)
+     * POST /api/homepage/trending/update/{borough}
+     */
+    @PostMapping("/trending/update/{borough}")
+    public ResponseEntity<Map<String, Object>> updateTrendingScores(
+            @PathVariable String borough,
+            Authentication authentication) {
+        try {
+            if (!TasteProfileService.AVAILABLE_BOROUGHS.contains(borough)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Invalid borough: " + borough
+                ));
+            }
+            
+            logger.info("Manually updating trending scores for borough: {}", borough);
+            
+            // Get the service from homepage service since it has the restaurantCacheService
+            homepageService.updateTrendingScoresForBorough(borough);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Updated trending scores for " + borough,
+                "borough", borough,
+                "timestamp", System.currentTimeMillis()
+            ));
+            
+        } catch (Exception e) {
+            logger.error("Error updating trending scores for borough {}: {}", borough, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * Get trending statistics for a borough
+     * GET /api/homepage/trending/stats/{borough}
+     */
+    @GetMapping("/trending/stats/{borough}")
+    public ResponseEntity<Map<String, Object>> getTrendingStats(
+            @PathVariable String borough,
+            Authentication authentication) {
+        try {
+            if (!TasteProfileService.AVAILABLE_BOROUGHS.contains(borough)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid borough: " + borough
+                ));
+            }
+            
+            // Get trending stats from the service
+            Map<String, Object> stats = homepageService.getTrendingStatsForBorough(borough);
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            logger.error("Error getting trending stats for borough {}: {}", borough, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", e.getMessage()
+            ));
+        }
+    }
 
     /**
      * Test endpoint to verify security config

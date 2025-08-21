@@ -133,4 +133,68 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
         @Param("now") Instant now,
         Pageable pageable
     );
+    
+    /**
+     * Count restaurants by borough (for statistics)
+     */
+    long countByBorough(String borough);
+    
+    // ===== TRENDING METHODS =====
+    
+    /**
+     * Find trending restaurants by borough ordered by trending rank
+     */
+    @Query("SELECT r FROM RestaurantCache r WHERE r.borough = :borough AND r.expiresAt > :now " +
+           "AND r.trendingRank IS NOT NULL ORDER BY r.trendingRank ASC")
+    List<RestaurantCache> findTrendingByBorough(@Param("borough") String borough, @Param("now") Instant now, Pageable pageable);
+    
+    /**
+     * Find trending restaurants by trending score
+     */
+    @Query("SELECT r FROM RestaurantCache r WHERE r.borough = :borough AND r.expiresAt > :now " +
+           "AND r.trendingScore IS NOT NULL ORDER BY r.trendingScore DESC")
+    List<RestaurantCache> findByTrendingScore(@Param("borough") String borough, @Param("now") Instant now, Pageable pageable);
+    
+    /**
+     * Find restaurants with recent trending calculations
+     */
+    @Query("SELECT r FROM RestaurantCache r WHERE r.borough = :borough AND r.expiresAt > :now " +
+           "AND r.lastTrendingCalcAt > :since ORDER BY r.trendingRank ASC")
+    List<RestaurantCache> findWithRecentTrendingCalc(@Param("borough") String borough, @Param("now") Instant now, 
+                                                     @Param("since") Instant since, Pageable pageable);
+    
+    /**
+     * Update trending scores for all restaurants in a borough
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE RestaurantCache r SET r.trendingScore = :score, r.trendingRank = :rank, " +
+           "r.lastTrendingCalcAt = :calcTime WHERE r.id = :id")
+    int updateTrendingData(@Param("id") Long id, @Param("score") Double score, 
+                          @Param("rank") Integer rank, @Param("calcTime") Instant calcTime);
+    
+    /**
+     * Find restaurants that need trending score updates (older than threshold)
+     */
+    @Query("SELECT r FROM RestaurantCache r WHERE r.borough = :borough AND r.expiresAt > :now " +
+           "AND (r.lastTrendingCalcAt IS NULL OR r.lastTrendingCalcAt < :threshold)")
+    List<RestaurantCache> findNeedingTrendingUpdate(@Param("borough") String borough, @Param("now") Instant now, 
+                                                    @Param("threshold") Instant threshold);
+    
+    /**
+     * Get trending statistics for a borough
+     */
+    @Query("SELECT MIN(r.trendingScore), MAX(r.trendingScore), AVG(r.trendingScore), COUNT(r) " +
+           "FROM RestaurantCache r WHERE r.borough = :borough AND r.expiresAt > :now " +
+           "AND r.trendingScore IS NOT NULL")
+    List<Object[]> getTrendingStats(@Param("borough") String borough, @Param("now") Instant now);
+    
+    /**
+     * Clear trending data for expired calculations
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE RestaurantCache r SET r.trendingScore = NULL, r.trendingRank = NULL " +
+           "WHERE r.lastTrendingCalcAt < :threshold")
+    int clearOldTrendingData(@Param("threshold") Instant threshold);
 } 

@@ -85,6 +85,15 @@ public class RestaurantCache {
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();
     
+    @Column(name = "trending_score", precision = 5, scale = 2)
+    private Double trendingScore = 0.0;
+    
+    @Column(name = "trending_rank")
+    private Integer trendingRank;
+    
+    @Column(name = "last_trending_calc_at")
+    private Instant lastTrendingCalcAt;
+    
     // Constructors
     public RestaurantCache() {
         // Set expiration to 30 days from now (as per Places API terms)
@@ -280,5 +289,29 @@ public class RestaurantCache {
     
     public long getDaysUntilExpiration() {
         return (expiresAt.getEpochSecond() - Instant.now().getEpochSecond()) / (24 * 60 * 60);
+    }
+    
+    public Double getTrendingScore() {
+        return trendingScore;
+    }
+    
+    public void setTrendingScore(Double trendingScore) {
+        this.trendingScore = trendingScore;
+    }
+    
+    public Integer getTrendingRank() {
+        return trendingRank;
+    }
+    
+    public void setTrendingRank(Integer trendingRank) {
+        this.trendingRank = trendingRank;
+    }
+    
+    public Instant getLastTrendingCalcAt() {
+        return lastTrendingCalcAt;
+    }
+    
+    public void setLastTrendingCalcAt(Instant lastTrendingCalcAt) {
+        this.lastTrendingCalcAt = lastTrendingCalcAt;
     }
 } 
