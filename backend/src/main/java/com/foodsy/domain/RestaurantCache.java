@@ -85,7 +85,7 @@ public class RestaurantCache {
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();
     
-    @Column(name = "trending_score", precision = 5, scale = 2)
+    @Column(name = "trending_score")
     private Double trendingScore = 0.0;
     
     @Column(name = "trending_rank")
