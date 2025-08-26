@@ -52,6 +52,9 @@ public class SecurityConfig {
                     .requestMatchers("/", "/error", "/oauth2/**", "/auth/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/actuator/**").permitAll()
                     // Allow public GET access for restaurant photos and search (binary image proxy etc.)
                     .requestMatchers(HttpMethod.GET, "/restaurants/**").permitAll()
+                    // Allow public access to admin endpoints for population scripts
+                    .requestMatchers(HttpMethod.POST, "/homepage/refresh/**", "/homepage/trending/update/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/homepage/health", "/homepage/trending/stats/**").permitAll()
                     .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
