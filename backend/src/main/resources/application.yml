@@ -103,6 +103,7 @@ logging:
         security.oauth2.client.web: ${LOG_LEVEL_OAUTH2:DEBUG}
         security.oauth2.client.web.server: ${LOG_LEVEL_OAUTH2:DEBUG}
         web: ${LOG_LEVEL_SECURITY:DEBUG}
+        web.servlet.resource: ERROR
   file:
     name: ${LOG_FILE_PATH:./logs/application.log}
     max-size: 10MB
