@@ -501,39 +501,47 @@ public class RestaurantCacheService {
     public void updateTrendingScores(String borough) {
         logger.info("Updating trending scores for borough: {}", borough);
         
-        Instant now = Instant.now();
-        List<RestaurantCache> restaurants = cacheRepository.findByBoroughNotExpired(
-            borough, now, PageRequest.of(0, 1000) // Process in batches
-        ).getContent();
-        
-        if (restaurants.isEmpty()) {
-            logger.warn("No restaurants found to update trending scores for borough: {}", borough);
-            return;
+        try {
+            Instant now = Instant.now();
+            List<RestaurantCache> restaurants = cacheRepository.findByBoroughNotExpired(
+                borough, now, PageRequest.of(0, 1000) // Process in batches
+            ).getContent();
+            
+            if (restaurants.isEmpty()) {
+                logger.warn("No restaurants found to update trending scores for borough: {}", borough);
+                return;
+            }
+            
+            logger.info("Found {} restaurants to update in borough: {}", restaurants.size(), borough);
+            
+            // Calculate scores and update ranks
+            restaurants.sort((r1, r2) -> {
+                double score1 = calculateTrendingScore(r1);
+                double score2 = calculateTrendingScore(r2);
+                return Double.compare(score2, score1); // Descending order
+            });
+            
+            // Update trending scores and ranks
+            for (int i = 0; i < restaurants.size(); i++) {
+                RestaurantCache restaurant = restaurants.get(i);
+                double score = calculateTrendingScore(restaurant);
+                restaurant.setTrendingScore(score);
+                restaurant.setTrendingRank(i + 1);
+                restaurant.setLastTrendingCalcAt(now);
+                logger.debug("Restaurant: {} - Score: {} - Rank: {}", 
+                            restaurant.getName(), score, i + 1);
+            }
+            
+            // Save updated restaurants
+            cacheRepository.saveAll(restaurants);
+            
+            logger.info("Updated trending scores for {} restaurants in borough: {}", 
+                       restaurants.size(), borough);
+                       
+        } catch (Exception e) {
+            logger.error("Error updating trending scores for borough {}: {}", borough, e.getMessage(), e);
+            throw new RuntimeException("Failed to update trending scores: " + e.getMessage(), e);
         }
-        
-        // Calculate scores and update ranks
-        restaurants.sort((r1, r2) -> {
-            double score1 = calculateTrendingScore(r1);
-            double score2 = calculateTrendingScore(r2);
-            return Double.compare(score2, score1); // Descending order
-        });
-        
-        // Update trending scores and ranks
-        for (int i = 0; i < restaurants.size(); i++) {
-            RestaurantCache restaurant = restaurants.get(i);
-            double score = calculateTrendingScore(restaurant);
-            restaurant.setTrendingScore(score);
-            restaurant.setTrendingRank(i + 1);
-            restaurant.setLastTrendingCalcAt(now);
-            logger.debug("Restaurant: {} - Score: {} - Rank: {}", 
-                        restaurant.getName(), score, i + 1);
-        }
-        
-        // Save updated restaurants
-        cacheRepository.saveAll(restaurants);
-        
-        logger.info("Updated trending scores for {} restaurants in borough: {}", 
-                   restaurants.size(), borough);
     }
     
     /**
