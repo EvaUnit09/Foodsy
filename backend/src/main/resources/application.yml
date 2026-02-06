@@ -97,7 +97,7 @@ jwt:
 logging:
   level:
     com:
-      foodsy: ${LOG_LEVEL_ROOT:INFO}
+      foodsy: ${LOG_LEVEL_ROOT:DEBUG}
     org:
       springframework:
         security: ${LOG_LEVEL_SECURITY:DEBUG}
