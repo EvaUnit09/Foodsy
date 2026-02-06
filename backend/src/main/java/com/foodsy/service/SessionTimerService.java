@@ -5,6 +5,8 @@ import com.foodsy.domain.SessionRestaurant;
 import com.foodsy.repository.SessionRepository;
 import com.foodsy.repository.SessionRestaurantRepository;
 import com.foodsy.repository.SessionParticipantRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 @Service
 @EnableAsync
 public class SessionTimerService {
+    private static final Logger logger = LoggerFactory.getLogger(SessionTimerService.class);
+
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository sessionRestaurantRepository;
@@ -47,7 +51,7 @@ public class SessionTimerService {
         
         // Check if timer is already running for this session/round
         if (!activeTimers.add(timerKey)) {
-            System.err.println("Timer already running for session " + sessionId + " round " + round + ", skipping duplicate");
+            logger.warn("Timer already running for session {} round {}, skipping duplicate", sessionId, round);
             return;
         }
         
@@ -55,7 +59,7 @@ public class SessionTimerService {
             // 1. Fetch session and use its roundTime (in minutes) for timer duration
             Session session = sessionRepository.findById(sessionId).orElse(null);
             if (session == null) {
-                System.err.println("Session not found for timer: " + sessionId);
+                logger.error("Session not found for timer: {}", sessionId);
                 return;
             }
         int roundTimeMinutes = session.getRoundTime() != null ? session.getRoundTime() : 5; // default 5 min

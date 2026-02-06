@@ -5,6 +5,8 @@ import com.foodsy.client.GooglePlacesClient;
 import com.foodsy.domain.Session;
 import com.foodsy.dto.RestaurantDto;
 import com.foodsy.service.SessionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
@@ -17,6 +19,8 @@ import org.springframework.web.client.RestTemplate;
 @RestController
 @RequestMapping("/restaurants")
 public class RestaurantController {
+    private static final Logger logger = LoggerFactory.getLogger(RestaurantController.class);
+
     private final GooglePlacesClient placesClient;
     private final SessionService sessionService;
 
@@ -93,7 +97,7 @@ public class RestaurantController {
                     .contentType(contentType != null ? contentType : MediaType.IMAGE_JPEG)
                     .body(response.getBody());
         } catch (RestClientResponseException e) {
-            System.err.println("Google Places API error: " + e.getRawStatusCode() + " - " + e.getResponseBodyAsString());
+            logger.error("Google Places API error: {} - {}", e.getRawStatusCode(), e.getResponseBodyAsString());
             
             // Return a simple placeholder image instead of null
             String placeholderSvg = """
@@ -109,8 +113,7 @@ public class RestaurantController {
                     .contentType(MediaType.valueOf("image/svg+xml"))
                     .body(placeholderSvg.getBytes());
         } catch (Exception e) {
-            System.err.println("Error fetching photo: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error fetching photo: {}", e.getMessage(), e);
             
             // Return a simple placeholder image instead of error
             String placeholderSvg = """

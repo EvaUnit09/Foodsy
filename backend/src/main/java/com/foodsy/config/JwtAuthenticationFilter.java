@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +20,8 @@ import java.io.IOException;
 import java.util.Collections;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     
     private final JwtService jwtService;
     
@@ -33,12 +37,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Skip JWT validation for OAuth and public endpoints
         String requestPath = request.getRequestURI();
-        System.out.println("=== JWT FILTER DEBUG ===");
-        System.out.println("Request Path: " + requestPath);
-        System.out.println("Should Skip: " + shouldSkipAuthentication(requestPath));
+        log.debug("JWT FILTER - Request Path: {}, Should Skip: {}", requestPath, shouldSkipAuthentication(requestPath));
         
         if (shouldSkipAuthentication(requestPath)) {
-            System.out.println("Skipping JWT validation for: " + requestPath);
+            log.debug("Skipping JWT validation for: {}", requestPath);
             filterChain.doFilter(request, response);
             return;
         }
@@ -46,22 +48,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // Try to extract token from Authorization header first (preferred method)
             String token = extractTokenFromHeader(request);
-            System.out.println("Token from header: " + (token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null"));
+            log.debug("Token from header: {}", token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null");
             
             // Fallback to cookies if no Authorization header
             if (token == null) {
                 token = extractTokenFromCookies(request);
-                System.out.println("Token from cookies: " + (token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null"));
+                log.debug("Token from cookies: {}", token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null");
             }
             
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                System.out.println("Processing JWT token...");
-                System.out.println("Is access token: " + jwtService.isAccessToken(token));
-                System.out.println("Is token expired: " + jwtService.isTokenExpired(token));
+                log.debug("Processing JWT token...");
+                log.debug("Is access token: {}", jwtService.isAccessToken(token));
+                log.debug("Is token expired: {}", jwtService.isTokenExpired(token));
                 
                 if (jwtService.isAccessToken(token) && !jwtService.isTokenExpired(token)) {
                     String userId = jwtService.extractUserId(token);
-                    System.out.println("Extracted user ID: " + userId);
+                    log.debug("Extracted user ID: {}", userId);
                     
                     UserDetails userDetails = User.builder()
                             .username(userId)
@@ -75,17 +77,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println("JWT authentication successful for user: " + userId);
+                    log.debug("JWT authentication successful for user: {}", userId);
                 } else {
-                    System.out.println("JWT token validation failed");
+                    log.debug("JWT token validation failed");
                 }
             } else {
-                System.out.println("No token found or authentication already exists");
+                log.debug("No token found or authentication already exists");
             }
         } catch (Exception e) {
-            System.err.println("JWT authentication failed: " + e.getMessage());
-            e.printStackTrace();
-            logger.warn("JWT authentication failed: " + e.getMessage());
+            log.warn("JWT authentication failed: {}", e.getMessage(), e);
         }
         
         filterChain.doFilter(request, response);

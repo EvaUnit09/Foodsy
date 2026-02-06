@@ -3,6 +3,8 @@ package com.foodsy.service;
 import com.foodsy.domain.AuthProvider;
 import com.foodsy.domain.User;
 import com.foodsy.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -15,6 +17,8 @@ import java.util.Optional;
 @Service
 public class OAuth2UserService extends DefaultOAuth2UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2UserService.class);
+
     private final UserRepository userRepository;
 
     @Autowired
@@ -24,19 +28,18 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        System.out.println("=== OAuth2UserService.loadUser called ===");
-        System.out.println("Registration ID: " + userRequest.getClientRegistration().getRegistrationId());
-        
+        logger.debug("OAuth2UserService.loadUser called - Registration ID: {}", userRequest.getClientRegistration().getRegistrationId());
+
         OAuth2User oauth2User = super.loadUser(userRequest);
-        
-        System.out.println("Default OAuth2User loaded: " + oauth2User);
+
+        logger.debug("Default OAuth2User loaded: {}", oauth2User);
         
         return processOAuth2User(userRequest, oauth2User);
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest userRequest, OAuth2User oauth2User) {
-        System.out.println("=== OAuth2UserService.processOAuth2User called ===");
-        
+        logger.debug("Processing OAuth2 user");
+
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         AuthProvider provider = AuthProvider.valueOf(registrationId.toUpperCase());
         
@@ -45,10 +48,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         String picture = oauth2User.getAttribute("picture");
         String providerId = oauth2User.getAttribute("sub"); // Google's user ID
         
-        System.out.println("Email: " + email);
-        System.out.println("Name: " + name);
-        System.out.println("Picture: " + picture);
-        System.out.println("Provider ID: " + providerId);
+        logger.debug("OAuth2 user - Email: {}, Name: {}, Provider ID: {}", email, name, providerId);
         
         // Validate required fields
         if (email == null || email.trim().isEmpty()) {

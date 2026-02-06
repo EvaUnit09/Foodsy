@@ -12,6 +12,8 @@ import com.foodsy.dto.SessionRequest;
 import com.foodsy.service.VoteService;
 import com.foodsy.dto.JoinSessionResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,8 @@ import java.security.Principal;
 @RestController
 @RequestMapping("/sessions")
 public class SessionController {
+    private static final Logger logger = LoggerFactory.getLogger(SessionController.class);
+
     private final SessionRepository repo;
     private final SessionRestaurantRepository restaurantRepo;
     private final SessionService sessionService;
@@ -251,15 +255,15 @@ public class SessionController {
             @RequestBody VoteRequest voteRequest,
             Principal principal) {
 
-        System.out.println("DEBUG: Vote endpoint called - sessionId: " + id + ", providerId: " + providerId + ", principal: " + (principal != null ? principal.getName() : "null"));
+        logger.debug("Vote endpoint called - sessionId: {}, providerId: {}, principal: {}", id, providerId, principal != null ? principal.getName() : "null");
 
         if (principal == null) {
-            System.out.println("DEBUG: Vote rejected - principal is null");
+            logger.debug("Vote rejected - principal is null");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to vote");
         }
 
         if (voteRequest == null || voteRequest.voteType() == null) {
-            System.out.println("DEBUG: Vote rejected - missing vote type");
+            logger.debug("Vote rejected - missing vote type");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vote type is required");
         }
 
@@ -339,7 +343,7 @@ public class SessionController {
             int remaining = voteService.getRemainingLikes(normalizedUserId, id);
             return Map.of("remainingVotes", remaining);
         } catch (Exception e) {
-            System.err.println("Error getting remaining votes: " + e.getMessage());
+            logger.error("Error getting remaining votes: {}", e.getMessage());
             return Map.of("remainingVotes", 0);
         }
     }

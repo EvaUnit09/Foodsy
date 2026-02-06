@@ -12,6 +12,8 @@ import com.foodsy.example.session.JoinCodeGenerator;
 import com.foodsy.repository.SessionParticipantRepository;
 import com.foodsy.repository.SessionRepository;
 import com.foodsy.repository.SessionRestaurantRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,8 @@ import java.util.Comparator;
 
 @Service
 public class SessionService {
+    private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
+
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository restaurantRepo;
     private final GooglePlacesClient placesClient;
@@ -103,8 +107,7 @@ public class SessionService {
             
             return saved;
         } catch (Exception e) {
-            System.err.println("Error in createSession: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in createSession: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -329,7 +332,7 @@ public class SessionService {
             sessionRepository.save(session);
             
             // Log the reason for ending the session
-            System.out.println("Session " + sessionId + " ended: " + (reason != null ? reason : "Manual termination"));
+            logger.info("Session {} ended: {}", sessionId, reason != null ? reason : "Manual termination");
         });
     }
 }

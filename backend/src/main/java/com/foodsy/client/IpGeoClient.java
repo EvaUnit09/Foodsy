@@ -1,5 +1,7 @@
 package com.foodsy.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -11,6 +13,8 @@ import java.util.Optional;
  */
 @Component
 public class IpGeoClient {
+    private static final Logger logger = LoggerFactory.getLogger(IpGeoClient.class);
+
     private final RestClient restClient;
 
     public IpGeoClient() {
@@ -49,7 +53,7 @@ public class IpGeoClient {
             }
             return Optional.empty();
         } catch (Exception e) {
-            System.err.println("IpGeoClient lookup error: " + e.getMessage());
+            logger.error("IpGeoClient lookup error: {}", e.getMessage());
             return Optional.empty();
         }
     }

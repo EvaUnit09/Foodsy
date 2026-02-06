@@ -48,7 +48,7 @@ public class HomepageController {
      */
     @GetMapping
     public ResponseEntity<HomepageResponseDto> getHomepage(Authentication authentication) {
-        System.out.println("DEBUG: Homepage endpoint called, authentication: " + authentication);
+        logger.debug("Homepage endpoint called, authentication: {}", authentication);
         try {
             if (authentication != null && authentication.isAuthenticated()) {
                 // Authenticated user

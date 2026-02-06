@@ -1,5 +1,7 @@
 package com.foodsy.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -18,6 +20,8 @@ import com.foodsy.dto.RestaurantDto;
 
 @Controller
 public class SessionEventsController {
+    private static final Logger logger = LoggerFactory.getLogger(SessionEventsController.class);
+
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionTimerService sessionTimerService;
     private final SessionService sessionService;
@@ -62,7 +66,7 @@ public class SessionEventsController {
         try {
             sessionTimerService.startRoundTimer(sessionId, 1, 300_000L);
         } catch (Exception e) {
-            System.err.println("Failed to start round timer: " + e.getMessage());
+            logger.error("Failed to start round timer: {}", e.getMessage(), e);
         }
     }
 
@@ -86,8 +90,7 @@ public class SessionEventsController {
             // Use RoundService to handle the transition
             roundService.transitionToRound2(sessionId);
         } catch (Exception e) {
-            System.err.println("Failed to complete round 1: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to complete round 1: {}", e.getMessage(), e);
         }
     }
 
@@ -98,8 +101,7 @@ public class SessionEventsController {
             // Use RoundService to complete the session
             roundService.completeSession(sessionId);
         } catch (Exception e) {
-            System.err.println("Failed to complete round 2: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to complete round 2: {}", e.getMessage(), e);
         }
     }
 
@@ -114,8 +116,7 @@ public class SessionEventsController {
             );
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
         } catch (Exception e) {
-            System.err.println("Failed to get round status: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to get round status: {}", e.getMessage(), e);
         }
     }
 
@@ -159,8 +160,7 @@ public class SessionEventsController {
             );
             messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
         } catch (Exception e) {
-            System.err.println("Failed to end session: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to end session: {}", e.getMessage(), e);
         }
     }
 

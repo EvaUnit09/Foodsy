@@ -1,6 +1,8 @@
 package com.foodsy.client;
 
 import com.foodsy.dto.GooglePlacesSearchResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -12,6 +14,8 @@ import java.util.Map;
 
 @Component
 public class GooglePlacesClient {
+    private static final Logger logger = LoggerFactory.getLogger(GooglePlacesClient.class);
+
     private final RestClient restClient;
     private final String apiKey;
 
@@ -45,13 +49,13 @@ public class GooglePlacesClient {
                     Map<String, Object> details = fetchPlaceDetails(place.id());
                     return mergePlaceWithDetails(place, details);
                 } catch (Exception e) {
-                    System.err.println("Error fetching details for place " + place.id() + ": " + e.getMessage());
+                    logger.error("Error fetching details for place {}: {}", place.id(), e.getMessage());
                     return place;
                 }
             }).toList();
             return new GooglePlacesSearchResponse(enrichedPlaces);
         } catch (Exception e) {
-            System.err.println("Error calling Google Places API: " + e.getMessage());
+            logger.error("Error calling Google Places API: {}", e.getMessage());
             // Return mock data as fallback
             return createMockResponse();
         }
@@ -173,7 +177,7 @@ public class GooglePlacesClient {
                                 
                                 return shouldInclude;
                             } catch (Exception e) {
-                                System.err.println("Error filtering place " + place.id() + ": " + e.getMessage());
+                                logger.error("Error filtering place {}: {}", place.id(), e.getMessage());
                                 return false;
                             }
                         })
@@ -186,8 +190,7 @@ public class GooglePlacesClient {
                 return new GooglePlacesSearchResponse(List.of());
             }
         } catch (Exception e) {
-            System.err.println("Error in searchNearby: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error in searchNearby: {}", e.getMessage(), e);
             // Return empty response instead of throwing
             return new GooglePlacesSearchResponse(List.of());
         }
@@ -230,7 +233,7 @@ public class GooglePlacesClient {
                     .filter(id -> id != null)
                     .toList();
         } catch (Exception e) {
-            System.err.println("Error fetching photos for place " + placeId + ": " + e.getMessage());
+            logger.error("Error fetching photos for place {}: {}", placeId, e.getMessage());
             return List.of();
         }
     }
