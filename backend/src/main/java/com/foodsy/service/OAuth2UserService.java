@@ -72,6 +72,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 user = existingUser.get();
                 // Link the OAuth2 account
                 user.setProvider(provider);
+                user.setProviderId(providerId);
                 user.setAvatarUrl(picture);
             } else {
                 // Create new user
@@ -91,10 +92,15 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                     counter++;
                 }
                 user.setUsername(uniqueUsername);
-                user.setFirstName(name != null ? name.split(" ")[0] : null);
-                user.setLastName(name != null && name.split(" ").length > 1 ? name.split(" ")[1] : null);
+                String firstName = name != null ? name.split(" ")[0] : null;
+                String lastName = name != null && name.split(" ").length > 1 ? name.split(" ")[1] : null;
+                user.setFirstName(firstName);
+                user.setLastName(lastName);
+                user.setDisplayName(firstName != null ? firstName : uniqueUsername);
                 user.setAvatarUrl(picture);
                 user.setProvider(provider);
+                user.setProviderId(providerId);
+                user.setPassword("OAUTH2_USER");
                 user.setEmailVerified(true); // OAuth2 emails are considered verified
             }
         }
