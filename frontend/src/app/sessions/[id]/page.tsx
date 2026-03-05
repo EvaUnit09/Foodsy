@@ -128,7 +128,7 @@ export default function SessionPage() {
   const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; status: string; isHost?: boolean } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -216,6 +216,8 @@ export default function SessionPage() {
   const [timerReceived, setTimerReceived] = useState(false);
   // Sync point from last server timerUpdate; local interval interpolates from this
   const timerSyncRef = useRef<{ millisLeft: number; receivedAt: number } | null>(null);
+  // Stable ref so WS effect can read roundTime without adding session to its deps
+  const roundTimeRef = useRef<number>(5);
 
   // Data fetching effect
   useEffect(() => {
@@ -234,6 +236,7 @@ export default function SessionPage() {
         
         // Initialize round state from session
         if (sessionObj) {
+          roundTimeRef.current = sessionObj.roundTime ?? 5;
           setCurrentRound(sessionObj.round || 1);
           
           // Sync session started state based on backend status
@@ -335,6 +338,11 @@ export default function SessionPage() {
         break;
       case "sessionStarted":
         setSessionStarted(true);
+        // Seed timer immediately so participants don't wait for first timerUpdate
+        if (!timerSyncRef.current) {
+          timerSyncRef.current = { millisLeft: roundTimeRef.current * 60_000, receivedAt: Date.now() };
+          setTimerReceived(true);
+        }
         break;
       case "timerUpdate": {
         const millisLeft = event.payload.millisLeft as number;
@@ -420,7 +428,10 @@ export default function SessionPage() {
   const handleStartSession = () => {
     send(`/app/session/${sessionId}/start`, {});
     setStartPressed(true);
-    setSessionStarted(true); // Optimistically update for host
+    setSessionStarted(true);
+    // Seed timer immediately so host doesn't wait for first timerUpdate
+    timerSyncRef.current = { millisLeft: roundTimeRef.current * 60_000, receivedAt: Date.now() };
+    setTimerReceived(true);
   };
 
   // Handler for host to complete round 1 and transition to round 2
