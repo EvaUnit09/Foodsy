@@ -212,6 +212,8 @@ export default function SessionPage() {
   const [sessionStarted, setSessionStarted] = useState(false);
   // Track if the host has pressed start (for instant feedback)
   const [startPressed, setStartPressed] = useState(false);
+  // Track if at least one timerUpdate has been received (prevents false TIME'S UP on load)
+  const [timerReceived, setTimerReceived] = useState(false);
 
   // Data fetching effect
   useEffect(() => {
@@ -338,6 +340,7 @@ export default function SessionPage() {
           minutes: Math.floor(millisLeft / 60000),
           seconds: Math.floor((millisLeft % 60000) / 1000),
         });
+        setTimerReceived(true);
         break;
       case "roundTransition":
         const newRound = event.payload.newRound as number;
@@ -463,6 +466,10 @@ export default function SessionPage() {
         currentRound={currentRound}
         timeLeft={timeLeft}
         sessionStarted={sessionStarted}
+        timerReceived={timerReceived}
+        isHost={isHost}
+        startPressed={startPressed}
+        onStartSession={handleStartSession}
       />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -485,11 +492,9 @@ export default function SessionPage() {
           votingStatus={votingStatus}
           isHost={isHost}
           sessionStarted={sessionStarted}
-          startPressed={startPressed}
           currentRound={currentRound}
           roundTransitioning={roundTransitioning}
           sessionComplete={sessionComplete}
-          onStartSession={handleStartSession}
           onCompleteRound1={handleCompleteRound1}
           onCompleteRound2={handleCompleteRound2}
         />

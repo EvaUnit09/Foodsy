@@ -26,11 +26,9 @@ interface ParticipantsSectionProps {
   votingStatus: VotingStatus;
   isHost: boolean;
   sessionStarted: boolean;
-  startPressed: boolean;
   currentRound: number;
   roundTransitioning: boolean;
   sessionComplete: boolean;
-  onStartSession: () => void;
   onCompleteRound1: () => void;
   onCompleteRound2: () => void;
 }
@@ -43,11 +41,9 @@ export function ParticipantsSection({
   votingStatus,
   isHost,
   sessionStarted,
-  startPressed,
   currentRound,
   roundTransitioning,
   sessionComplete,
-  onStartSession,
   onCompleteRound1,
   onCompleteRound2,
 }: ParticipantsSectionProps) {
@@ -83,16 +79,6 @@ export function ParticipantsSection({
         {/* Host Control Buttons */}
         {isHost && (
           <>
-            {/* Start Session Button */}
-            {!sessionStarted && !startPressed && (
-              <Button
-                onClick={onStartSession}
-                className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
-              >
-                Start Voting Session
-              </Button>
-            )}
-
             {/* Complete Round 1 Button */}
             {sessionStarted && currentRound === 1 && !roundTransitioning && (
               <Button

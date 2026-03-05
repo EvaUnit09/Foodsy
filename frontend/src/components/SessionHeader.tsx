@@ -9,9 +9,13 @@ interface SessionHeaderProps {
   currentRound: number;
   timeLeft: { minutes: number; seconds: number };
   sessionStarted: boolean;
+  timerReceived: boolean;
+  isHost: boolean;
+  startPressed: boolean;
+  onStartSession: () => void;
 }
 
-export function SessionHeader({ sessionId, currentRound, timeLeft, sessionStarted }: SessionHeaderProps) {
+export function SessionHeader({ sessionId, currentRound, timeLeft, sessionStarted, timerReceived, isHost, startPressed, onStartSession }: SessionHeaderProps) {
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,17 +65,31 @@ export function SessionHeader({ sessionId, currentRound, timeLeft, sessionStarte
             <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
               <Clock className="w-4 h-4 text-red-600" />
               {!sessionStarted ? (
-                <span className="text-lg font-semibold text-gray-500">
-                  Waiting...
-                </span>
-              ) : timeLeft.minutes === 0 && timeLeft.seconds === 0 ? (
+                isHost && !startPressed ? (
+                  <Button
+                    onClick={onStartSession}
+                    size="sm"
+                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white h-7 px-3 text-sm"
+                  >
+                    Start
+                  </Button>
+                ) : (
+                  <span className="text-lg font-semibold text-gray-500">
+                    Waiting...
+                  </span>
+                )
+              ) : timerReceived && timeLeft.minutes === 0 && timeLeft.seconds === 0 ? (
                 <span className="text-lg font-bold text-red-600 animate-pulse">
                   TIME&apos;S UP!
                 </span>
-              ) : (
+              ) : timerReceived ? (
                 <span className="text-lg font-mono text-red-600">
                   {String(timeLeft.minutes).padStart(2, "0")}:
                   {String(timeLeft.seconds).padStart(2, "0")}
+                </span>
+              ) : (
+                <span className="text-lg font-semibold text-gray-500">
+                  --:--
                 </span>
               )}
             </div>
