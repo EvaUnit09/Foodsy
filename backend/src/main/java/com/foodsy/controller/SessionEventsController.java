@@ -54,6 +54,11 @@ public class SessionEventsController {
     // Host triggers session start
     @MessageMapping("/session/{sessionId}/start")
     public void startSession(@DestinationVariable Long sessionId) {
+        try {
+            sessionService.startSession(sessionId);
+        } catch (Exception e) {
+            logger.error("Failed to update session status: {}", e.getMessage(), e);
+        }
         SessionEvent event = new SessionEvent(
             "sessionStarted",
             Map.of(
@@ -62,7 +67,6 @@ public class SessionEventsController {
             )
         );
         messagingTemplate.convertAndSend("/topic/session/" + sessionId, event);
-        // Start the round timer (5 minutes = 300000 ms)
         try {
             sessionTimerService.startRoundTimer(sessionId, 1, 300_000L);
         } catch (Exception e) {

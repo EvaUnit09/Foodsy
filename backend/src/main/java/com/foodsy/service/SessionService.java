@@ -258,10 +258,18 @@ public class SessionService {
         return sessionParticipantRepository.findBySessionId(id);
     }
 
+    public void startSession(Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        session.setStatus("voting");
+        session.setLastActivityAt(Instant.now());
+        sessionRepository.save(session);
+    }
+
     public void endSession(Long sessionId) {
         Session session = sessionRepository.findById(sessionId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
-        
+
         session.setStatus("ENDED");
         sessionRepository.save(session);
     }
