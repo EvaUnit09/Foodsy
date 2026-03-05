@@ -234,7 +234,7 @@ export default function SessionPage() {
           
           // Sync session started state based on backend status
           // Session is considered started if status is not 'open' (i.e., 'voting', 'round1', 'round2', etc.)
-          const isStarted = sessionObj.status && sessionObj.status !== 'open';
+          const isStarted = sessionObj.status && sessionObj.status.toLowerCase() !== 'open';
           setSessionStarted(isStarted);
           
           console.log(`Session sync: status="${sessionObj.status}", round=${sessionObj.round}, started=${isStarted}`);
@@ -458,10 +458,11 @@ export default function SessionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <SessionHeader 
+      <SessionHeader
         sessionId={sessionId}
         currentRound={currentRound}
         timeLeft={timeLeft}
+        sessionStarted={sessionStarted}
       />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
