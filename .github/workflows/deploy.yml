@@ -89,12 +89,14 @@ jobs:
             echo "Waiting for backend to become healthy..."
             HEALTHY=false
             for i in $(seq 1 30); do
-              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              RESPONSE=$(curl -s http://localhost:8080/actuator/health 2>/dev/null || true)
+              echo "Attempt $i/30 - response: $RESPONSE"
+              if echo "$RESPONSE" | grep -q '"status":"UP"'; then
                 echo "Backend is healthy after $i attempts"
                 HEALTHY=true
                 break
               fi
-              echo "Attempt $i/30 - not ready yet, waiting 5s..."
+              echo "Not ready yet, waiting 5s..."
               sleep 5
             done
 
