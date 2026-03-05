@@ -214,6 +214,8 @@ export default function SessionPage() {
   const [startPressed, setStartPressed] = useState(false);
   // Track if at least one timerUpdate has been received (prevents false TIME'S UP on load)
   const [timerReceived, setTimerReceived] = useState(false);
+  // Sync point from last server timerUpdate; local interval interpolates from this
+  const timerSyncRef = useRef<{ millisLeft: number; receivedAt: number } | null>(null);
 
   // Data fetching effect
   useEffect(() => {
@@ -334,14 +336,14 @@ export default function SessionPage() {
       case "sessionStarted":
         setSessionStarted(true);
         break;
-      case "timerUpdate":
+      case "timerUpdate": {
         const millisLeft = event.payload.millisLeft as number;
-        setTimeLeft({
-          minutes: Math.floor(millisLeft / 60000),
-          seconds: Math.floor((millisLeft % 60000) / 1000),
-        });
+        const serverTime = event.payload.serverTime as number | undefined;
+        const networkDelay = serverTime ? Math.max(0, Date.now() - serverTime) : 0;
+        timerSyncRef.current = { millisLeft: Math.max(0, millisLeft - networkDelay), receivedAt: Date.now() };
         setTimerReceived(true);
         break;
+      }
       case "roundTransition":
         const newRound = event.payload.newRound as number;
         setCurrentRound(newRound);
@@ -372,6 +374,21 @@ export default function SessionPage() {
         break;
     }
   }, [event, sessionId]);
+
+  // Smooth countdown: ticks every 500ms using local math, corrected by server sync points
+  useEffect(() => {
+    if (!sessionStarted) return;
+    const id = setInterval(() => {
+      if (!timerSyncRef.current) return;
+      const { millisLeft, receivedAt } = timerSyncRef.current;
+      const adjusted = Math.max(0, millisLeft - (Date.now() - receivedAt));
+      setTimeLeft({
+        minutes: Math.floor(adjusted / 60000),
+        seconds: Math.floor((adjusted % 60000) / 1000),
+      });
+    }, 500);
+    return () => clearInterval(id);
+  }, [sessionStarted]);
 
   /* -------------------- derived state --------------------------- */
   const likeProgressPct = useMemo(

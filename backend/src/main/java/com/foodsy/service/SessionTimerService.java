@@ -63,17 +63,18 @@ public class SessionTimerService {
         int roundTimeMinutes = session.getRoundTime() != null ? session.getRoundTime() : 5; // default 5 min
         long durationMillis = roundTimeMinutes * 60_000L;
 
-        long interval = 1000; // 1 second updates
+        long interval = 2000; // 2 second server broadcasts; client interpolates smoothly
         long millisLeft = durationMillis;
         while (millisLeft > 0) {
-            // Send timerUpdate event
+            // Send timerUpdate event with serverTime for client clock-sync
             messagingTemplate.convertAndSend(
                 "/topic/session/" + sessionId,
                 Map.of(
                     "type", "timerUpdate",
                     "payload", Map.of(
                         "sessionId", sessionId,
-                        "millisLeft", millisLeft
+                        "millisLeft", millisLeft,
+                        "serverTime", System.currentTimeMillis()
                     )
                 )
             );
@@ -88,7 +89,8 @@ public class SessionTimerService {
                 "type", "timerUpdate",
                 "payload", Map.of(
                     "sessionId", sessionId,
-                    "millisLeft", 0L
+                    "millisLeft", 0L,
+                    "serverTime", System.currentTimeMillis()
                 )
             )
         );
