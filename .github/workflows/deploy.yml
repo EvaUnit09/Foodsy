@@ -53,8 +53,8 @@ jobs:
 
             # Rebuild and restart the backend container
             cd backend
-            docker compose -f docker-compose.prod.yml build --no-cache
-            docker compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml build --no-cache
+            docker-compose -f docker-compose.prod.yml up -d
 
             # Wait for backend health (max 2.5 minutes)
             echo "Waiting for backend to become healthy..."
@@ -71,7 +71,7 @@ jobs:
 
             if [ "$HEALTHY" = false ]; then
               echo "ERROR: Backend failed to become healthy after 150 seconds"
-              docker compose -f docker-compose.prod.yml logs --tail=50
+              docker-compose -f docker-compose.prod.yml logs --tail=50
               exit 1
             fi
 
