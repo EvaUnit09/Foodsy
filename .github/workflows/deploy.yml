@@ -38,3 +38,16 @@ jobs:
             cd backend
             docker-compose -f docker-compose.prod.yml build --no-cache
             docker-compose -f docker-compose.prod.yml up -d
+            # Wait for backend to be healthy before reloading nginx
+            echo "Waiting for backend to start..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                echo "Backend is healthy"
+                break
+              fi
+              echo "Attempt $i/30 - waiting..."
+              sleep 5
+            done
+            # Update and reload nginx config
+            sudo cp /home/ubuntu/foodsy/backend/nginx.conf /etc/nginx/sites-available/foodsy
+            sudo nginx -t && sudo systemctl reload nginx
