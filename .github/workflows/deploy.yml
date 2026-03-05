@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,28 +31,56 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Build & Test
+      - name: Build JAR
         run: ./gradlew build
 
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/build/libs/*-SNAPSHOT.jar
+          retention-days: 1
+
   deploy:
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend-jar
+
+      - name: Stage JAR for upload
+        run: mv backend-jar/*.jar app.jar
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: app.jar
+          target: ~/foodsy/backend/
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 5m
           script: |
             set -e
 
-            # Pull latest code
-            cd /home/ubuntu/foodsy
+            # Pull latest config/scripts
+            cd ~/foodsy
             git fetch origin main
             git reset --hard origin/main
 
-            # Rebuild and restart the backend container
+            # Rebuild image (just copies the pre-built JAR - very fast) and restart
             cd backend
             docker-compose -f docker-compose.prod.yml build --no-cache
             docker-compose -f docker-compose.prod.yml up -d
@@ -77,8 +105,7 @@ jobs:
             fi
 
             # Update nginx config and reload
-            sudo cp /home/ubuntu/foodsy/backend/nginx.conf /etc/nginx/sites-available/foodsy
-            # Ensure sites-enabled symlink exists
+            sudo cp ~/foodsy/backend/nginx.conf /etc/nginx/sites-available/foodsy
             sudo ln -sf /etc/nginx/sites-available/foodsy /etc/nginx/sites-enabled/foodsy
             sudo nginx -t
             sudo systemctl reload nginx
