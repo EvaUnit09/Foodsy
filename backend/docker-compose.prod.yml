@@ -25,13 +25,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Resource limits (adjust based on your EC2 instance)
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
+    
 
 networks:
   app-network:
