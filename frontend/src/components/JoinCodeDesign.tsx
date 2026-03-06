@@ -29,9 +29,13 @@ const JoinSessionForm = () => {
     setSubmitting(true);
 
     try {
+      const accessToken = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
       const res = await fetch(`/api/sessions/sessions/${joinCode}/join`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ userName: username }),
         credentials: "include",
       });
