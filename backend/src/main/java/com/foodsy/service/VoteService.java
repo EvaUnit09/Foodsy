@@ -24,19 +24,22 @@ public class VoteService {
     private final SessionVoteHistoryRepository historyRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionService sessionService;
+    private final RoundService roundService;
 
     public VoteService(SessionRestaurantRepository sessionRestaurantRepository,
                       SessionRepository sessionRepository,
                       UserVoteQuotaRepository quotaRepository,
                       SessionVoteHistoryRepository historyRepository,
                       SimpMessagingTemplate messagingTemplate,
-                      SessionService sessionService) {
+                      SessionService sessionService,
+                      RoundService roundService) {
         this.sessionRestaurantRepository = sessionRestaurantRepository;
         this.sessionRepository = sessionRepository;
         this.quotaRepository = quotaRepository;
         this.historyRepository = historyRepository;
         this.messagingTemplate = messagingTemplate;
         this.sessionService = sessionService;
+        this.roundService = roundService;
     }
 
     public void processVote(VoteRequest voteRequest) {
@@ -105,6 +108,11 @@ public class VoteService {
 
         // Broadcast vote update via WebSocket
         broadcastVoteUpdate(voteRequest.sessionId(), session.getRound());
+
+        // Auto-end round 1 if all active voters have used their quota
+        if (voteRequest.voteType() == VoteType.LIKE && session.getRound() == 1) {
+            checkAndAutoEndRound1(voteRequest.sessionId(), session.getRound());
+        }
     }
 
     /**
@@ -132,6 +140,25 @@ public class VoteService {
         UserVoteQuota savedQuota = quotaRepository.save(quota);
         logger.debug("Created UserVoteQuota with ID: {}, maxVotes: {}, votesUsed: {}, remaining: {}", savedQuota.getId(), savedQuota.getTotalAllowed(), savedQuota.getVotesUsed(), savedQuota.getRemainingVotes());
         return savedQuota;
+    }
+
+    /**
+     * Triggers round 1 → round 2 transition if every participant who has voted
+     * has exhausted their quota. Participants who joined but never voted have no
+     * quota row and are intentionally excluded from this check.
+     */
+    private void checkAndAutoEndRound1(Long sessionId, int round) {
+        try {
+            List<UserVoteQuota> quotas = quotaRepository.findBySessionIdAndRound(sessionId, round);
+            if (quotas.isEmpty()) return;
+            boolean allExhausted = quotas.stream().allMatch(q -> q.getRemainingVotes() == 0);
+            if (allExhausted) {
+                logger.info("All active voters exhausted quota for session {} round {} — auto-ending round", sessionId, round);
+                roundService.transitionToRound2(sessionId);
+            }
+        } catch (Exception e) {
+            logger.warn("Auto-end round check skipped (already transitioned?): {}", e.getMessage());
+        }
     }
 
     /**

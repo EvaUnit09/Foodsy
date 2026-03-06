@@ -33,6 +33,16 @@ public class SessionTimerService {
         this.roundService = roundService;
     }
 
+    /**
+     * Cancels a running timer so the @Async thread exits on its next loop iteration.
+     * Safe to call even if no timer is running for that session/round.
+     */
+    public void cancelTimer(Long sessionId, int round) {
+        String timerKey = sessionId + "_round_" + round;
+        boolean removed = activeTimers.remove(timerKey);
+        logger.info("cancelTimer called for session {} round {} — was active: {}", sessionId, round, removed);
+    }
+
     @Async
     public void startRoundTimer(Long sessionId, int round, Long unusedDurationMillis) throws InterruptedException {
         // Create unique timer key
@@ -57,6 +67,11 @@ public class SessionTimerService {
         long interval = 2000; // 2 second server broadcasts; client interpolates smoothly
         long millisLeft = durationMillis;
         while (millisLeft > 0) {
+            // Exit early if the timer was cancelled (e.g. host pressed Complete Round 1)
+            if (!activeTimers.contains(timerKey)) {
+                logger.info("Timer cancelled for session {} round {}", sessionId, round);
+                return;
+            }
             // Send timerUpdate event with serverTime for client clock-sync
             messagingTemplate.convertAndSend(
                 "/topic/session/" + sessionId,

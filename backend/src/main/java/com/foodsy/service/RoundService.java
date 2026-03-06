@@ -51,30 +51,22 @@ public class RoundService {
         List<SessionRestaurant> round1Restaurants = sessionRestaurantRepository
             .findBySessionIdAndRoundOrderByLikeCountDesc(sessionId, 1);
 
+        // K = max(2, min(5, floor(poolSize × 0.25)))
+        int poolSize = session.getPoolSize() != null ? session.getPoolSize() : 20;
+        int k = Math.max(2, Math.min(5, (int) Math.floor(poolSize * 0.25)));
+
         List<SessionRestaurant> sorted = round1Restaurants.stream()
             .sorted((a, b) -> {
-                // Primary: total likes desc
                 int cmp = Integer.compare(
                     b.getLikeCount() != null ? b.getLikeCount() : 0,
                     a.getLikeCount() != null ? a.getLikeCount() : 0
                 );
                 if (cmp != 0) return cmp;
-                // Tie1: rating desc
                 Double ar = a.getRating() != null ? a.getRating() : 0.0;
                 Double br = b.getRating() != null ? b.getRating() : 0.0;
-                cmp = Double.compare(br, ar);
-                if (cmp != 0) return cmp;
-                // Tie2: userRatingCount desc
-                Integer auc = a.getUserRatingCount() != null ? a.getUserRatingCount() : 0;
-                Integer buc = b.getUserRatingCount() != null ? b.getUserRatingCount() : 0;
-                cmp = Integer.compare(buc, auc);
-                if (cmp != 0) return cmp;
-                // Tie3: providerId asc
-                String ap = a.getProviderId() != null ? a.getProviderId() : "";
-                String bp = b.getProviderId() != null ? b.getProviderId() : "";
-                return ap.compareTo(bp);
+                return Double.compare(br, ar);
             })
-            .limit(2)
+            .limit(k)
             .toList();
         
         // Persist only top 2 for round 2 with likeCount=0

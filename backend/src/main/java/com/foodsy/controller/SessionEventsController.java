@@ -90,8 +90,9 @@ public class SessionEventsController {
     // Round 1 complete - transition to round 2 (host triggers)
     @MessageMapping("/session/{sessionId}/completeRound1")
     public void completeRound1(@DestinationVariable Long sessionId) {
+        // Cancel the running timer first so it doesn't also call transitionToRound2
+        sessionTimerService.cancelTimer(sessionId, 1);
         try {
-            // Use RoundService to handle the transition
             roundService.transitionToRound2(sessionId);
         } catch (Exception e) {
             logger.error("Failed to complete round 1: {}", e.getMessage(), e);
