@@ -50,6 +50,10 @@ export function useSessionWebSocket(sessionId: number) {
         if (response.ok) {
           const data = await response.json();
           errorCountRef.current = 0;
+          if (data.status === 'completed') {
+            stopPolling();
+            return;
+          }
           if (data.lastUpdate) setEvent({ type: 'session_update', payload: data });
         } else {
           if (++errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) { stopPolling(); return; }
