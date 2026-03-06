@@ -340,9 +340,17 @@ export default function SessionPage() {
         setSessionStarted(true);
         // Seed timer immediately so participants don't wait for first timerUpdate
         if (!timerSyncRef.current) {
-          timerSyncRef.current = { millisLeft: roundTimeRef.current * 60_000, receivedAt: Date.now() };
-          setTimerReceived(true);
+          timerSyncRef.current = {
+            millisLeft: roundTimeRef.current * 60_000,
+            receivedAt: Date.now(),
+          };
         }
+        // Ensure UI shows full round time on start instead of 00:00
+        setTimeLeft({
+          minutes: Math.floor(roundTimeRef.current),
+          seconds: 0,
+        });
+        setTimerReceived(true);
         break;
       case "timerUpdate": {
         const millisLeft = event.payload.millisLeft as number;
@@ -430,7 +438,15 @@ export default function SessionPage() {
     setStartPressed(true);
     setSessionStarted(true);
     // Seed timer immediately so host doesn't wait for first timerUpdate
-    timerSyncRef.current = { millisLeft: roundTimeRef.current * 60_000, receivedAt: Date.now() };
+    timerSyncRef.current = {
+      millisLeft: roundTimeRef.current * 60_000,
+      receivedAt: Date.now(),
+    };
+    // Ensure UI shows full round time on start instead of 00:00
+    setTimeLeft({
+      minutes: Math.floor(roundTimeRef.current),
+      seconds: 0,
+    });
     setTimerReceived(true);
   };
 
