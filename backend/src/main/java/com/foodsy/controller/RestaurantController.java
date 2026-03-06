@@ -4,6 +4,8 @@ import java.util.List;
 import com.foodsy.client.GooglePlacesClient;
 import com.foodsy.domain.Session;
 import com.foodsy.dto.RestaurantDto;
+import com.foodsy.dto.RestaurantSummaryDto;
+import com.foodsy.service.RestaurantCacheService;
 import com.foodsy.service.SessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +25,29 @@ public class RestaurantController {
 
     private final GooglePlacesClient placesClient;
     private final SessionService sessionService;
+    private final RestaurantCacheService restaurantCacheService;
 
-    public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService) {
+    public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService,
+                                RestaurantCacheService restaurantCacheService) {
         this.placesClient = placesClient;
         this.sessionService = sessionService;
+        this.restaurantCacheService = restaurantCacheService;
     }
+    private static final java.util.Set<String> SUPPORTED_BOROUGHS =
+            java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
+
+    @GetMapping("/trending")
+    public ResponseEntity<List<RestaurantSummaryDto>> getTrending(
+            @RequestParam(defaultValue = "manhattan") String borough) {
+        String normalized = borough.trim().toLowerCase();
+        if (!SUPPORTED_BOROUGHS.contains(normalized)) {
+            return ResponseEntity.badRequest().build();
+        }
+        String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+        List<RestaurantSummaryDto> results = restaurantCacheService.getTrendingRestaurants(capitalized, 5);
+        return ResponseEntity.ok(results);
+    }
+
     @GetMapping
     public List<RestaurantDto> search(@RequestParam String near, @RequestParam String query) {
         return placesClient.search(near, query).places().stream()

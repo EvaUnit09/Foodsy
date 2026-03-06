@@ -7,6 +7,7 @@ import { Button } from "@/components/button";
 import { Card, CardContent } from "@/components/card";
 
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
+import { TrendingCarousel } from "@/components/TrendingCarousel";
 import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
 
@@ -46,6 +47,7 @@ const Index = () => {
   // Removed search functionality
   
   // Homepage/Dashboard state
+  const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
   const [showPersonalizedContent, setShowPersonalizedContent] = useState(false);
@@ -750,6 +752,46 @@ const Index = () => {
             </Button>
           </div>
         </section>
+      )}
+
+      {/* Trending Carousel - Only for anonymous users */}
+      {!isAuthenticated && (
+        <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
+      )}
+
+      {/* Sign-up prompt modal (triggered by favorite button in carousel) */}
+      {showSignUpPrompt && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowSignUpPrompt(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Save Your Favorites</h3>
+            <p className="text-gray-600 mb-6">
+              Sign up to save favorites and use them in your group voting sessions.
+            </p>
+            <Button
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 mb-3"
+              onClick={() => {
+                window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`;
+              }}
+            >
+              Sign Up with Google
+            </Button>
+            <button
+              className="text-sm text-gray-400 hover:text-gray-600"
+              onClick={() => setShowSignUpPrompt(false)}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Call to Action - Only for anonymous users */}
