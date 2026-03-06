@@ -172,13 +172,13 @@ public class SessionController {
                 .map(p -> new ParticipantDto(p.getUserId(), "participant", p.getUserId().equals(creatorId)))
                 .collect(Collectors.toList());
     }
-    // GET all restaurants for a session
+    // GET all restaurants for a session (filtered to the session's current round)
     @GetMapping("/{id}/restaurants")
     public List<SessionRestaurantDto> getRestaurants(@PathVariable Long id) {
-        if (!repo.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found");
-        }
-        List<SessionRestaurant> restaurants = restaurantRepo.findBySessionId(id);
+        Session session = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        int round = session.getRound() != null ? session.getRound() : 1;
+        List<SessionRestaurant> restaurants = restaurantRepo.findBySessionIdAndRound(id, round);
         return restaurants.stream().map(r -> new SessionRestaurantDto(
             r.getId(),
             r.getProviderId(),
