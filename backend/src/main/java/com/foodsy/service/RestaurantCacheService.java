@@ -8,8 +8,11 @@ import com.foodsy.repository.RestaurantCacheRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -530,6 +533,28 @@ public class RestaurantCacheService {
                         logger.error("Error fetching trending for borough {}: {}", b.name(), e.getMessage());
                     }
                 }, () -> logger.warn("Borough {} not in TRENDING_BOROUGHS, skipping", borough));
+    }
+
+    /** On startup, seed any borough that has no trending data yet. Runs async so it doesn't block boot. */
+    @Async
+    @EventListener(ApplicationReadyEvent.class)
+    public void seedTrendingOnStartup() {
+        logger.info("Checking trending cache on startup");
+        Instant now = Instant.now();
+        for (TrendingBorough b : TRENDING_BOROUGHS) {
+            try {
+                List<RestaurantCache> existing = cacheRepository.findTrendingByBorough(
+                        b.name(), now, PageRequest.of(0, 1));
+                if (existing.isEmpty()) {
+                    logger.info("No trending data for {} — seeding on startup", b.name());
+                    fetchAndCacheTrendingForBorough(b.name());
+                } else {
+                    logger.info("Trending data already present for {}, skipping seed", b.name());
+                }
+            } catch (Exception e) {
+                logger.error("Startup seed failed for {}: {}", b.name(), e.getMessage());
+            }
+        }
     }
 
     /** Daily job: refresh trending data for all three boroughs at 3 AM server time. */
