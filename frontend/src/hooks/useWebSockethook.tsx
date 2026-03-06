@@ -7,227 +7,120 @@ interface WebSocketEvent {
   payload?: Record<string, unknown>;
 }
 
-// Fallback polling interval for when WebSocket fails
-const POLLING_INTERVAL = 5000; // Reduced frequency
+const POLLING_INTERVAL = 5000;
 const MAX_CONSECUTIVE_ERRORS = 3;
-const BACKOFF_MULTIPLIER = 2;
 
-// Get WebSocket URL based on environment
-function getWebSocketURL(useNative: boolean): string {
+// SockJS requires an HTTP(S) URL — it negotiates the transport internally.
+// Never use ws:// or wss:// with SockJS.
+function getSockJSUrl(): string {
   if (typeof window === 'undefined') return '';
-  
   const host = window.location.host;
-  
-  // In production, connect through the backend directly
   if (host.includes('vercel.app') || host.includes('foodsy-frontend')) {
-    return useNative ? 'wss://apifoodsy-backend.com/ws' : 'wss://apifoodsy-backend.com/ws-sockjs';
+    return 'https://apifoodsy-backend.com/ws';
   }
-
-  return useNative ? 'ws://localhost:8080/ws' : 'ws://localhost:8080/ws-sockjs';
-}
-
-// Check if we should use native WebSocket instead of SockJS for HTTPS
-function shouldUseNativeWebSocket(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.location.protocol === 'https:';
+  return 'http://localhost:8080/ws';
 }
 
 export function useSessionWebSocket(sessionId: number) {
   const [event, setEvent] = useState<WebSocketEvent | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pollingActiveRef = useRef(false);
   const errorCountRef = useRef(0);
-  const currentIntervalRef = useRef(POLLING_INTERVAL);
 
-  // Polling fallback for when WebSocket fails
+  const stopPolling = () => {
+    if (pollingRef.current) clearTimeout(pollingRef.current);
+    pollingRef.current = null;
+    pollingActiveRef.current = false;
+    errorCountRef.current = 0;
+  };
+
   const startPolling = () => {
-    if (pollingActiveRef.current) return; // Prevent multiple polling instances
-    
-    console.log('Starting polling fallback for session:', sessionId);
+    if (pollingActiveRef.current) return;
     pollingActiveRef.current = true;
-    errorCountRef.current = 0; // Reset error count
-    currentIntervalRef.current = POLLING_INTERVAL; // Reset interval
-    
+    errorCountRef.current = 0;
+
     const poll = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
         const response = await fetch(`/api/sessions/${sessionId}/status`, {
           credentials: 'include',
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        
         if (response.ok) {
           const data = await response.json();
-          errorCountRef.current = 0; // Reset error count on success
-          currentIntervalRef.current = POLLING_INTERVAL; // Reset interval
-          
-          if (data.lastUpdate) {
-            setEvent({
-              type: 'session_update',
-              payload: data
-            });
-          }
+          errorCountRef.current = 0;
+          if (data.lastUpdate) setEvent({ type: 'session_update', payload: data });
         } else {
-          // Handle HTTP errors (including 500s)
-          errorCountRef.current++;
-          console.warn(`Polling response not ok: ${response.status} (error count: ${errorCountRef.current})`);
-          
-          // Circuit breaker: stop polling after too many errors
-          if (errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) {
-            console.error('Too many consecutive polling errors, stopping polling');
-            stopPolling();
-            return;
-          }
-          
-          // Exponential backoff
-          currentIntervalRef.current = Math.min(
-            currentIntervalRef.current * BACKOFF_MULTIPLIER, 
-            30000 // Max 30 seconds
-          );
+          if (++errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) { stopPolling(); return; }
         }
-      } catch (error) {
-        errorCountRef.current++;
-        console.error(`Polling error: ${error} (error count: ${errorCountRef.current})`);
-        
-        // Circuit breaker: stop polling after too many errors
-        if (errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) {
-          console.error('Too many consecutive polling errors, stopping polling');
-          stopPolling();
-          return;
-        }
-        
-        // Exponential backoff
-        currentIntervalRef.current = Math.min(
-          currentIntervalRef.current * BACKOFF_MULTIPLIER, 
-          30000 // Max 30 seconds
-        );
+      } catch {
+        if (++errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) { stopPolling(); return; }
+      }
+      if (pollingActiveRef.current) {
+        pollingRef.current = setTimeout(poll, POLLING_INTERVAL);
       }
     };
-    
-    // Poll immediately, then schedule next poll with current interval
-    poll();
-    
-    const scheduleNextPoll = () => {
-      pollingRef.current = setTimeout(() => {
-        // If polling was stopped, do not continue
-        if (!pollingActiveRef.current) return;
-        poll();
-        scheduleNextPoll();
-      }, currentIntervalRef.current);
-    };
-    
-    scheduleNextPoll();
-  };
 
-  const stopPolling = () => {
-    if (pollingRef.current) {
-      clearTimeout(pollingRef.current); // Changed from clearInterval to clearTimeout
-      pollingRef.current = null;
-    }
-    pollingActiveRef.current = false;
-    errorCountRef.current = 0; // Reset error count when stopping
+    poll();
   };
 
   useEffect(() => {
     if (!sessionId) return;
-    
-    const useNative = shouldUseNativeWebSocket();
-    const wsUrl = getWebSocketURL(useNative);
-    console.log('Connecting to WebSocket:', wsUrl, 'Native:', useNative);
-    
+
+    const url = getSockJSUrl();
+
     const client = new Client({
-      webSocketFactory: () => {
-        if (useNative) {
-          // Use native WebSocket for HTTPS connections
-          return new WebSocket(wsUrl);
-        } else {
-          // Use SockJS for HTTP connections
-          return new SockJS(wsUrl);
-        }
-      },
+      // SockJS handles WebSocket + XHR-streaming + long-polling fallbacks automatically.
+      // This is the recommended approach for Spring STOMP in production.
+      webSocketFactory: () => new SockJS(url),
       reconnectDelay: 5000,
-      debug: (str) => console.log('STOMP:', str),
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
     });
 
     client.onConnect = () => {
-      console.log('WebSocket connected successfully');
-      setIsConnected(true);
-      stopPolling(); // Stop polling if WebSocket connects
-      
-      try {
-        client.subscribe(`/topic/session/${sessionId}`, (message) => {
-          try {
-            const event = JSON.parse(message.body);
-            setEvent(event);
-          } catch (parseError) {
-            console.error('Error parsing WebSocket message:', parseError, message.body);
-          }
-        });
-        // Request current session state so late-joining clients sync up immediately
-        client.publish({ destination: `/app/session/${sessionId}/getRoundStatus`, body: '{}' });
-      } catch (subscribeError) {
-        console.error('Error subscribing to WebSocket topic:', subscribeError);
-        setIsConnected(false);
-        startPolling();
-      }
+      stopPolling();
+      client.subscribe(`/topic/session/${sessionId}`, (message) => {
+        try {
+          setEvent(JSON.parse(message.body));
+        } catch (e) {
+          console.error('WS parse error:', e);
+        }
+      });
+      // Sync late-joining clients: ask the server for current round/status immediately.
+      client.publish({ destination: `/app/session/${sessionId}/getRoundStatus`, body: '{}' });
     };
 
     client.onDisconnect = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
+      if (!pollingActiveRef.current) startPolling();
     };
 
-    client.onStompError = (frame) => {
-      console.error('WebSocket STOMP error:', frame);
-      setIsConnected(false);
-      // Immediately start polling fallback after WebSocket fails
-      if (!pollingActiveRef.current) {
-        console.log('STOMP error - immediately falling back to polling');
-        startPolling();
-      }
+    client.onStompError = () => {
+      if (!pollingActiveRef.current) startPolling();
     };
 
-    client.onWebSocketError = (error) => {
-      console.error('WebSocket connection error:', error);
-      setIsConnected(false);
-      // Immediately start polling fallback after WebSocket fails
-      if (!pollingActiveRef.current) {
-        console.log('WebSocket error - immediately falling back to polling');
-        startPolling();
-      }
+    client.onWebSocketError = () => {
+      if (!pollingActiveRef.current) startPolling();
     };
 
-    // Try to connect
-    try {
-      client.activate();
-      clientRef.current = client;
-      
-      // Fallback: if not connected after 3 seconds, start polling (reduced timeout)
-      setTimeout(() => {
-        if (!isConnected && !pollingActiveRef.current) {
-          console.warn('WebSocket connection timeout, falling back to polling');
-          startPolling();
-        }
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Failed to activate WebSocket client:', error);
-      startPolling();
-    }
+    client.activate();
+    clientRef.current = client;
+
+    // Fallback: if STOMP hasn't connected within 5 s, start polling
+    const connectTimeout = setTimeout(() => {
+      if (!client.connected && !pollingActiveRef.current) startPolling();
+    }, 5000);
 
     return () => {
+      clearTimeout(connectTimeout);
       stopPolling();
-      if (clientRef.current) {
-        clientRef.current.deactivate();
-      }
+      client.deactivate();
     };
   }, [sessionId]);
 
-  // Optionally, expose a send function for host actions
   const send = (destination: string, body: unknown) => {
-    if (clientRef.current && clientRef.current.connected) {
+    if (clientRef.current?.connected) {
       clientRef.current.publish({
         destination,
         body: typeof body === 'string' ? body : JSON.stringify(body),

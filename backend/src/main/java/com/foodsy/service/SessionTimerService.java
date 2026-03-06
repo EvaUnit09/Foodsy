@@ -1,10 +1,7 @@
 package com.foodsy.service;
 
 import com.foodsy.domain.Session;
-import com.foodsy.domain.SessionRestaurant;
 import com.foodsy.repository.SessionRepository;
-import com.foodsy.repository.SessionRestaurantRepository;
-import com.foodsy.repository.SessionParticipantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,12 +9,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Service
 public class SessionTimerService {
@@ -25,21 +19,18 @@ public class SessionTimerService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final SessionRepository sessionRepository;
-    private final SessionRestaurantRepository sessionRestaurantRepository;
-    private final SessionParticipantRepository sessionParticipantRepository;
-    
+    private final RoundService roundService;
+
     // Track active timers to prevent duplicates
     private final Set<String> activeTimers = ConcurrentHashMap.newKeySet();
 
     @Autowired
     public SessionTimerService(SimpMessagingTemplate messagingTemplate,
                               SessionRepository sessionRepository,
-                              SessionRestaurantRepository sessionRestaurantRepository,
-                              SessionParticipantRepository sessionParticipantRepository) {
+                              RoundService roundService) {
         this.messagingTemplate = messagingTemplate;
         this.sessionRepository = sessionRepository;
-        this.sessionRestaurantRepository = sessionRestaurantRepository;
-        this.sessionParticipantRepository = sessionParticipantRepository;
+        this.roundService = roundService;
     }
 
     @Async
@@ -94,30 +85,16 @@ public class SessionTimerService {
                 )
             )
         );
-        // 2. On timer expiry, calculate real top K restaurants for this round
-        List<SessionRestaurant> restaurants = sessionRestaurantRepository.findBySessionId(sessionId)
-            .stream()
-            .filter(r -> r.getRound() == round)
-            .sorted(Comparator.comparing(SessionRestaurant::getLikeCount).reversed())
-            .collect(Collectors.toList());
-        int groupSize = sessionParticipantRepository.findBySessionId(sessionId).size();
-        int k = Math.min(5, groupSize + 2);
-        List<String> topK = restaurants.stream()
-            .limit(k)
-            .map(SessionRestaurant::getName)
-            .collect(Collectors.toList());
-        // Timer expired, send roundTransition event with real top K
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + sessionId,
-            Map.of(
-                "type", "roundTransition",
-                "payload", Map.of(
-                    "sessionId", sessionId,
-                    "newRound", round + 1,
-                    "topK", topK
-                )
-            )
-        );
+        // Timer expired — perform the actual DB transition and broadcast roundTransition.
+        // RoundService handles top-K selection, DB writes, and the WS broadcast.
+        // Guard against duplicate calls (e.g. host already pressed Complete Round 1).
+        try {
+            if (round == 1) {
+                roundService.transitionToRound2(sessionId);
+            }
+        } catch (Exception e) {
+            logger.warn("Round transition on timer expiry skipped (already transitioned?): {}", e.getMessage());
+        }
         } finally {
             // Remove timer from active set when done
             activeTimers.remove(timerKey);
