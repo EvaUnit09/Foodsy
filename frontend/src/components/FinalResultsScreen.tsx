@@ -73,7 +73,7 @@ export function FinalResultsScreen({ winner, sessionId }: FinalResultsScreenProp
                   <Star className="w-4 h-4 text-yellow-500 mr-2" />
                   <span className="text-gray-700">
                     <strong>Rating:</strong> {winner.rating}/5
-                    {winner.userRatingCount && (
+                    {winner.userRatingCount > 0 && (
                       <span className="text-sm text-gray-500 ml-1">
                         ({winner.userRatingCount} reviews)
                       </span>
