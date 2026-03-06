@@ -411,6 +411,16 @@ export default function SessionPage() {
     }
   }, [event, sessionId]);
 
+  // Force a clean reload if the browser restores this page from bfcache (back button).
+  // Without this, the page comes back with a torn-down WebSocket that looks active.
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.replace(`/sessions/${sessionId}`);
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [sessionId]);
+
   // Smooth countdown: ticks every 500ms using local math, corrected by server sync points
   useEffect(() => {
     if (!sessionStarted) return;

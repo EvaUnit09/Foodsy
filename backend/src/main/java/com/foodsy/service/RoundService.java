@@ -173,7 +173,11 @@ public class RoundService {
                 result.put("round2Votes", r2.getLikeCount());
                 return result;
             })
-            .sorted((a, b) -> Integer.compare((Integer) b.get("voteCount"), (Integer) a.get("voteCount")))
+            .sorted((a, b) -> {
+                int cmp = Integer.compare((Integer) b.get("voteCount"), (Integer) a.get("voteCount"));
+                if (cmp != 0) return cmp;
+                return Double.compare((Double) b.get("rating"), (Double) a.get("rating"));
+            })
             .toList();
         
         Map<String, Object> winner = aggregatedResults.get(0);
