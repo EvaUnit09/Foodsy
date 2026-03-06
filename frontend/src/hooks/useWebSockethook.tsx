@@ -167,6 +167,8 @@ export function useSessionWebSocket(sessionId: number) {
             console.error('Error parsing WebSocket message:', parseError, message.body);
           }
         });
+        // Request current session state so late-joining clients sync up immediately
+        client.publish({ destination: `/app/session/${sessionId}/getRoundStatus`, body: '{}' });
       } catch (subscribeError) {
         console.error('Error subscribing to WebSocket topic:', subscribeError);
         setIsConnected(false);

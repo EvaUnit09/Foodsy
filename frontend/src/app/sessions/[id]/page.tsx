@@ -383,9 +383,21 @@ export default function SessionPage() {
         setSessionComplete(true);
         setWinner(event.payload.winner as Restaurant);
         break;
-      case "roundStatus":
+      case "roundStatus": {
         setCurrentRound(event.payload.currentRound as number);
+        const roundStatusStr = event.payload.status as string;
+        if (roundStatusStr && roundStatusStr.toLowerCase() !== 'open') {
+          setSessionStarted(true);
+        }
         break;
+      }
+      case 'session_update': {
+        const statusStr = event.payload.status as string;
+        if (statusStr && statusStr.toLowerCase() !== 'open') {
+          setSessionStarted(true);
+        }
+        break;
+      }
       default:
         break;
     }
