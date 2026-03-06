@@ -398,6 +398,14 @@ export default function SessionPage() {
         }
         break;
       }
+      case 'participantJoined': {
+        const userId = event.payload.userId as string;
+        setParticipants((prev) => {
+          if (prev.some((p) => p.userId === userId)) return prev;
+          return [...prev, { userId, isHost: false }];
+        });
+        break;
+      }
       default:
         break;
     }

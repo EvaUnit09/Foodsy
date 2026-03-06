@@ -20,12 +20,10 @@ function getWebSocketURL(useNative: boolean): string {
   
   // In production, connect through the backend directly
   if (host.includes('vercel.app') || host.includes('foodsy-frontend')) {
-    // Fix: Add trailing slash for WebSocket endpoints
-    return useNative ? 'wss://apifoodsy-backend.com/ws/' : 'wss://apifoodsy-backend.com/ws-sockjs/';
+    return useNative ? 'wss://apifoodsy-backend.com/ws' : 'wss://apifoodsy-backend.com/ws-sockjs';
   }
-  
-  // Local development - also add trailing slash for consistency
-  return useNative ? 'ws://localhost:8080/ws/' : 'ws://localhost:8080/ws-sockjs/';
+
+  return useNative ? 'ws://localhost:8080/ws' : 'ws://localhost:8080/ws-sockjs';
 }
 
 // Check if we should use native WebSocket instead of SockJS for HTTPS

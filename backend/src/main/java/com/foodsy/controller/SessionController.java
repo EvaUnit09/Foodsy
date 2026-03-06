@@ -11,6 +11,8 @@ import com.foodsy.service.SessionService;
 import com.foodsy.dto.SessionRequest;
 import com.foodsy.service.VoteService;
 import com.foodsy.dto.JoinSessionResponse;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.foodsy.controller.SessionEventsController.SessionEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +41,7 @@ public class SessionController {
     private final SessionParticipantRepository sessionParticipantRepository;
     private final SessionRepository sessionRepository;
     private final VoteService voteService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // Add DTO definition at the top or in a separate file
     record SessionRestaurantDto(
@@ -77,13 +80,15 @@ public class SessionController {
                              SessionRepository sessionRepository,
                              SessionRestaurantRepository sessionRestaurantRepository,
                              SessionRestaurantVoteRepository voteRepo,
-                             VoteService voteService) {
+                             VoteService voteService,
+                             SimpMessagingTemplate messagingTemplate) {
         this.sessionService = sessionService;
         this.repo = repo;
         this.restaurantRepo = restaurantRepo;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.sessionRepository = sessionRepository;
         this.voteService = voteService;
+        this.messagingTemplate = messagingTemplate;
 
     }
 
@@ -243,7 +248,10 @@ public class SessionController {
         participant.setUserId(normalizedUserName);
         participant.setJoinedAt(Instant.now());
         sessionParticipantRepository.save(participant);
-        
+
+        messagingTemplate.convertAndSend("/topic/session/" + session.getId(),
+                new SessionEvent("participantJoined", Map.of("userId", normalizedUserName)));
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new JoinSessionResponse(participant.getUserId(), session.getId()));
         
