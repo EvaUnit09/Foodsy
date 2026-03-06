@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,14 @@ public class RestaurantCacheService {
     private static final int MAX_DAILY_PLACE_DETAILS = 200; // 60% of ~10000/month ≈ 200/day
     private static final int MAX_DAILY_TOTAL_CALLS = 300;
     
+    // Fixed midpoints and search radius for the three supported trending boroughs
+    private record TrendingBorough(String name, double lat, double lng, double radiusMeters) {}
+    private static final List<TrendingBorough> TRENDING_BOROUGHS = List.of(
+        new TrendingBorough("Manhattan", 40.7831, -73.9712, 3000),
+        new TrendingBorough("Queens",    40.7282, -73.7949, 4000),
+        new TrendingBorough("Brooklyn",  40.6782, -73.9442, 4000)
+    );
+
     // Borough neighborhoods for targeted searches
     private static final Map<String, List<String>> BOROUGH_NEIGHBORHOODS = Map.of(
         "Manhattan", Arrays.asList("SoHo", "Greenwich Village", "Upper East Side", "Midtown", "Lower East Side", 
@@ -436,57 +445,107 @@ public class RestaurantCacheService {
     /**
      * Get trending restaurants with calculated scores
      */
+    /**
+     * Return the top trending restaurants for a borough, ordered by Google's popularity rank.
+     * On a cold cache the data is fetched on-demand; otherwise the daily job keeps it fresh.
+     */
     public List<RestaurantSummaryDto> getTrendingRestaurants(String borough, int limit) {
         logger.debug("Getting trending restaurants for borough: {} with limit: {}", borough, limit);
-        
+
         Instant now = Instant.now();
-        List<RestaurantCache> cached = cacheRepository.findByBoroughNotExpired(
-            borough, now, PageRequest.of(0, limit * 2) // Get more to allow for sorting
-        ).getContent();
-        
-        if (cached.isEmpty()) {
-            logger.info("No cached restaurants found for trending in borough: {}", borough);
-            return List.of();
+        List<RestaurantCache> ranked = cacheRepository.findTrendingByBorough(
+                borough, now, PageRequest.of(0, limit));
+
+        if (ranked.isEmpty()) {
+            logger.info("No trending data for borough: {}, fetching from Google Places", borough);
+            fetchAndCacheTrendingForBorough(borough);
+            ranked = cacheRepository.findTrendingByBorough(borough, now, PageRequest.of(0, limit));
         }
-        
-        // Check if we have recent trending calculations (within 24 hours)
-        Instant dayAgo = now.minusSeconds(24 * 60 * 60);
-        boolean hasRecentCalculations = cached.stream()
-            .anyMatch(r -> r.getLastTrendingCalcAt() != null && r.getLastTrendingCalcAt().isAfter(dayAgo));
-        
-        List<RestaurantCache> trendingRestaurants;
-        
-        if (hasRecentCalculations) {
-            // Use optimized repository query for persisted trending data
-            logger.debug("Using persisted trending scores for borough: {}", borough);
-            trendingRestaurants = cacheRepository.findTrendingByBorough(
-                borough, now, PageRequest.of(0, limit)
-            );
-        } else {
-            // Calculate trending scores in real-time and optionally update
-            logger.debug("Calculating real-time trending scores for borough: {}", borough);
-            trendingRestaurants = cached.stream()
-                .peek(restaurant -> {
-                    // Calculate and log trending score for debugging
-                    double score = calculateTrendingScore(restaurant);
-                    logger.debug("Restaurant: {} - Trending Score: {}", restaurant.getName(), score);
-                })
-                .sorted((r1, r2) -> {
-                    double score1 = calculateTrendingScore(r1);
-                    double score2 = calculateTrendingScore(r2);
-                    return Double.compare(score2, score1); // Descending order
-                })
-                .limit(limit)
+
+        logger.info("Returning {} trending restaurants for borough: {}", ranked.size(), borough);
+        return ranked.stream()
+                .map(RestaurantSummaryDto::fromEntity)
                 .collect(Collectors.toList());
-        }
-        
-        logger.info("Found {} trending restaurants for borough: {}", trendingRestaurants.size(), borough);
-        
-        return trendingRestaurants.stream()
-            .map(RestaurantSummaryDto::fromEntity)
-            .collect(Collectors.toList());
     }
-    
+
+    /**
+     * Fetch popular restaurants from Google Places using their own popularity ranking,
+     * then upsert them into restaurant_cache with trendingRank set to their order (1 = most popular).
+     */
+    @Transactional
+    public void fetchAndCacheTrendingForBorough(String borough) {
+        TRENDING_BOROUGHS.stream()
+                .filter(b -> b.name().equalsIgnoreCase(borough))
+                .findFirst()
+                .ifPresentOrElse(b -> {
+                    try {
+                        logger.info("Fetching trending restaurants from Google Places for {}", b.name());
+                        GooglePlacesSearchResponse response = placesClient.searchTrending(
+                                b.lat(), b.lng(), b.radiusMeters(), 10);
+
+                        List<GooglePlacesSearchResponse.Place> places = response.places();
+                        if (places == null || places.isEmpty()) {
+                            logger.warn("No results from Google Places trending search for {}", b.name());
+                            return;
+                        }
+
+                        Instant now = Instant.now();
+                        for (int i = 0; i < places.size(); i++) {
+                            GooglePlacesSearchResponse.Place place = places.get(i);
+                            try {
+                                RestaurantCache entry = cacheRepository.findByPlaceId(place.id())
+                                        .orElseGet(RestaurantCache::new);
+                                entry.setPlaceId(place.id());
+                                entry.setName(place.displayName() != null ? place.displayName().text() : place.name());
+                                entry.setCategory(extractCategory(place.types()));
+                                entry.setRating(place.rating());
+                                entry.setPriceLevel(extractPriceLevel(place.priceLevel()));
+                                entry.setAddress(place.formattedAddress());
+                                entry.setBorough(b.name());
+                                entry.setUserRatingCount(place.userRatingsTotal());
+                                entry.setGenerativeSummary(place.generativeSummary());
+                                entry.setReviewSummary(place.reviewSummary());
+                                entry.setOpeningHours(place.currentOpeningHours());
+                                entry.setWebsiteUri(place.websiteUri());
+                                if (place.location() != null) {
+                                    entry.setLatitude(place.location().latitude());
+                                    entry.setLongitude(place.location().longitude());
+                                }
+                                if (place.photos() != null) {
+                                    entry.setPhotoReferences(place.photos().stream()
+                                            .map(GooglePlacesSearchResponse.Photo::name)
+                                            .collect(Collectors.toList()));
+                                }
+                                entry.setTrendingRank(i + 1);
+                                entry.setTrendingScore(0.0);
+                                entry.setLastTrendingCalcAt(now);
+                                entry.refreshExpiration();
+                                cacheRepository.save(entry);
+                            } catch (Exception e) {
+                                logger.error("Error saving trending restaurant {}: {}", place.id(), e.getMessage());
+                            }
+                        }
+                        logger.info("Cached {} trending restaurants for {}", places.size(), b.name());
+                    } catch (Exception e) {
+                        logger.error("Error fetching trending for borough {}: {}", b.name(), e.getMessage());
+                    }
+                }, () -> logger.warn("Borough {} not in TRENDING_BOROUGHS, skipping", borough));
+    }
+
+    /** Daily job: refresh trending data for all three boroughs at 3 AM server time. */
+    @Scheduled(cron = "0 0 3 * * *")
+    public void refreshAllTrendingBoroughs() {
+        logger.info("Starting scheduled trending refresh for all boroughs");
+        for (TrendingBorough b : TRENDING_BOROUGHS) {
+            try {
+                fetchAndCacheTrendingForBorough(b.name());
+            } catch (Exception e) {
+                logger.error("Scheduled trending refresh failed for {}: {}", b.name(), e.getMessage());
+            }
+        }
+        logger.info("Completed scheduled trending refresh");
+    }
+
     /**
      * Get neighborhoods for a specific borough
      */

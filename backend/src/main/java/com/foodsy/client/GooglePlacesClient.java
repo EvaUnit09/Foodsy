@@ -196,6 +196,69 @@ public class GooglePlacesClient {
         }
     }
 
+    /**
+     * Search for popular restaurants near a point using Google's own popularity ranking.
+     * Uses rankPreference=POPULARITY so results are ordered by Google's signals, not distance.
+     * Requests the full field mask in one call to avoid N+1 detail fetches.
+     */
+    public GooglePlacesSearchResponse searchTrending(
+            double latitude,
+            double longitude,
+            double radiusMeters,
+            int maxResults
+    ) {
+        try {
+            RestClient trendingClient = RestClient.builder()
+                    .baseUrl("https://places.googleapis.com/v1")
+                    .defaultHeader("X-Goog-Api-Key", apiKey)
+                    .defaultHeader("X-Goog-FieldMask",
+                            "places.id,places.name,places.displayName,places.formattedAddress," +
+                            "places.types,places.location,places.photos,places.rating," +
+                            "places.userRatingCount,places.priceLevel,places.priceRange," +
+                            "places.currentOpeningHours,places.generativeSummary," +
+                            "places.reviewSummary,places.websiteUri")
+                    .build();
+
+            int capped = Math.max(1, Math.min(20, maxResults));
+            Map<String, Object> body = new HashMap<>();
+            body.put("includedTypes", List.of("restaurant"));
+            body.put("maxResultCount", capped);
+            body.put("rankPreference", "POPULARITY");
+            body.put("locationRestriction", Map.of(
+                "circle", Map.of(
+                    "center", Map.of("latitude", latitude, "longitude", longitude),
+                    "radius", radiusMeters
+                )
+            ));
+
+            GooglePlacesSearchResponse response = trendingClient.post()
+                    .uri("/places:searchNearby")
+                    .body(body)
+                    .retrieve()
+                    .body(GooglePlacesSearchResponse.class);
+
+            if (response == null || response.places() == null) {
+                return new GooglePlacesSearchResponse(List.of());
+            }
+
+            List<GooglePlacesSearchResponse.Place> filtered = response.places().stream()
+                    .filter(p -> {
+                        List<String> types = p.types();
+                        if (types == null) return false;
+                        boolean isRestaurant = types.contains("restaurant");
+                        boolean isHotel = types.contains("lodging") || types.contains("hotel");
+                        return isRestaurant && !isHotel;
+                    })
+                    .limit(maxResults)
+                    .toList();
+
+            return new GooglePlacesSearchResponse(filtered);
+        } catch (Exception e) {
+            logger.error("Error in searchTrending: {}", e.getMessage(), e);
+            return new GooglePlacesSearchResponse(List.of());
+        }
+    }
+
     public List<String> fetchPhotoUrls(String placeId, int limit) {
         try {
             // Create a separate RestClient for place details with correct field mask
