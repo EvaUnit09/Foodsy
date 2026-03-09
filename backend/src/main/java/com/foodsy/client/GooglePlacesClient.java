@@ -243,14 +243,10 @@ public class GooglePlacesClient {
                 return new GooglePlacesSearchResponse(List.of());
             }
 
+            // includedTypes: ["restaurant"] already restricts results server-side;
+            // just drop any place with a null types list and limit to what was requested.
             List<GooglePlacesSearchResponse.Place> filtered = response.places().stream()
-                    .filter(p -> {
-                        List<String> types = p.types();
-                        if (types == null) return false;
-                        boolean isRestaurant = types.contains("restaurant");
-                        boolean isHotel = types.contains("lodging") || types.contains("hotel");
-                        return isRestaurant && !isHotel;
-                    })
+                    .filter(p -> p.types() != null && !p.types().isEmpty())
                     .limit(maxResults)
                     .toList();
 

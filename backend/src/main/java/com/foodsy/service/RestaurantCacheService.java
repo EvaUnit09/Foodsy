@@ -41,12 +41,13 @@ public class RestaurantCacheService {
     private static final int MAX_DAILY_PLACE_DETAILS = 200; // 60% of ~10000/month ≈ 200/day
     private static final int MAX_DAILY_TOTAL_CALLS = 300;
     
-    // Fixed midpoints and search radius for the three supported trending boroughs
+    // Fixed midpoints and search radius for the three supported trending boroughs.
+    // Manhattan uses Midtown (high restaurant density); Queens/Brooklyn use borough centers.
     private record TrendingBorough(String name, double lat, double lng, double radiusMeters) {}
     private static final List<TrendingBorough> TRENDING_BOROUGHS = List.of(
-        new TrendingBorough("Manhattan", 40.7831, -73.9712, 3000),
-        new TrendingBorough("Queens",    40.7282, -73.7949, 4000),
-        new TrendingBorough("Brooklyn",  40.6782, -73.9442, 4000)
+        new TrendingBorough("Manhattan", 40.7549, -73.9840, 5000),
+        new TrendingBorough("Queens",    40.7282, -73.7949, 5000),
+        new TrendingBorough("Brooklyn",  40.6782, -73.9442, 5000)
     );
 
     // Borough neighborhoods for targeted searches
@@ -484,7 +485,7 @@ public class RestaurantCacheService {
                     try {
                         logger.info("Fetching trending restaurants from Google Places for {}", b.name());
                         GooglePlacesSearchResponse response = placesClient.searchTrending(
-                                b.lat(), b.lng(), b.radiusMeters(), 10);
+                                b.lat(), b.lng(), b.radiusMeters(), 20);
 
                         List<GooglePlacesSearchResponse.Place> places = response.places();
                         if (places == null || places.isEmpty()) {
