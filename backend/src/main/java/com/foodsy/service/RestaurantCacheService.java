@@ -47,7 +47,7 @@ public class RestaurantCacheService {
     private static final List<TrendingBorough> TRENDING_BOROUGHS = List.of(
         new TrendingBorough("Manhattan", 40.7549, -73.9840, 5000),
         new TrendingBorough("Queens",    40.7282, -73.7949, 5000),
-        new TrendingBorough("Brooklyn",  40.6782, -73.9442, 5000)
+        new TrendingBorough("Brooklyn",  40.7210, -73.9580, 5000)
     );
 
     // Borough neighborhoods for targeted searches
@@ -143,7 +143,7 @@ public class RestaurantCacheService {
         
         Instant now = Instant.now();
         List<RestaurantCache> spotlight = cacheRepository.findRandomHighRated(
-            borough, now, 4.0, limit);
+            borough, now, 4.5, limit);
         
         return spotlight.stream()
             .map(RestaurantSummaryDto::fromEntity)
