@@ -208,15 +208,17 @@ public class GooglePlacesClient {
             int maxResults
     ) {
         try {
+            // Only include fields that map to scalar types in GooglePlacesSearchResponse.Place.
+            // Fields like priceRange, currentOpeningHours, generativeSummary are JSON objects
+            // in the Places API response and will cause Jackson deserialization failures if
+            // included here. They are fetched separately via fetchPlaceDetails when needed.
             RestClient trendingClient = RestClient.builder()
                     .baseUrl("https://places.googleapis.com/v1")
                     .defaultHeader("X-Goog-Api-Key", apiKey)
                     .defaultHeader("X-Goog-FieldMask",
                             "places.id,places.name,places.displayName,places.formattedAddress," +
                             "places.types,places.location,places.photos,places.rating," +
-                            "places.userRatingCount,places.priceLevel,places.priceRange," +
-                            "places.currentOpeningHours,places.generativeSummary," +
-                            "places.reviewSummary,places.websiteUri")
+                            "places.userRatingCount,places.priceLevel,places.websiteUri")
                     .build();
 
             int capped = Math.max(1, Math.min(20, maxResults));

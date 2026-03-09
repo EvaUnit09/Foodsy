@@ -36,6 +36,24 @@ public class RestaurantController {
     private static final java.util.Set<String> SUPPORTED_BOROUGHS =
             java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
 
+    private static final java.util.List<String> TRENDING_BOROUGHS =
+            java.util.List.of("Manhattan", "Queens", "Brooklyn");
+
+    @PostMapping("/trending/refresh")
+    public ResponseEntity<java.util.Map<String, Object>> refreshTrending() {
+        java.util.List<String> refreshed = new java.util.ArrayList<>();
+        java.util.List<String> failed = new java.util.ArrayList<>();
+        for (String borough : TRENDING_BOROUGHS) {
+            try {
+                restaurantCacheService.fetchAndCacheTrendingForBorough(borough);
+                refreshed.add(borough);
+            } catch (Exception e) {
+                failed.add(borough + ": " + e.getMessage());
+            }
+        }
+        return ResponseEntity.ok(java.util.Map.of("refreshed", refreshed, "failed", failed));
+    }
+
     @GetMapping("/trending")
     public ResponseEntity<List<RestaurantSummaryDto>> getTrending(
             @RequestParam(defaultValue = "manhattan") String borough) {
