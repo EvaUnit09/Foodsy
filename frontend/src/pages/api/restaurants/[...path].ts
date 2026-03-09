@@ -3,11 +3,19 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 const BACKEND_URL = process.env.BACKEND_URL || 'https://apifoodsy-backend.com';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { path } = req.query;
+  const { path, ...queryParams } = req.query;
   const apiPath = Array.isArray(path) ? path.join('/') : path;
-  
-  console.log(`API Proxy: ${req.method} /restaurants/${apiPath}`);
-  
+
+  // Forward any query parameters (e.g. ?borough=queens) to the backend
+  const qs = new URLSearchParams(
+    Object.entries(queryParams).flatMap(([k, v]) =>
+      Array.isArray(v) ? v.map((val) => [k, val]) : [[k, v as string]]
+    )
+  ).toString();
+  const upstreamUrl = `${BACKEND_URL}/restaurants/${apiPath}${qs ? `?${qs}` : ''}`;
+
+  console.log(`API Proxy: ${req.method} /restaurants/${apiPath}${qs ? `?${qs}` : ''}`);
+
   try {
     // Prepare headers, excluding host and content-length. Don't force Content-Type; let upstream decide.
     const headers: Record<string, string> = {};
@@ -18,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    const upstream = await fetch(`${BACKEND_URL}/restaurants/${apiPath}`, {
+    const upstream = await fetch(upstreamUrl, {
       method: req.method,
       headers,
       body: req.method !== 'GET' && req.body ? JSON.stringify(req.body) : undefined,
