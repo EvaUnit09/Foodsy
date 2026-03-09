@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Heart, Star } from "lucide-react";
-import { Card, CardContent } from "@/components/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface TrendingRestaurant {
   id: string;
@@ -31,7 +37,6 @@ interface TrendingCarouselProps {
 export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
   const [activeBorough, setActiveBorough] = useState<Borough>("manhattan");
   const [data, setData] = useState<Partial<Record<Borough, TrendingRestaurant[]>>>({});
-  // Track which boroughs have been fetched (or are in-flight) so we never double-fetch
   const fetchedRef = useRef(new Set<Borough>());
 
   useEffect(() => {
@@ -50,11 +55,12 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
       })
       .catch(() => {
         if (!cancelled) setData((prev) => ({ ...prev, [activeBorough]: [] }));
-        // Allow retry on next tab visit by removing from fetched set
         fetchedRef.current.delete(activeBorough);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeBorough]);
 
   const restaurants = data[activeBorough];
@@ -87,15 +93,30 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
         </div>
 
         {/* Carousel */}
-        <div className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {!restaurants
-            ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
-            : restaurants.length === 0
-            ? <p className="text-gray-400 text-sm py-8">No trending restaurants available yet.</p>
-            : restaurants.map((r) => (
-                <TrendingCard key={r.id} restaurant={r} onFavorite={onSignUpPrompt} />
+        {!restaurants ? (
+          <div className="flex gap-4 overflow-hidden">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : restaurants.length === 0 ? (
+          <p className="text-gray-400 text-sm py-8">No trending restaurants available yet.</p>
+        ) : (
+          <Carousel
+            opts={{ align: "start", dragFree: true }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-3">
+              {restaurants.map((r) => (
+                <CarouselItem key={r.id} className="pl-3 basis-56">
+                  <TrendingCard restaurant={r} onFavorite={onSignUpPrompt} />
+                </CarouselItem>
               ))}
-        </div>
+            </CarouselContent>
+            <CarouselPrevious className="-left-4" />
+            <CarouselNext className="-right-4" />
+          </Carousel>
+        )}
       </div>
     </section>
   );
@@ -111,56 +132,54 @@ function TrendingCard({
   const photo = restaurant.photos?.[0];
 
   return (
-    <Card className="flex-shrink-0 w-56 snap-start overflow-hidden hover:shadow-lg transition-shadow">
-      <CardContent className="p-0">
-        <div className="relative h-36 bg-gray-100 overflow-hidden">
-          {photo ? (
-            <img
-              src={photo}
-              alt={restaurant.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
-              <span className="text-3xl">🍽</span>
-            </div>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFavorite();
-            }}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
-            aria-label="Save to favorites"
-          >
-            <Heart className="w-3.5 h-3.5 text-gray-500" />
-          </button>
-        </div>
-        <div className="p-3">
-          <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1 mb-0.5">
-            {restaurant.name}
-          </h3>
-          <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">{restaurant.category}</p>
-          <div className="flex items-center justify-between">
-            {restaurant.rating ? (
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                <span className="text-xs font-medium text-gray-700">{restaurant.rating}</span>
-              </div>
-            ) : null}
-            {restaurant.priceRange && (
-              <span className="text-xs text-gray-400">{restaurant.priceRange}</span>
-            )}
+    <div className="rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow bg-white h-full">
+      <div className="relative h-36 bg-gray-100 overflow-hidden">
+        {photo ? (
+          <img
+            src={photo}
+            alt={restaurant.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
+            <span className="text-3xl">🍽</span>
           </div>
-          {restaurant.generativeSummary && (
-            <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
-              {restaurant.generativeSummary}
-            </p>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onFavorite();
+          }}
+          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
+          aria-label="Save to favorites"
+        >
+          <Heart className="w-3.5 h-3.5 text-gray-500" />
+        </button>
+      </div>
+      <div className="p-3">
+        <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1 mb-0.5">
+          {restaurant.name}
+        </h3>
+        <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">{restaurant.category}</p>
+        <div className="flex items-center justify-between">
+          {restaurant.rating ? (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-yellow-400 fill-current" />
+              <span className="text-xs font-medium text-gray-700">{restaurant.rating}</span>
+            </div>
+          ) : null}
+          {restaurant.priceRange && (
+            <span className="text-xs text-gray-400">{restaurant.priceRange}</span>
           )}
         </div>
-      </CardContent>
-    </Card>
+        {restaurant.generativeSummary && (
+          <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
+            {restaurant.generativeSummary}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
