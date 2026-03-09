@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Heart, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/card";
 
@@ -30,41 +30,34 @@ interface TrendingCarouselProps {
 
 export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
   const [activeBorough, setActiveBorough] = useState<Borough>("manhattan");
-  const [cache, setCache] = useState<Partial<Record<Borough, TrendingRestaurant[]>>>({});
-  const [loading, setLoading] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const fetchBorough = useCallback(
-    async (borough: Borough) => {
-      if (cache[borough]) return;
-
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = new AbortController();
-
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/restaurants/trending?borough=${borough}`, {
-          signal: abortRef.current.signal,
-        });
-        if (!res.ok) throw new Error("fetch failed");
-        const data: TrendingRestaurant[] = await res.json();
-        setCache((prev) => ({ ...prev, [borough]: data }));
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          setCache((prev) => ({ ...prev, [borough]: [] }));
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [cache]
-  );
+  const [data, setData] = useState<Partial<Record<Borough, TrendingRestaurant[]>>>({});
+  // Track which boroughs have been fetched (or are in-flight) so we never double-fetch
+  const fetchedRef = useRef(new Set<Borough>());
 
   useEffect(() => {
-    fetchBorough(activeBorough);
-  }, [activeBorough, fetchBorough]);
+    if (fetchedRef.current.has(activeBorough)) return;
+    fetchedRef.current.add(activeBorough);
 
-  const restaurants = cache[activeBorough];
+    let cancelled = false;
+
+    fetch(`/api/restaurants/trending?borough=${activeBorough}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("fetch failed");
+        return res.json();
+      })
+      .then((result: TrendingRestaurant[]) => {
+        if (!cancelled) setData((prev) => ({ ...prev, [activeBorough]: result }));
+      })
+      .catch(() => {
+        if (!cancelled) setData((prev) => ({ ...prev, [activeBorough]: [] }));
+        // Allow retry on next tab visit by removing from fetched set
+        fetchedRef.current.delete(activeBorough);
+      });
+
+    return () => { cancelled = true; };
+  }, [activeBorough]);
+
+  const restaurants = data[activeBorough];
 
   return (
     <section className="py-12 px-4 sm:px-6 lg:px-8">
@@ -95,7 +88,7 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
 
         {/* Carousel */}
         <div className="flex gap-4 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {loading || !restaurants
+          {!restaurants
             ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
             : restaurants.length === 0
             ? <p className="text-gray-400 text-sm py-8">No trending restaurants available yet.</p>
