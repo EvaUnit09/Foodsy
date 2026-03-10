@@ -8,6 +8,10 @@ import { Card, CardContent } from "@/components/card";
 
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { TrendingCarousel } from "@/components/TrendingCarousel";
+import { SocialProofStrip } from "@/components/SocialProofStrip";
+import { HowItWorks } from "@/components/HowItWorks";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { FinalCTA } from "@/components/FinalCTA";
 import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
 
@@ -222,24 +226,24 @@ const Index = () => {
   const trendingList = homepageData?.trending ?? [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col">
+    <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100 sticky top-0 z-50">
+      <header className="bg-[#fdf6f0] border-b border-[rgba(0,0,0,0.06)] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">F</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                <span className="text-xl font-bold text-[#1a1a1a]" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
               </div>
               {isAuthenticated ? (
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                <span className="text-sm text-[#444] bg-[#e8e8e8] px-2 py-1 rounded-full" style={{ fontSize: 11, fontWeight: 600 }}>
                   Dashboard
                 </span>
               ) : (
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                <span className="text-[#444] bg-[#e8e8e8] px-2 py-1 rounded-full" style={{ fontSize: 11, fontWeight: 600 }}>
                   NY
                 </span>
               )}
@@ -284,13 +288,22 @@ const Index = () => {
                   </Button>
                 </div>
               ) : (
-                <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                <button
+                  className="text-white font-bold cursor-pointer"
+                  style={{
+                    background: "#e8531a",
+                    borderRadius: 10,
+                    padding: "8px 20px",
+                    fontSize: 14,
+                    border: "none",
+                    boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
                   onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
                 >
                   Sign In with Google
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -412,21 +425,44 @@ const Index = () => {
 
       {/* Hero Section - Only for anonymous users */}
       {!isAuthenticated && (
-        <section className="relative py-8 px-4 sm:px-6 lg:px-8">
+        <section className="relative px-4 sm:px-8" style={{ padding: "56px 32px 48px" }}>
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            <h1
+              className="font-extrabold text-[#1a1a1a] mb-4"
+              style={{
+                fontFamily: "'Georgia', serif",
+                fontSize: "clamp(32px, 5vw, 52px)",
+                fontWeight: 800,
+                lineHeight: 1.15,
+              }}
+            >
               Never Ask
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500">
-                {" "}
-                &#34;Where Should We Eat?&#34;{" "}
+              <span className="text-[#e8531a]">
+                {" "}&#34;Where Should We Eat?&#34;{" "}
               </span>
               Again
             </h1>
-            <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+            <p className="mb-8 max-w-[480px] mx-auto text-[#666666]" style={{ fontSize: 16, lineHeight: 1.6 }}>
               Find restaurants you love, save them to your favorites, then let
               your group vote on tonight&#39;s dinner. No more endless
               back-and-forth!
             </p>
+            <button
+              className="text-white font-bold cursor-pointer"
+              style={{
+                background: "#e8531a",
+                borderRadius: 10,
+                padding: "14px 28px",
+                fontSize: 15,
+                border: "none",
+                boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+              onClick={() => setShowSignUpPrompt(true)}
+            >
+              + Get Started Free
+            </button>
           </div>
         </section>
       )}
@@ -455,33 +491,17 @@ const Index = () => {
         {!isAuthenticated && (
           <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
         )}
-      {/* Sign Up Encouragement for Anonymous Users */}
+      {/* Social Proof Strip - Only for anonymous users */}
+      {!isAuthenticated && <SocialProofStrip />}
+      {/* How It Works - replaces old CTA section, only for anonymous users */}
       {!isAuthenticated && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 border border-orange-100">
-              <div className="inline-flex items-center space-x-2 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <Star className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold text-gray-900">Get Personalized Recommendations</span>
-              </div>
-              <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-                Sign up to discover restaurants tailored to your taste preferences and see what&apos;s trending in NYC!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
-                  onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Sign Up with Google
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <HowItWorks onStartSession={() => setShowSignUpPrompt(true)} />
+      )}
+      {/* Activity Feed - Only for anonymous users */}
+      {!isAuthenticated && <ActivityFeed />}
+      {/* Final CTA Banner - Only for anonymous users */}
+      {!isAuthenticated && (
+        <FinalCTA onSignUp={() => setShowSignUpPrompt(true)} />
       )}
 
       {/* Tab-based Content for Authenticated Users */}
@@ -776,14 +796,24 @@ const Index = () => {
             <p className="text-gray-600 mb-6">
               Sign up to save favorites and use them in your group voting sessions.
             </p>
-            <Button
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 mb-3"
+            <button
+              className="w-full text-white font-bold cursor-pointer mb-3"
+              style={{
+                background: "#e8531a",
+                borderRadius: 10,
+                padding: "14px 28px",
+                fontSize: 15,
+                border: "none",
+                boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
               onClick={() => {
                 window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`;
               }}
             >
               Sign Up with Google
-            </Button>
+            </button>
             <button
               className="text-sm text-gray-400 hover:text-gray-600"
               onClick={() => setShowSignUpPrompt(false)}
@@ -794,39 +824,7 @@ const Index = () => {
         </div>
       )}
 
-      {/* Call to Action - Only for anonymous users */}
-      {!isAuthenticated && (
-        <section className="py-20 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              End the &#34;Where Should We Eat?&#34; Struggle
-            </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              Build your list of favorite spots, then let your group vote on
-              tonight&#39;s dinner. Decision made, everyone&#39;s happy.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                onClick={handleStartSession}
-                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 px-8"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Start New Session
-              </Button>
-              <Button
-                size="lg"
-                onClick={handleJoinSession}
-                variant="outline"
-                className="border-orange-200 text-orange-600 hover:bg-orange-50 px-8"
-              >
-                <Users className="w-5 h-5 mr-2" />
-                Join Session
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
+      
       
       </main>
 
@@ -834,10 +832,10 @@ const Index = () => {
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">F</span>
             </div>
-                                  <span className="text-xl font-bold">Foodsy</span>
+                                  <span className="text-xl font-bold" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
           </div>
           <p className="text-gray-400">
             Stop the dinner debate. Start enjoying great meals together.
