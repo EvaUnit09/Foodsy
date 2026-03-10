@@ -42,6 +42,7 @@ export default function DiscoverPage() {
   const [sessionFavorites, setSessionFavorites] = useState(0);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
 
   // ── Auth guard ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -54,6 +55,8 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    let aborted = false;
+
     async function loadDeck() {
       setIsLoading(true);
       setFetchError(false);
@@ -61,17 +64,19 @@ export default function DiscoverPage() {
 
       const ids = DiscoveryApi.getSeenIds();
       const currentStreak = DiscoveryApi.getStreak();
+
+      if (aborted) return;
       setSeenIds(ids);
       setStreak(currentStreak);
 
       if (ids.size >= DAILY_CAP) {
-        setIsDone(true);
-        setIsLoading(false);
+        if (!aborted) { setIsDone(true); setIsLoading(false); }
         return;
       }
 
       try {
         const restaurants = await DiscoveryApi.fetchRestaurants(selectedBorough);
+        if (aborted) return;
         const filtered = restaurants
           .filter((r) => !ids.has(r.id))
           .slice(0, DAILY_CAP - ids.size);
@@ -83,14 +88,15 @@ export default function DiscoverPage() {
           setIsDone(true);
         }
       } catch {
-        setFetchError(true);
+        if (!aborted) setFetchError(true);
       } finally {
-        setIsLoading(false);
+        if (!aborted) setIsLoading(false);
       }
     }
 
     loadDeck();
-  }, [selectedBorough, isAuthenticated]);
+    return () => { aborted = true; };
+  }, [selectedBorough, isAuthenticated, retryKey]);
 
   // ── Action handler ───────────────────────────────────────────────────────────
   async function handleAction(action: SwipeAction) {
@@ -221,7 +227,7 @@ export default function DiscoverPage() {
               Couldn&apos;t load restaurants right now.
             </p>
             <button
-              onClick={() => setSelectedBorough(selectedBorough)}
+              onClick={() => setRetryKey((k) => k + 1)}
               style={{
                 background: "#e8531a",
                 color: "#fff",
@@ -303,10 +309,7 @@ export default function DiscoverPage() {
           watchlistCount={watchlistCount}
           seenCount={seenCount}
           streak={streak}
-          onChangeArea={() => {
-            setIsDone(false);
-            setShowAreaPicker(true);
-          }}
+          onChangeArea={() => setShowAreaPicker(true)}
           onGoHome={() => router.push("/")}
         />
       )}

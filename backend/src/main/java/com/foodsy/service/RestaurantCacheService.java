@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,10 @@ import java.util.stream.Collectors;
 public class RestaurantCacheService {
 
     private static final Logger logger = LoggerFactory.getLogger(RestaurantCacheService.class);
+
+    // Per-borough in-flight gate: only the first caller triggers fetchAndCacheTrendingForBorough;
+    // concurrent callers for the same borough wait on the existing CompletableFuture.
+    private final ConcurrentHashMap<String, CompletableFuture<Void>> discoveryFetchGate = new ConcurrentHashMap<>();
 
     // Conservative quota management - track daily API calls
     private final AtomicInteger dailyApiCalls = new AtomicInteger(0);
@@ -136,7 +142,9 @@ public class RestaurantCacheService {
 
 
     /**
-     * Get randomised restaurants for the discovery swipe feature (lower rating floor than spotlight)
+     * Get randomised restaurants for the discovery swipe feature (lower rating floor than spotlight).
+     * Uses a per-borough in-flight gate so only the first caller triggers a cache-warming fetch;
+     * concurrent callers for the same borough wait on the existing CompletableFuture.
      */
     public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, int limit) {
         logger.debug("Getting discovery restaurants for borough: {}", borough);
@@ -144,14 +152,29 @@ public class RestaurantCacheService {
         Instant now = Instant.now();
         List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
 
-        if (results.isEmpty()) {
-            fetchAndCacheTrendingForBorough(borough);
-            results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        if (!results.isEmpty()) {
+            return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
         }
 
-        return results.stream()
-                .map(RestaurantSummaryDto::fromEntity)
-                .collect(Collectors.toList());
+        // Cache is empty — gate concurrent fetches so only one thread calls upstream per borough.
+        CompletableFuture<Void> myFuture = new CompletableFuture<>();
+        CompletableFuture<Void> existing = discoveryFetchGate.putIfAbsent(borough, myFuture);
+
+        if (existing != null) {
+            // Another thread already started a fetch — wait for it to finish.
+            existing.join();
+        } else {
+            // We won the race — fetch and notify waiters.
+            try {
+                fetchAndCacheTrendingForBorough(borough);
+            } finally {
+                discoveryFetchGate.remove(borough, myFuture);
+                myFuture.complete(null);
+            }
+        }
+
+        results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
     }
 
     /**

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { DAILY_CAP } from "@/api/discoveryApi";
 
 interface CompletionScreenProps {
@@ -20,9 +21,17 @@ export function CompletionScreen({
   onGoHome,
 }: CompletionScreenProps) {
   const hitDailyCap = seenCount >= DAILY_CAP;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="completion-title"
       style={{
         position: "fixed",
         inset: 0,
@@ -41,6 +50,9 @@ export function CompletionScreen({
 
       <div>
         <h2
+          id="completion-title"
+          ref={headingRef}
+          tabIndex={-1}
           style={{
             fontFamily: "'Georgia', serif",
             fontSize: 26,
@@ -48,6 +60,7 @@ export function CompletionScreen({
             color: "#1a1a1a",
             margin: 0,
             marginBottom: 8,
+            outline: "none",
           }}
         >
           You&apos;re all caught up!

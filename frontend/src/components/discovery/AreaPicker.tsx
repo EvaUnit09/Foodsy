@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Borough, BOROUGH_NEIGHBORHOODS } from "@/api/discoveryApi";
 
 interface AreaPickerProps {
@@ -26,11 +27,23 @@ export function AreaPicker({
   const boroughLabel =
     BOROUGHS.find((b) => b.key === selectedBorough)?.label ?? "Area";
 
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    sheetRef.current?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — not focusable */}
       <div
         onClick={onClose}
+        aria-hidden="true"
         style={{
           position: "fixed",
           inset: 0,
@@ -41,6 +54,11 @@ export function AreaPicker({
 
       {/* Sheet */}
       <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="area-picker-title"
+        tabIndex={-1}
         style={{
           position: "fixed",
           bottom: 0,
@@ -53,11 +71,13 @@ export function AreaPicker({
           borderRadius: "24px 24px 0 0",
           padding: "24px 20px",
           animation: "slideUp 0.25s ease",
+          outline: "none",
         }}
       >
         <style>{`@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }`}</style>
 
         <div
+          id="area-picker-title"
           style={{
             fontSize: 16,
             fontWeight: 700,

@@ -61,8 +61,16 @@ export const BOROUGH_NEIGHBORHOODS: Record<Borough, string[]> = {
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
+/** Returns a local YYYY-MM-DD string so keys rotate at the user's local midnight, not UTC. */
+function localDateString(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function todayKey(): string {
-  return `discovery_seen_${new Date().toISOString().split("T")[0]}`;
+  return `discovery_seen_${localDateString()}`;
 }
 
 // ─── API class ────────────────────────────────────────────────────────────────
@@ -157,10 +165,8 @@ export class DiscoveryApi {
       const raw = localStorage.getItem("discovery_streak");
       if (!raw) return 0;
       const { count, lastDate } = JSON.parse(raw);
-      const today = new Date().toISOString().split("T")[0];
-      const yesterday = new Date(Date.now() - 86400000)
-        .toISOString()
-        .split("T")[0];
+      const today = localDateString();
+      const yesterday = localDateString(new Date(Date.now() - 86400000));
       if (lastDate === today || lastDate === yesterday) return count as number;
       return 0;
     } catch {
@@ -170,7 +176,7 @@ export class DiscoveryApi {
 
   static recordCompletion(): void {
     if (typeof window === "undefined") return;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateString();
     const current = this.getStreak();
     const lastDate = (() => {
       try {

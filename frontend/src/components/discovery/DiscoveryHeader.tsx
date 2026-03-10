@@ -65,25 +65,38 @@ export function DiscoveryHeader({
         </div>
       </div>
 
-      {/* Right: streak pill + progress ring */}
+      {/* Right: area trigger + optional streak pill + progress ring */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {streak > 0 && (
-          <button
-            onClick={onAreaPickerOpen}
+          <span
             style={{
               background: "#fff3ee",
-              border: "none",
               borderRadius: 20,
               padding: "5px 10px",
               fontSize: 13,
               color: "#e8531a",
               fontWeight: 700,
-              cursor: "pointer",
             }}
           >
             🔥 {streak}
-          </button>
+          </span>
         )}
+        <button
+          onClick={onAreaPickerOpen}
+          aria-label="Change area"
+          style={{
+            background: "#f5ede8",
+            border: "none",
+            borderRadius: 20,
+            padding: "5px 10px",
+            fontSize: 12,
+            color: "#555",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          ▾ Area
+        </button>
 
         {/* 44px progress ring */}
         <div style={{ width: 44, height: 44, flexShrink: 0 }}>

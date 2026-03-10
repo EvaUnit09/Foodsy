@@ -2,20 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DiscoveryApi, DAILY_CAP } from "@/api/discoveryApi";
 
 export function DiscoveryEntryCard() {
   const router = useRouter();
   const [seenCount, setSeenCount] = useState(0);
 
   useEffect(() => {
-    const key = `discovery_seen_${new Date().toISOString().split("T")[0]}`;
-    try {
-      setSeenCount(
-        Math.min(JSON.parse(localStorage.getItem(key) || "[]").length, 20)
-      );
-    } catch {
-      // no-op
-    }
+    setSeenCount(DiscoveryApi.getTodaySeenCount());
   }, []);
 
   return (
@@ -85,7 +79,7 @@ export function DiscoveryEntryCard() {
             fill="none"
             stroke="#e8531a"
             strokeWidth={6}
-            strokeDasharray={`${(seenCount / 20) * 2 * Math.PI * 30} ${2 * Math.PI * 30}`}
+            strokeDasharray={`${(seenCount / DAILY_CAP) * 2 * Math.PI * 30} ${2 * Math.PI * 30}`}
             strokeLinecap="round"
             transform="rotate(-90 36 36)"
           />
@@ -96,7 +90,7 @@ export function DiscoveryEntryCard() {
             dominantBaseline="central"
             style={{ fontSize: 13, fontWeight: 700, fill: "#1a1a1a" }}
           >
-            {seenCount}/20
+            {seenCount}/{DAILY_CAP}
           </text>
         </svg>
       </div>

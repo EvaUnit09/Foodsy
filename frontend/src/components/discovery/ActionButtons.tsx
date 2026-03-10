@@ -44,6 +44,7 @@ function CircleButton({
         onTouchStart={() => setPressed(true)}
         onTouchEnd={() => setPressed(false)}
         disabled={disabled}
+        aria-label={label}
         style={{
           width: size,
           height: size,
@@ -103,7 +104,7 @@ export function ActionButtons({
           ringColor="#9ca3af"
           disabled={disabled}
         >
-          <svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+          <svg aria-hidden="true" width={20} height={20} viewBox="0 0 20 20" fill="none">
             <path
               d="M5 5l10 10M15 5L5 15"
               stroke="#9ca3af"
@@ -121,7 +122,7 @@ export function ActionButtons({
           ringColor="#3b82f6"
           disabled={disabled}
         >
-          <svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+          <svg aria-hidden="true" width={24} height={24} viewBox="0 0 24 24" fill="none">
             <path
               d="M5 3h14a1 1 0 011 1v17l-8-4-8 4V4a1 1 0 011-1z"
               fill="white"
@@ -137,7 +138,7 @@ export function ActionButtons({
           ringColor="#e8531a"
           disabled={disabled}
         >
-          <svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+          <svg aria-hidden="true" width={20} height={20} viewBox="0 0 20 20" fill="none">
             <path
               d="M10 17s-7-4.35-7-9a5 5 0 0110 0 5 5 0 0110 0c0 4.65-7 9-7 9z"
               fill="white"
