@@ -451,7 +451,10 @@ const Index = () => {
           </div>
         </section>
       )}
-
+      {/* Trending Carousel - Only for anonymous users */}
+        {!isAuthenticated && (
+          <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
+        )}
       {/* Sign Up Encouragement for Anonymous Users */}
       {!isAuthenticated && (
         <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -754,10 +757,7 @@ const Index = () => {
         </section>
       )}
 
-      {/* Trending Carousel - Only for anonymous users */}
-      {!isAuthenticated && (
-        <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
-      )}
+      
 
       {/* Sign-up prompt modal (triggered by favorite button in carousel) */}
       {showSignUpPrompt && (
