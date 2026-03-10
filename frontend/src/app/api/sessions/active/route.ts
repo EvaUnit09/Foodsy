@@ -1,9 +1,6 @@
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL = process.env.BACKEND_URL;
-if (!BACKEND_URL) {
-  throw new Error("BACKEND_URL environment variable is not set");
-}
+const BACKEND_URL = process.env.BACKEND_URL || "https://apifoodsy-backend.com";
 
 export async function GET(request: Request) {
   try {
