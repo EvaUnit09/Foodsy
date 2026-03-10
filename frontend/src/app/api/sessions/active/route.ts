@@ -23,6 +23,15 @@ export async function GET(request: Request) {
       });
     }
 
+    // Forward other non-2xx responses upstream unchanged
+    if (!response.ok) {
+      const body = await response.text();
+      return new Response(body, {
+        status: response.status,
+        headers: { "Content-Type": response.headers.get("content-type") || "text/plain" },
+      });
+    }
+
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const data = await response.json();
@@ -40,14 +49,16 @@ export async function GET(request: Request) {
       });
     }
 
-    return new Response(JSON.stringify({ data: null }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    // Non-JSON 2xx — forward with original content-type
+    const body = await response.text();
+    return new Response(body, {
+      status: response.status,
+      headers: { "Content-Type": contentType || "text/plain" },
     });
   } catch (error) {
     console.error("Route /api/sessions/active GET error:", error);
-    return new Response(JSON.stringify({ data: null }), {
-      status: 200,
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
