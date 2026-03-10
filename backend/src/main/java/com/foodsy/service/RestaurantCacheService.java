@@ -203,39 +203,31 @@ public class RestaurantCacheService {
             logger.warn("API quota exceeded, cannot fetch restaurants for borough: {}", borough);
             return List.of();
         }
-        
+
         try {
             logger.info("Fetching restaurants from Places API for borough: {}", borough);
-            
+
             // Get coordinates for borough center (simplified)
             BoroughCoordinates coords = getBoroughCoordinates(borough);
-            
+
             // Increment API call counters
             nearbySearchCalls.incrementAndGet();
             dailyApiCalls.incrementAndGet();
-            
+
             GooglePlacesSearchResponse response = placesClient.searchNearby(
                 coords.latitude(), coords.longitude(), 5000.0, limit);
-            
+
             List<RestaurantCache> cached = response.places().stream()
-                .map(place -> convertToRestaurantCache(place, borough))
-                .peek(cache -> {
-                    try {
-                        cacheRepository.save(cache);
-                        logger.debug("Cached restaurant: {} in {}", cache.getName(), borough);
-                    } catch (Exception e) {
-                        logger.error("Error caching restaurant {}: {}", cache.getName(), e.getMessage());
-                    }
-                })
+                .map(place -> upsertRestaurantCache(place, borough))
                 .collect(Collectors.toList());
-            
-            logger.info("Successfully fetched and cached {} restaurants for borough: {}", 
+
+            logger.info("Successfully fetched and cached {} restaurants for borough: {}",
                        cached.size(), borough);
-            
+
             return cached.stream()
                 .map(RestaurantSummaryDto::fromEntity)
                 .collect(Collectors.toList());
-                
+
         } catch (Exception e) {
             logger.error("Error fetching restaurants for borough {}: {}", borough, e.getMessage());
             return List.of();
@@ -314,50 +306,44 @@ public class RestaurantCacheService {
             .collect(Collectors.toList());
     }
 
-    private RestaurantCache convertToRestaurantCache(GooglePlacesSearchResponse.Place place, String borough) {
-        // Use displayName.text() for actual restaurant name, place.id() for placeId
-        String restaurantName = place.displayName() != null && place.displayName().text() != null 
-            ? place.displayName().text() 
-            : place.name(); // Fallback to place.name() if displayName is null
-        RestaurantCache cache = new RestaurantCache(place.id(), restaurantName);
-        
-        // Set basic info
+    /**
+     * Find-or-create a RestaurantCache row by place_id (upsert), then populate all fields.
+     * Using find-or-create everywhere means we never INSERT a duplicate place_id row.
+     */
+    @Transactional
+    RestaurantCache upsertRestaurantCache(GooglePlacesSearchResponse.Place place, String borough) {
+        RestaurantCache cache = cacheRepository.findByPlaceId(place.id())
+                .orElseGet(RestaurantCache::new);
+
+        String restaurantName = place.displayName() != null && place.displayName().text() != null
+                ? place.displayName().text()
+                : place.name();
+
+        cache.setPlaceId(place.id());
+        cache.setName(restaurantName);
         cache.setCategory(extractCategory(place.types()));
         cache.setRating(place.rating());
         cache.setPriceLevel(extractPriceLevel(place.priceLevel()));
         cache.setAddress(place.formattedAddress());
         cache.setBorough(borough);
         cache.setUserRatingCount(place.userRatingsTotal());
-        
-        // Set extended details if available
-        if (place.generativeSummary() != null) {
-            cache.setGenerativeSummary(place.generativeSummary());
-        }
-        if (place.reviewSummary() != null) {
-            cache.setReviewSummary(place.reviewSummary());
-        }
-        if (place.currentOpeningHours() != null) {
-            cache.setOpeningHours(place.currentOpeningHours());
-        }
-        if (place.websiteUri() != null) {
-            cache.setWebsiteUri(place.websiteUri());
-        }
-        
-        // Set location
+        cache.setGenerativeSummary(place.generativeSummary());
+        cache.setReviewSummary(place.reviewSummary());
+        cache.setOpeningHours(place.currentOpeningHours());
+        cache.setWebsiteUri(place.websiteUri());
+
         if (place.location() != null) {
             cache.setLatitude(place.location().latitude());
             cache.setLongitude(place.location().longitude());
         }
-        
-        // Process photos
         if (place.photos() != null && !place.photos().isEmpty()) {
-            List<String> photoRefs = place.photos().stream()
-                .map(GooglePlacesSearchResponse.Photo::name)
-                .collect(Collectors.toList());
-            cache.setPhotoReferences(photoRefs);
+            cache.setPhotoReferences(place.photos().stream()
+                    .map(GooglePlacesSearchResponse.Photo::name)
+                    .collect(Collectors.toList()));
         }
-        
-        return cache;
+
+        cache.refreshExpiration();
+        return cacheRepository.save(cache);
     }
 
     private String extractCategory(List<String> types) {
@@ -497,33 +483,10 @@ public class RestaurantCacheService {
                         for (int i = 0; i < places.size(); i++) {
                             GooglePlacesSearchResponse.Place place = places.get(i);
                             try {
-                                RestaurantCache entry = cacheRepository.findByPlaceId(place.id())
-                                        .orElseGet(RestaurantCache::new);
-                                entry.setPlaceId(place.id());
-                                entry.setName(place.displayName() != null ? place.displayName().text() : place.name());
-                                entry.setCategory(extractCategory(place.types()));
-                                entry.setRating(place.rating());
-                                entry.setPriceLevel(extractPriceLevel(place.priceLevel()));
-                                entry.setAddress(place.formattedAddress());
-                                entry.setBorough(b.name());
-                                entry.setUserRatingCount(place.userRatingsTotal());
-                                entry.setGenerativeSummary(place.generativeSummary());
-                                entry.setReviewSummary(place.reviewSummary());
-                                entry.setOpeningHours(place.currentOpeningHours());
-                                entry.setWebsiteUri(place.websiteUri());
-                                if (place.location() != null) {
-                                    entry.setLatitude(place.location().latitude());
-                                    entry.setLongitude(place.location().longitude());
-                                }
-                                if (place.photos() != null) {
-                                    entry.setPhotoReferences(place.photos().stream()
-                                            .map(GooglePlacesSearchResponse.Photo::name)
-                                            .collect(Collectors.toList()));
-                                }
+                                RestaurantCache entry = upsertRestaurantCache(place, b.name());
                                 entry.setTrendingRank(i + 1);
                                 entry.setTrendingScore(0.0);
                                 entry.setLastTrendingCalcAt(now);
-                                entry.refreshExpiration();
                                 cacheRepository.save(entry);
                             } catch (Exception e) {
                                 logger.error("Error saving trending restaurant {}: {}", place.id(), e.getMessage());

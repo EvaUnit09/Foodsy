@@ -7,7 +7,10 @@ import java.time.Instant;
 import java.util.List;
 
 @Entity
-@Table(name = "restaurant_cache", 
+@Table(name = "restaurant_cache",
+       uniqueConstraints = {
+           @UniqueConstraint(name = "uq_restaurant_cache_place_id", columnNames = "place_id")
+       },
        indexes = {
            @Index(name = "idx_place_id", columnList = "place_id", unique = true),
            @Index(name = "idx_borough", columnList = "borough"),
