@@ -54,6 +54,22 @@ public class RestaurantController {
         return ResponseEntity.ok(java.util.Map.of("refreshed", refreshed, "failed", failed));
     }
 
+    private static final java.util.List<String> DISCOVERY_BOROUGHS =
+            java.util.List.of("manhattan", "brooklyn", "queens");
+
+    @GetMapping("/discover")
+    public ResponseEntity<List<RestaurantSummaryDto>> getDiscovery(
+            @RequestParam(defaultValue = "manhattan") String borough,
+            @RequestParam(defaultValue = "20") int limit) {
+        if (limit < 1 || limit > 50) return ResponseEntity.badRequest().build();
+        String normalized = borough.trim().toLowerCase();
+        if (!DISCOVERY_BOROUGHS.contains(normalized)) {
+            return ResponseEntity.badRequest().build();
+        }
+        String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
+        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, limit));
+    }
+
     @GetMapping("/trending")
     public ResponseEntity<List<RestaurantSummaryDto>> getTrending(
             @RequestParam(defaultValue = "manhattan") String borough) {

@@ -101,6 +101,22 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
      */
     @Query(value = "SELECT * FROM restaurant_cache WHERE borough = :borough AND expires_at > :now AND rating >= :minRating ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
     List<RestaurantCache> findRandomHighRated(@Param("borough") String borough, @Param("now") Instant now, @Param("minRating") Double minRating, @Param("limit") int limit);
+
+    /**
+     * Find random restaurants for discovery section (lower rating floor to maximise pool)
+     */
+    @Query(
+        value = "SELECT * FROM restaurant_cache " +
+                "WHERE borough = :borough AND expires_at > :now AND rating >= :minRating " +
+                "ORDER BY RANDOM() LIMIT :limit",
+        nativeQuery = true
+    )
+    List<RestaurantCache> findDiscoveryRestaurants(
+        @Param("borough") String borough,
+        @Param("now") Instant now,
+        @Param("minRating") Double minRating,
+        @Param("limit") int limit
+    );
     
     /**
      * Find restaurants with photos (for visual sections)

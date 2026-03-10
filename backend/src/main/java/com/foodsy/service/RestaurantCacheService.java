@@ -136,6 +136,25 @@ public class RestaurantCacheService {
 
 
     /**
+     * Get randomised restaurants for the discovery swipe feature (lower rating floor than spotlight)
+     */
+    public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, int limit) {
+        logger.debug("Getting discovery restaurants for borough: {}", borough);
+
+        Instant now = Instant.now();
+        List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+
+        if (results.isEmpty()) {
+            fetchAndCacheTrendingForBorough(borough);
+            results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        }
+
+        return results.stream()
+                .map(RestaurantSummaryDto::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Get random high-rated restaurants for spotlight section
      */
     public List<RestaurantSummaryDto> getSpotlightRestaurants(String borough, int limit) {
