@@ -43,6 +43,13 @@ public class SessionController {
     private final VoteService voteService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    record ActiveSessionDto(
+        String sessionId,
+        int participantCount,
+        int restaurantCount,
+        long elapsedMinutes
+    ) {}
+
     // Add DTO definition at the top or in a separate file
     record SessionRestaurantDto(
         Long id,
@@ -90,6 +97,46 @@ public class SessionController {
         this.voteService = voteService;
         this.messagingTemplate = messagingTemplate;
 
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<ActiveSessionDto> getActiveSession(Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        String userId = principal.getName().trim().toLowerCase();
+
+        List<Session> activeSessions = sessionRepository.findActiveSessions();
+
+        // Prefer sessions where the user is the creator
+        Optional<Session> userSession = activeSessions.stream()
+            .filter(s -> userId.equals(s.getCreatorId() != null ? s.getCreatorId().trim().toLowerCase() : ""))
+            .findFirst();
+
+        // Fall back to sessions where the user is a participant
+        if (userSession.isEmpty()) {
+            List<Long> participatingIds = sessionParticipantRepository.findSessionIdsByUserId(userId);
+            userSession = activeSessions.stream()
+                .filter(s -> participatingIds.contains(s.getId()))
+                .findFirst();
+        }
+
+        if (userSession.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Session session = userSession.get();
+        int participantCount = sessionParticipantRepository.countBySessionId(session.getId());
+        int round = session.getRound() != null ? session.getRound() : 1;
+        int restaurantCount = restaurantRepo.findBySessionIdAndRound(session.getId(), round).size();
+        long elapsedMinutes = (Instant.now().toEpochMilli() - session.getCreatedAt().toEpochMilli()) / 60_000;
+
+        return ResponseEntity.ok(new ActiveSessionDto(
+            String.valueOf(session.getId()),
+            participantCount,
+            restaurantCount,
+            elapsedMinutes
+        ));
     }
 
     @PostMapping
