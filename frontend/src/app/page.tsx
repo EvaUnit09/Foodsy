@@ -501,7 +501,7 @@ const Index = () => {
       {!isAuthenticated && <ActivityFeed />}
       {/* Final CTA Banner - Only for anonymous users */}
       {!isAuthenticated && (
-        <FinalCTA onSignUp={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`} />
+        <FinalCTA onSignUp={() => setShowSignUpPrompt(true)} />
       )}
 
       {/* Tab-based Content for Authenticated Users */}
@@ -835,7 +835,7 @@ const Index = () => {
             <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">F</span>
             </div>
-                                  <span className="text-xl font-bold">Foodsy</span>
+                                  <span className="text-xl font-bold" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
           </div>
           <p className="text-gray-400">
             Stop the dinner debate. Start enjoying great meals together.

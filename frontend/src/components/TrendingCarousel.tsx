@@ -79,10 +79,13 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
 
       {/* Borough tab strip */}
       <div className="mb-5" style={{ borderBottom: "1px solid #e5e5e5" }}>
-        <nav className="-mb-px flex">
+        <nav className="-mb-px flex" role="tablist">
           {BOROUGHS.map(({ key, label }) => (
             <button
               key={key}
+              role="tab"
+              aria-selected={activeBorough === key}
+              tabIndex={activeBorough === key ? 0 : -1}
               onClick={() => setActiveBorough(key)}
               style={{
                 background: "none",
@@ -148,16 +151,6 @@ function TrendingCard({
       style={{
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-        transition: "transform 0.2s, box-shadow 0.2s",
-        cursor: "pointer",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 20px rgba(0,0,0,0.12)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)";
       }}
     >
       <div className="relative bg-gray-100 overflow-hidden" style={{ height: 130 }}>
