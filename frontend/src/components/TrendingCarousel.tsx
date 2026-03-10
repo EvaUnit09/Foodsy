@@ -32,10 +32,16 @@ const BOROUGHS: { key: Borough; label: string }[] = [
 
 interface TrendingCarouselProps {
   onSignUpPrompt: () => void;
+  isAuthenticated?: boolean;
+  userBorough?: string;
 }
 
-export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
-  const [activeBorough, setActiveBorough] = useState<Borough>("manhattan");
+export function TrendingCarousel({ onSignUpPrompt, isAuthenticated, userBorough }: TrendingCarouselProps) {
+  const defaultBorough: Borough =
+    userBorough && (["manhattan", "queens", "brooklyn"] as Borough[]).includes(userBorough as Borough)
+      ? (userBorough as Borough)
+      : "manhattan";
+  const [activeBorough, setActiveBorough] = useState<Borough>(defaultBorough);
   const [data, setData] = useState<Partial<Record<Borough, TrendingRestaurant[]>>>({});
   const fetchedRef = useRef(new Set<Borough>());
 
@@ -125,7 +131,7 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
             <CarouselContent className="-ml-3">
               {restaurants.map((r) => (
                 <CarouselItem key={r.id} className="pl-3 basis-56">
-                  <TrendingCard restaurant={r} onFavorite={onSignUpPrompt} />
+                  <TrendingCard restaurant={r} onFavorite={onSignUpPrompt} isAuthenticated={isAuthenticated} />
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -141,9 +147,11 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
 function TrendingCard({
   restaurant,
   onFavorite,
+  isAuthenticated,
 }: {
   restaurant: TrendingRestaurant;
   onFavorite: () => void;
+  isAuthenticated?: boolean;
 }) {
   const photo = restaurant.photos?.[0];
 

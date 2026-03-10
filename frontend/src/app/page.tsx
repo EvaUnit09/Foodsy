@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Heart, Star, Users, Plus, LogOut, UserIcon } from "lucide-react";
+import { Heart, Star, LogOut, UserIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
-import { Card, CardContent } from "@/components/card";
 
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { TrendingCarousel } from "@/components/TrendingCarousel";
@@ -12,6 +11,11 @@ import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { HowItWorks } from "@/components/HowItWorks";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { FinalCTA } from "@/components/FinalCTA";
+import { GreetingHeader } from "@/components/GreetingHeader";
+import { ActiveSessionBanner } from "@/components/ActiveSessionBanner";
+import { DiscoveryEntryCard } from "@/components/DiscoveryEntryCard";
+import { FavoritesShelf } from "@/components/FavoritesShelf";
+import { WatchlistShelf } from "@/components/WatchlistShelf";
 import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
 
@@ -26,6 +30,35 @@ const showNotification = (message: string, type: 'success' | 'error' = 'success'
 };
 
 const GOOGLE_PHOTO_PROXY = `${API_BASE_URL}/restaurants/photos`;
+
+interface ActiveSessionData {
+  sessionId: string;
+  participantCount: number;
+  restaurantCount: number;
+  elapsedMinutes: number;
+}
+
+async function fetchActiveSession(): Promise<ActiveSessionData | null> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const res = await fetch("/api/sessions/active", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.data) return null;
+    const s = json.data;
+    return {
+      sessionId: s.id ?? s.sessionId,
+      participantCount: s.participantCount ?? 0,
+      restaurantCount: s.restaurantCount ?? 0,
+      elapsedMinutes: s.elapsedMinutes ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Ensure we have a sync helper for .map()
 function enrichWithPhotoUrls(r: RestaurantSummaryDto, max = 1): RestaurantSummaryDto {
@@ -54,21 +87,20 @@ const Index = () => {
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
-  const [showPersonalizedContent, setShowPersonalizedContent] = useState(false);
   const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
-  const [activeTab, setActiveTab] = useState<'picks' | 'trending' | 'favorites'>('picks');
+  const [activeSession, setActiveSession] = useState<ActiveSessionData | null>(null);
+  const [favorites, setFavorites] = useState<RestaurantSummaryDto[]>([]);
 
   // Load homepage data and check onboarding status
   const loadHomepageData = useCallback(async () => {
-    // Only proceed if user is authenticated
-    if (!isAuthenticated) {
-      setShowPersonalizedContent(false);
-      return;
-    }
+    if (!isAuthenticated) return;
 
     try {
       setIsLoadingHomepageData(true);
-      const data = await homepageApi.getHomepageData(true);
+      const [data, session] = await Promise.all([
+        homepageApi.getHomepageData(true),
+        fetchActiveSession(),
+      ]);
       const hydrated = {
         ...data,
         yourPicks: (data.yourPicks ?? []).map(enrichWithPhotoUrls),
@@ -77,23 +109,28 @@ const Index = () => {
         spotlight: (data.spotlight ?? []).map(enrichWithPhotoUrls),
       };
       setHomepageData(hydrated);
-      setShowPersonalizedContent(true);
-      
+      setActiveSession(session);
+
+      const allRestaurants = [
+        ...(hydrated.yourPicks ?? []),
+        ...(hydrated.highlights ?? []),
+        ...(hydrated.trending ?? []),
+        ...(hydrated.spotlight ?? []),
+      ];
+      const likedUnique = allRestaurants.filter(
+        (r, i, arr) => r.isLiked && arr.findIndex((x) => x.id === r.id) === i
+      );
+      setFavorites(likedUnique);
+
       console.log("Homepage data loaded - hasOnboarded:", data.hasOnboarded);
-      
-      // Show onboarding if user hasn't completed it
-      // Only show onboarding if hasOnboarded is explicitly false (not undefined)
+
       if (data.hasOnboarded === false) {
-        console.log("Setting showOnboarding to true because hasOnboarded is false");
         setShowOnboarding(true);
       } else {
-        console.log("User has completed onboarding or data is undefined, hiding onboarding");
         setShowOnboarding(false);
       }
     } catch (err) {
       console.error("Error loading homepage data:", err);
-      setShowPersonalizedContent(false);
-      // If it's a 401 error, don't show the error to user since they're not authenticated
       if (err instanceof Error && err.message.includes('401')) {
         console.log("User not authenticated - showing basic homepage");
       } else {
@@ -223,8 +260,6 @@ const Index = () => {
     );
   }
 
-  const trendingList = homepageData?.trending ?? [];
-
   return (
     <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
       {/* Header */}
@@ -249,22 +284,22 @@ const Index = () => {
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleStartSession}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Session
-              </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={handleJoinSession}
               >
-                <Users className="w-4 h-4 mr-2" />
                 Sessions
               </Button>
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/discover")}
+                >
+                  Discover
+                </Button>
+              )}
               <Button variant="ghost" size="sm">
                 <Heart className="w-4 h-4 mr-2" />
                 Favorites
@@ -313,90 +348,28 @@ const Index = () => {
       {/* Main content wrapper with flex-1 to fill space */}
       <main className="flex-1">
 
-      {/* Dashboard Welcome Section - Only for authenticated users */}
+      {/* Authenticated dashboard - new scroll layout */}
       {isAuthenticated && (
-        <section className="py-6 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user?.firstName || user?.displayName || 'there'}! 👋
-              </h1>
-              <p className="text-gray-600">
-                Discover new restaurants and manage your dining sessions
-              </p>
-            </div>
-
-            {/* Quick Actions for Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleStartSession}>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                      <Plus className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Start New Session</h3>
-                      <p className="text-gray-600">Create a voting session with friends</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleJoinSession}>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                      <Users className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Join Session</h3>
-                      <p className="text-gray-600">Join an existing voting session</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Content Tabs for Dashboard */}
-            <div className="mb-6">
-              <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8">
-                  <button
-                    onClick={() => setActiveTab('picks')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'picks'
-                        ? 'border-orange-500 text-orange-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Your Picks
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('trending')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'trending'
-                        ? 'border-orange-500 text-orange-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Trending
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('favorites')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === 'favorites'
-                        ? 'border-orange-500 text-orange-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Heart className="w-4 h-4 inline mr-1" />
-                    Favorites
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
-        </section>
+        <>
+          <GreetingHeader
+            firstName={user?.firstName || user?.displayName || ""}
+            onStartSession={handleStartSession}
+            onJoinSession={handleJoinSession}
+          />
+          {activeSession && <ActiveSessionBanner {...activeSession} />}
+          <DiscoveryEntryCard />
+          <FavoritesShelf
+            favorites={favorites}
+            isLoading={isLoadingHomepageData}
+            onStartDiscovery={() => router.push("/discover")}
+          />
+          <WatchlistShelf watchlist={[]} onStartDiscovery={() => router.push("/discover")} />
+          <TrendingCarousel
+            onSignUpPrompt={() => {}}
+            isAuthenticated={true}
+            userBorough={homepageData ? undefined : undefined}
+          />
+        </>
       )}
 
       {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
@@ -467,317 +440,20 @@ const Index = () => {
         </section>
       )}
 
-      {/* Loading indicator for authenticated users */}
-      {isAuthenticated && isLoadingHomepageData && (
-        <section className="py-8 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center">
-              <div className="inline-flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center animate-pulse">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <span className="text-lg font-medium text-gray-600">Loading your personalized recommendations...</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-80 bg-gray-200 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+      {/* Anonymous sections */}
+      {!isAuthenticated && (
+        <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
       )}
-      {/* Trending Carousel - Only for anonymous users */}
-        {!isAuthenticated && (
-          <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
-        )}
-      {/* Social Proof Strip - Only for anonymous users */}
       {!isAuthenticated && <SocialProofStrip />}
-      {/* How It Works - replaces old CTA section, only for anonymous users */}
       {!isAuthenticated && (
         <HowItWorks onStartSession={() => setShowSignUpPrompt(true)} />
       )}
-      {/* Activity Feed - Only for anonymous users */}
       {!isAuthenticated && <ActivityFeed />}
-      {/* Final CTA Banner - Only for anonymous users */}
       {!isAuthenticated && (
         <FinalCTA onSignUp={() => setShowSignUpPrompt(true)} />
       )}
 
-      {/* Tab-based Content for Authenticated Users */}
-      {isAuthenticated && showPersonalizedContent && homepageData && !isLoadingHomepageData && (
-        <section className="px-4 sm:px-6 lg:px-8 pb-8">
-          <div className="max-w-7xl mx-auto">
-            {/* Your Picks Tab */}
-            {activeTab === 'picks' && homepageData.yourPicks.length > 0 && (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Personalized for You
-                  </h2>
-                  <p className="text-gray-600">
-                    Curated based on your taste profile and preferences
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {homepageData.yourPicks.slice(0, 6).map((restaurant, index) => (
-                    <Card
-                      key={`${restaurant.id}-${index}`}
-                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
-                      onClick={() => handleRestaurantClick(restaurant)}
-                    >
-                      <CardContent className="p-0">
-                        <div className="relative h-48 overflow-hidden">
-                          <img
-                            src={(restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : "/placeholder.svg")}
-                            alt={restaurant.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleLike(restaurant.id);
-                            }}
-                            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                              restaurant.isLiked
-                                ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-white/80 hover:bg-white text-gray-600"
-                            }`}
-                          >
-                            <Heart
-                              className={`w-4 h-4 ${restaurant.isLiked ? "fill-current" : ""}`}
-                            />
-                          </button>
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
-                              {restaurant.name}
-                            </h3>
-                            <span className="text-sm font-medium text-gray-600">
-                              {restaurant.priceLevel}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {restaurant.category}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-1">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-medium">
-                                {restaurant.rating}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                ({restaurant.userRatingCount})
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Trending Tab */}
-            {activeTab === 'trending' && trendingList.length > 0 && (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Trending in NYC
-                  </h2>
-                  <p className="text-gray-600">
-                    Most popular restaurants this week
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {trendingList.slice(0, 4).map((restaurant: RestaurantSummaryDto, index: number) => (
-                    <Card
-                      key={`${restaurant.id}-${index}`}
-                      className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
-                      onClick={() => handleRestaurantClick(restaurant)}
-                    >
-                      <CardContent className="p-0">
-                        <div className="relative h-48 overflow-hidden">
-                          <img
-                            src={(restaurant.photos && restaurant.photos.length > 0 ? restaurant.photos[0] : "/placeholder.svg")}
-                            alt={restaurant.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          {/* Rank Badge */}
-                          <div className="absolute top-3 left-3 w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">#{index + 1}</span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleLike(restaurant.id);
-                            }}
-                            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                              restaurant.isLiked
-                                ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-white/80 hover:bg-white text-gray-600"
-                            }`}
-                          >
-                            <Heart
-                              className={`w-4 h-4 ${restaurant.isLiked ? "fill-current" : ""}`}
-                            />
-                          </button>
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
-                              {restaurant.name}
-                            </h3>
-                            <span className="text-sm font-medium text-gray-600">
-                              {restaurant.priceLevel}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">
-                            {restaurant.category}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-1">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-medium">
-                                {restaurant.rating}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                ({restaurant.userRatingCount})
-                              </span>
-                            </div>
-                          </div>
-                          {restaurant.clickCount && (
-                            <div className="flex items-center text-sm text-orange-600 font-medium mt-2">
-                              <Users className="w-4 h-4 mr-1" />
-                              {restaurant.clickCount} people interested
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Favorites Tab */}
-            {activeTab === 'favorites' && (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Your Favorites
-                  </h2>
-                  <p className="text-gray-600">
-                    Restaurants you've liked and saved
-                  </p>
-                </div>
-                {(() => {
-                  const favorites = [
-                    ...homepageData.yourPicks,
-                    ...homepageData.trending,
-                    ...homepageData.highlights,
-                    ...homepageData.spotlight
-                  ].filter(r => r.isLiked);
-                  
-                  if (favorites.length === 0) {
-                    return (
-                      <div className="text-center py-12">
-                        <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No favorites yet</h3>
-                        <p className="text-gray-600">Start exploring and like restaurants to see them here!</p>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {favorites.map((restaurant, index) => (
-                        <Card
-                          key={`${restaurant.id}-fav-${index}`}
-                          className="group cursor-pointer hover:shadow-xl transition-all duration-300 overflow-hidden"
-                          onClick={() => handleRestaurantClick(restaurant)}
-                        >
-                          <CardContent className="p-0">
-                            <div className="relative h-48 overflow-hidden">
-                              <img
-                                src={restaurant.photos?.length > 0 ? restaurant.photos[0] : "/placeholder.svg"}
-                                alt={restaurant.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleLike(restaurant.id);
-                                }}
-                                className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-red-500 hover:bg-red-600 text-white"
-                              >
-                                <Heart className="w-4 h-4 fill-current" />
-                              </button>
-                            </div>
-                            <div className="p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">
-                                  {restaurant.name}
-                                </h3>
-                                <span className="text-sm font-medium text-gray-600">
-                                  {restaurant.priceLevel}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">
-                                {restaurant.category}
-                              </p>
-                              <div className="flex items-center space-x-1">
-                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                <span className="text-sm font-medium">
-                                  {restaurant.rating}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  ({restaurant.userRatingCount})
-                                </span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-
-
-      {/* Empty State for Authenticated Users */}
-      {isAuthenticated && !isLoadingHomepageData && (!homepageData || (
-        homepageData.yourPicks.length === 0 && 
-        homepageData.trending.length === 0 && 
-        homepageData.highlights.length === 0 && 
-        homepageData.spotlight.length === 0
-      )) && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No recommendations available</h3>
-            <p className="text-gray-600 mb-6">We're working on getting some great restaurant recommendations for you!</p>
-            <Button 
-              onClick={handleStartSession}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Start a Session
-            </Button>
-          </div>
-        </section>
-      )}
-
-      
 
       {/* Sign-up prompt modal (triggered by favorite button in carousel) */}
       {showSignUpPrompt && (
