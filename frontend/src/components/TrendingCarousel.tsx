@@ -66,31 +66,42 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
   const restaurants = data[activeBorough];
 
   return (
-    <section className="py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Trending Near You</h2>
-          <p className="text-gray-500 text-sm">Top spots in NYC right now</p>
-        </div>
+    <section className="py-12 px-8" style={{ maxWidth: 960, margin: "0 auto" }}>
+      <div className="mb-4">
+        <h2
+          className="font-bold text-[#1a1a1a] mb-1"
+          style={{ fontFamily: "'Georgia', serif", fontSize: 22 }}
+        >
+          Trending Near You
+        </h2>
+        <p className="text-[#888888]" style={{ fontSize: 13 }}>Top spots in NYC right now</p>
+      </div>
 
-        {/* Borough tab strip */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-6">
-            {BOROUGHS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setActiveBorough(key)}
-                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeBorough === key
-                    ? "border-orange-500 text-orange-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* Borough tab strip */}
+      <div className="mb-5" style={{ borderBottom: "1px solid #e5e5e5" }}>
+        <nav className="-mb-px flex">
+          {BOROUGHS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveBorough(key)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "8px 16px",
+                fontSize: 14,
+                fontWeight: activeBorough === key ? 600 : 400,
+                color: activeBorough === key ? "#e8531a" : "#666",
+                borderBottom: activeBorough === key ? "2px solid #e8531a" : "2px solid transparent",
+                marginBottom: -1,
+                cursor: "pointer",
+                transition: "color 0.15s",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
         {/* Carousel */}
         {!restaurants ? (
@@ -118,7 +129,6 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
             <CarouselNext className="-right-4" />
           </Carousel>
         )}
-      </div>
     </section>
   );
 }
@@ -133,8 +143,24 @@ function TrendingCard({
   const photo = restaurant.photos?.[0];
 
   return (
-    <div className="rounded-lg border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow bg-white h-full">
-      <div className="relative h-36 bg-gray-100 overflow-hidden">
+    <div
+      className="overflow-hidden bg-white h-full"
+      style={{
+        borderRadius: 12,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+        transition: "transform 0.2s, box-shadow 0.2s",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 20px rgba(0,0,0,0.12)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)";
+      }}
+    >
+      <div className="relative bg-gray-100 overflow-hidden" style={{ height: 130 }}>
         {photo ? (
           <img
             src={photo}
@@ -143,7 +169,7 @@ function TrendingCard({
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
+          <div className="w-full h-full flex items-center justify-center bg-[#fff3ee]">
             <span className="text-3xl">🍽</span>
           </div>
         )}
@@ -158,24 +184,27 @@ function TrendingCard({
           <Heart className="w-3.5 h-3.5 text-gray-500" />
         </button>
       </div>
-      <div className="p-3">
-        <h3 className="font-semibold text-sm text-gray-900 leading-tight line-clamp-1 mb-0.5">
+      <div style={{ padding: "10px 12px 12px" }}>
+        <h3
+          className="leading-tight line-clamp-1 mb-0.5"
+          style={{ fontWeight: 700, fontSize: 13, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
           {restaurant.name}
         </h3>
-        <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">{restaurant.category}</p>
+        <p className="line-clamp-1 mb-1.5" style={{ fontSize: 11, color: "#888888" }}>{restaurant.category}</p>
         <div className="flex items-center justify-between">
           {restaurant.rating ? (
             <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 text-yellow-400 fill-current" />
-              <span className="text-xs font-medium text-gray-700">{restaurant.rating}</span>
+              <Star className="w-3 h-3 fill-current" style={{ color: "#f59e0b" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#f59e0b" }}>{restaurant.rating}</span>
             </div>
           ) : null}
           {restaurant.priceRange && (
-            <span className="text-xs text-gray-400">{restaurant.priceRange}</span>
+            <span style={{ fontSize: 12, color: "#666666" }}>{restaurant.priceRange}</span>
           )}
         </div>
         {restaurant.generativeSummary && (
-          <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
+          <p className="mt-1.5 line-clamp-2 leading-relaxed" style={{ fontSize: 11, color: "#888888" }}>
             {restaurant.generativeSummary}
           </p>
         )}
