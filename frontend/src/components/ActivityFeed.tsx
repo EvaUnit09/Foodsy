@@ -36,7 +36,7 @@ export function ActivityFeed() {
 
   return (
     <section className="bg-white border-t border-[#e5e5e5] py-8 px-8">
-      <div className="max-w-4xl mx-auto flex flex-col items-center gap-3">
+      <div className="max-w-7xl mx-auto flex flex-col items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wide">Live activity</span>

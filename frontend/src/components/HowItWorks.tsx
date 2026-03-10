@@ -10,7 +10,7 @@ const STEPS = [
 
 export function HowItWorks({ onStartSession }: { onStartSession: () => void }) {
   return (
-    <section style={{ padding: "64px 32px", maxWidth: 900, margin: "0 auto" }}>
+    <section className="max-w-7xl mx-auto" style={{ padding: "64px 32px" }}>
       <div className="text-center" style={{ marginBottom: 48 }}>
         <h2
           className="font-extrabold text-[#1a1a1a]"

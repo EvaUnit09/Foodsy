@@ -66,7 +66,8 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
   const restaurants = data[activeBorough];
 
   return (
-    <section className="py-12 px-8" style={{ maxWidth: 960, margin: "0 auto" }}>
+    <section className="py-12 px-8">
+      <div className="max-w-7xl mx-auto">
       <div className="mb-4">
         <h2
           className="font-bold text-[#1a1a1a] mb-1"
@@ -132,6 +133,7 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
             <CarouselNext className="-right-4" />
           </Carousel>
         )}
+      </div>
     </section>
   );
 }

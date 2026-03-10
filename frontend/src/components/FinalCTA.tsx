@@ -4,7 +4,7 @@ export function FinalCTA({ onSignUp }: { onSignUp: () => void }) {
   return (
     <section className="px-8 pb-16">
       <div
-        className="max-w-[860px] mx-auto text-center"
+        className="max-w-5xl mx-auto text-center"
         style={{
           background: "linear-gradient(135deg, #e8531a 0%, #c94010 100%)",
           borderRadius: 20,
