@@ -103,6 +103,7 @@ export function TrendingCarousel({ onSignUpPrompt }: TrendingCarouselProps) {
           <p className="text-gray-400 text-sm py-8">No trending restaurants available yet.</p>
         ) : (
           <Carousel
+            key={activeBorough}
             opts={{ align: "start", dragFree: true }}
             className="w-full"
           >
