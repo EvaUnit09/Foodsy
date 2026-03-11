@@ -8,7 +8,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiClient } from "@/api/client";
+import { ApiClient, SessionRequest } from "@/api/client";
 
 export default function CreateSessionPage() {
   const [poolSize, setPoolSize] = useState(20);
@@ -36,7 +36,7 @@ export default function CreateSessionPage() {
     
     setSubmitting(true);
     
-    const body: Record<string, unknown> = {
+    const body: SessionRequest = {
       poolSize,
       roundTime,
       likesPerUser,
