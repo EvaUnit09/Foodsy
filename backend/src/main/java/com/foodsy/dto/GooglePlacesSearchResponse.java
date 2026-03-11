@@ -1,5 +1,6 @@
 package com.foodsy.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 
 public record GooglePlacesSearchResponse(
@@ -18,8 +19,8 @@ public record GooglePlacesSearchResponse(
             PriceLevel priceLevel,
             String priceRange,
             String currentOpeningHours,
-            String generativeSummary,
-            String reviewSummary,
+            @JsonDeserialize(using = SummaryTextDeserializer.class) String generativeSummary,
+            @JsonDeserialize(using = SummaryTextDeserializer.class) String reviewSummary,
             String websiteUri,
             // Vibe attribute flags from Places API
             Boolean goodForGroups,

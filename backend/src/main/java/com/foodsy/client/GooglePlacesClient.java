@@ -207,10 +207,8 @@ public class GooglePlacesClient {
             int maxResults
     ) {
         try {
-            // Only include fields that map to scalar types in GooglePlacesSearchResponse.Place.
-            // Fields like priceRange, currentOpeningHours, generativeSummary are JSON objects
-            // in the Places API response and will cause Jackson deserialization failures if
-            // included here. They are fetched separately via fetchPlaceDetails when needed.
+            // generativeSummary and reviewSummary are nested JSON objects in the Places API
+            // response. A custom SummaryTextDeserializer on the Place record handles extraction.
             RestClient trendingClient = RestClient.builder()
                     .baseUrl("https://places.googleapis.com/v1")
                     .defaultHeader("X-Goog-Api-Key", apiKey)
@@ -218,6 +216,7 @@ public class GooglePlacesClient {
                             "places.id,places.name,places.displayName,places.formattedAddress," +
                             "places.types,places.location,places.photos,places.rating," +
                             "places.userRatingCount,places.priceLevel,places.websiteUri," +
+                            "places.generativeSummary,places.reviewSummary," +
                             "places.goodForGroups,places.goodForChildren,places.liveMusic," +
                             "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
                             "places.servesWine,places.servesVegetarianFood,places.delivery," +

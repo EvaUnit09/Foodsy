@@ -20,6 +20,7 @@ interface TrendingRestaurant {
   photos: string[];
   generativeSummary: string | null;
   userRatingCount: number;
+  websiteUri?: string | null;
 }
 
 type Borough = "manhattan" | "queens" | "brooklyn";
@@ -156,11 +157,17 @@ function TrendingCard({
   const photo = restaurant.photos?.[0];
 
   return (
-    <div
+    <a
+      href={restaurant.websiteUri ?? undefined}
+      target="_blank"
+      rel="noopener noreferrer"
       className="overflow-hidden bg-white h-full"
       style={{
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+        display: "block",
+        textDecoration: "none",
+        cursor: restaurant.websiteUri ? "pointer" : "default",
       }}
     >
       <div className="relative bg-gray-100 overflow-hidden" style={{ height: 130 }}>
@@ -212,7 +219,7 @@ function TrendingCard({
           </p>
         )}
       </div>
-    </div>
+    </a>
   );
 }
 

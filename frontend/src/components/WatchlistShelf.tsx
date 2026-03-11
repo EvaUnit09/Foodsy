@@ -112,7 +112,10 @@ function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
   const photo = restaurant.photos?.[0];
 
   return (
-    <div
+    <a
+      href={restaurant.websiteUri ?? undefined}
+      target="_blank"
+      rel="noopener noreferrer"
       style={{
         flexShrink: 0,
         width: 200,
@@ -120,6 +123,9 @@ function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
         overflow: "hidden",
+        display: "block",
+        textDecoration: "none",
+        cursor: restaurant.websiteUri ? "pointer" : "default",
       }}
     >
       <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
@@ -174,6 +180,6 @@ function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
           {restaurant.category}
         </p>
       </div>
-    </div>
+    </a>
   );
 }

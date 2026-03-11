@@ -28,6 +28,7 @@ public class RestaurantSummaryDto {
     private Double longitude;
     
     private List<String> vibeTags;
+    private String websiteUri;
 
     // For analytics and recommendations
     private Integer clickCount; // Number of times clicked in last 7 days
@@ -62,6 +63,7 @@ public class RestaurantSummaryDto {
         dto.setLatitude(entity.getLatitude());
         dto.setLongitude(entity.getLongitude());
         dto.setVibeTags(entity.getVibeTags());
+        dto.setWebsiteUri(entity.getWebsiteUri());
         return dto;
     }
     
@@ -231,6 +233,14 @@ public class RestaurantSummaryDto {
 
     public void setVibeTags(List<String> vibeTags) {
         this.vibeTags = vibeTags;
+    }
+
+    public String getWebsiteUri() {
+        return websiteUri;
+    }
+
+    public void setWebsiteUri(String websiteUri) {
+        this.websiteUri = websiteUri;
     }
 
     public Integer getClickCount() {

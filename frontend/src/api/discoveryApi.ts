@@ -16,6 +16,7 @@ export interface DiscoveryRestaurant {
   address: string;
   userRatingCount: number | null;
   generativeSummary: string | null;
+  websiteUri?: string | null;
   vibeTags?: string[];
 }
 
