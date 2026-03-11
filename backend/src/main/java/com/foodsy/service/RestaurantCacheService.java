@@ -188,8 +188,9 @@ public class RestaurantCacheService {
 
     /**
      * Fetch restaurants from Google Places for a specific neighborhood, using its stored coordinates.
+     *
+     * Not @Transactional at this level so each upsertRestaurantCache runs in its own transaction (#11).
      */
-    @Transactional
     public void fetchAndCacheForNeighborhood(String borough, String neighborhood) {
         Optional<Neighborhood> nbOpt = neighborhoodRepository
                 .findByNameIgnoreCaseAndBoroughIgnoreCase(neighborhood, borough);
@@ -202,6 +203,13 @@ public class RestaurantCacheService {
 
         Neighborhood nb = nbOpt.get();
         try {
+            // Check quota before calling upstream (#8)
+            if (!canMakeApiCall() || !canMakeNearbySearchCall()) {
+                logger.warn("API quota exceeded, skipping fetch for neighborhood {}", nb.getName());
+                return;
+            }
+            nearbySearchCalls.incrementAndGet();
+            dailyApiCalls.incrementAndGet();
             logger.info("Fetching places for neighborhood {} ({}, {}) radius {}m",
                     nb.getName(), nb.getCenterLat(), nb.getCenterLng(), nb.getRadiusMeters());
             GooglePlacesSearchResponse response = placesClient.searchTrending(
@@ -392,15 +400,21 @@ public class RestaurantCacheService {
 
     // Helper methods
     private List<RestaurantCache> combineAndLimitResults(
-        List<RestaurantCache> existing, 
-        List<RestaurantCache> newResults, 
+        List<RestaurantCache> existing,
+        List<RestaurantCache> newResults,
         int limit
     ) {
-        return existing.stream()
-            .collect(Collectors.toList())
-            .stream()
-            .limit(limit)
-            .collect(Collectors.toList());
+        // Merge both lists, deduplicating by placeId, then apply limit (#5)
+        java.util.Set<String> seenIds = existing.stream()
+            .map(RestaurantCache::getPlaceId)
+            .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        List<RestaurantCache> combined = new ArrayList<>(existing);
+        for (RestaurantCache r : newResults) {
+            if (seenIds.add(r.getPlaceId())) {
+                combined.add(r);
+            }
+        }
+        return combined.stream().limit(limit).collect(Collectors.toList());
     }
 
     /**
@@ -594,14 +608,23 @@ public class RestaurantCacheService {
     /**
      * Fetch popular restaurants from Google Places using their own popularity ranking,
      * then upsert them into restaurant_cache with trendingRank set to their order (1 = most popular).
+     *
+     * Not @Transactional at this level: each upsertRestaurantCache call runs in its own transaction
+     * so a single failure doesn't roll back the entire batch (#11).
      */
-    @Transactional
     public void fetchAndCacheTrendingForBorough(String borough) {
         TRENDING_BOROUGHS.stream()
                 .filter(b -> b.name().equalsIgnoreCase(borough))
                 .findFirst()
                 .ifPresentOrElse(b -> {
                     try {
+                        // Check quota before calling upstream (#8)
+                        if (!canMakeApiCall() || !canMakeNearbySearchCall()) {
+                            logger.warn("API quota exceeded, skipping trending fetch for {}", b.name());
+                            return;
+                        }
+                        nearbySearchCalls.incrementAndGet();
+                        dailyApiCalls.incrementAndGet();
                         logger.info("Fetching trending restaurants from Google Places for {}", b.name());
                         GooglePlacesSearchResponse response = placesClient.searchTrending(
                                 b.lat(), b.lng(), b.radiusMeters(), 20);
