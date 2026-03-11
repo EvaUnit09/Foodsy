@@ -11,9 +11,11 @@ import com.foodsy.repository.UserWatchlistRepository;
 import com.foodsy.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -55,13 +57,15 @@ public class UserLibraryController {
     }
 
     @PostMapping("/favorites/{placeId}")
+    @Transactional
     public ResponseEntity<Void> addFavorite(@PathVariable String placeId, Authentication authentication) {
         Optional<User> userOpt = userService.findByAuthentication(authentication);
         if (userOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        Long userId = userOpt.get().getId();
-        if (!favoriteRepository.existsByUserIdAndPlaceId(userId, placeId)) {
+        try {
             favoriteRepository.save(new UserFavorite(userOpt.get(), placeId));
+        } catch (DataIntegrityViolationException ignored) {
+            // concurrent duplicate — already exists, treat as success
         }
         return ResponseEntity.ok().build();
     }
@@ -88,13 +92,15 @@ public class UserLibraryController {
     }
 
     @PostMapping("/watchlist/{placeId}")
+    @Transactional
     public ResponseEntity<Void> addToWatchlist(@PathVariable String placeId, Authentication authentication) {
         Optional<User> userOpt = userService.findByAuthentication(authentication);
         if (userOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        Long userId = userOpt.get().getId();
-        if (!watchlistRepository.existsByUserIdAndPlaceId(userId, placeId)) {
+        try {
             watchlistRepository.save(new UserWatchlist(userOpt.get(), placeId));
+        } catch (DataIntegrityViolationException ignored) {
+            // concurrent duplicate — already exists, treat as success
         }
         return ResponseEntity.ok().build();
     }

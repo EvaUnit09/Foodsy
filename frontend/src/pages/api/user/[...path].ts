@@ -2,9 +2,24 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://apifoodsy-backend.com';
 
+// Explicit allowlist of permitted path shapes.
+// Segments are matched after splitting on '/'.
+const ALLOWED_PATHS = [
+  /^library\/(favorites|watchlist)$/,
+  /^library\/(favorites|watchlist)\/[A-Za-z0-9_\-%.]+$/,
+];
+
+function isAllowedPath(apiPath: string): boolean {
+  return ALLOWED_PATHS.some((pattern) => pattern.test(apiPath));
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { path, ...queryParams } = req.query;
-  const apiPath = Array.isArray(path) ? path.join('/') : path;
+  const apiPath = Array.isArray(path) ? path.join('/') : (path ?? '');
+
+  if (!isAllowedPath(apiPath)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
 
   const qs = new URLSearchParams(
     Object.entries(queryParams).flatMap(([k, v]) =>

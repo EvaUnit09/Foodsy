@@ -14,10 +14,9 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    LibraryApi.getFavorites().then((data) => {
-      setFavorites(data);
-      setIsLoading(false);
-    });
+    LibraryApi.getFavorites()
+      .then(setFavorites)
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (
