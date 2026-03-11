@@ -15,9 +15,6 @@ async function handle(
     const method = request.method;
     const auth = request.headers.get("authorization");
     const cookies = request.headers.get("cookie");
-    const contentType = request.headers.get("content-type") || "";
-    const isJson = contentType.includes("application/json");
-
     // Robust body extraction (avoid stream reuse errors on Vercel)
     let body: BodyInit | undefined = undefined;
     if (method !== "GET" && method !== "HEAD") {
@@ -41,6 +38,7 @@ async function handle(
       body,
       cache: "no-store",
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Proxy fetch error for", url, err);
       return new Response(

@@ -303,7 +303,7 @@ export default function SessionPage() {
           }
           currentInterval = Math.min(currentInterval * 2, 30000);
         }
-      } catch (error) {
+      } catch {
         errorCount++;
         if (errorCount >= maxErrors) {
           stopPolling();

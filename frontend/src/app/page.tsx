@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Heart, Star, LogOut, UserIcon } from "lucide-react";
+import { Star, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/button";
+import { AppHeader } from "@/components/AppHeader";
 
 import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { TrendingCarousel } from "@/components/TrendingCarousel";
@@ -74,7 +75,7 @@ function enrichWithPhotoUrls(r: RestaurantSummaryDto, max = 1): RestaurantSummar
 }
 
 const Index = () => {
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const homepageApi = useHomepageApi();
   
@@ -87,16 +88,13 @@ const Index = () => {
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
-  const [isLoadingHomepageData, setIsLoadingHomepageData] = useState(false);
   const [activeSession, setActiveSession] = useState<ActiveSessionData | null>(null);
-  const [favorites, setFavorites] = useState<RestaurantSummaryDto[]>([]);
 
   // Load homepage data and check onboarding status
   const loadHomepageData = useCallback(async () => {
     if (!isAuthenticated) return;
 
     try {
-      setIsLoadingHomepageData(true);
       const [data, session] = await Promise.all([
         homepageApi.getHomepageData(true),
         fetchActiveSession(),
@@ -110,17 +108,6 @@ const Index = () => {
       };
       setHomepageData(hydrated);
       setActiveSession(session);
-
-      const allRestaurants = [
-        ...(hydrated.yourPicks ?? []),
-        ...(hydrated.highlights ?? []),
-        ...(hydrated.trending ?? []),
-        ...(hydrated.spotlight ?? []),
-      ];
-      const likedUnique = allRestaurants.filter(
-        (r, i, arr) => r.isLiked && arr.findIndex((x) => x.id === r.id) === i
-      );
-      setFavorites(likedUnique);
 
       console.log("Homepage data loaded - hasOnboarded:", data.hasOnboarded);
 
@@ -136,9 +123,8 @@ const Index = () => {
       } else {
         showNotification("Failed to load personalized content", "error");
       }
-    } finally {
-      setIsLoadingHomepageData(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -192,22 +178,6 @@ const Index = () => {
     showNotification("You can set up your taste profile later from your profile page!", "success");
   };
 
-  const handleRestaurantClick = async (restaurant: RestaurantSummaryDto) => {
-    try {
-      await homepageApi.trackRestaurantClick(restaurant.id, "homepage");
-      
-      // Open website if available
-      if (restaurant.websiteUri) {
-        window.open(restaurant.websiteUri, '_blank', 'noopener,noreferrer');
-        showNotification(`Opening ${restaurant.name} website...`, "success");
-      } else {
-        showNotification(`${restaurant.name} - No website available`, "success");
-      }
-    } catch (err) {
-      console.error("Error tracking restaurant click:", err);
-    }
-  };
-
   const handleStartSession = async () => {
     try {
       await homepageApi.trackSessionStart();
@@ -228,28 +198,6 @@ const Index = () => {
     }
   };
 
-  const handleToggleLike = async (restaurantId: string) => {
-    try {
-      if (!homepageData) return;
-      
-      // Find the restaurant
-      const allRestaurants = [...homepageData.yourPicks, ...homepageData.highlights, ...homepageData.trending, ...homepageData.spotlight];
-      const restaurant = allRestaurants.find(r => r.id === restaurantId);
-      if (!restaurant) return;
-
-      const newLikedStatus = !restaurant.isLiked;
-      await homepageApi.trackRestaurantLike(restaurantId, newLikedStatus);
-      
-      showNotification(newLikedStatus ? "Added to favorites!" : "Removed from favorites", "success");
-      
-      // Refresh data to get updated like status
-      await loadHomepageData();
-    } catch (err) {
-      console.error("Error toggling like:", err);
-      showNotification("Failed to update favorite status", "error");
-    }
-  };
-
   // Show onboarding if needed
   if (showOnboarding) {
     return (
@@ -262,88 +210,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
-      {/* Header */}
-      <header className="bg-[#fdf6f0] border-b border-[rgba(0,0,0,0.06)] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <span className="text-xl font-bold text-[#1a1a1a]" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
-              </div>
-              {isAuthenticated ? (
-                <span className="text-sm text-[#444] bg-[#e8e8e8] px-2 py-1 rounded-full" style={{ fontSize: 11, fontWeight: 600 }}>
-                  Dashboard
-                </span>
-              ) : (
-                <span className="text-[#444] bg-[#e8e8e8] px-2 py-1 rounded-full" style={{ fontSize: 11, fontWeight: 600 }}>
-                  NY
-                </span>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleJoinSession}
-              >
-                Sessions
-              </Button>
-              {isAuthenticated && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/discover")}
-                >
-                  Discover
-                </Button>
-              )}
-              <Button variant="ghost" size="sm">
-                <Heart className="w-4 h-4 mr-2" />
-                Favorites
-              </Button>
-              {isAuthenticated && user ? (
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-2 bg-orange-50 px-3 py-1 rounded-full">
-                    <UserIcon className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-medium text-orange-700">
-                      {user.displayName}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={signOut}
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <LogOut className="w-4 h-4 mr-1" />
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  className="text-white font-bold cursor-pointer"
-                  style={{
-                    background: "#e8531a",
-                    borderRadius: 10,
-                    padding: "8px 20px",
-                    fontSize: 14,
-                    border: "none",
-                    boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
-                  onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
-                >
-                  Sign In with Google
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main content wrapper with flex-1 to fill space */}
       <main className="flex-1">

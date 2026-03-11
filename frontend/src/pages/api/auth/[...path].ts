@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       data = await response.json();
       console.log(`Backend response data:`, data);
-    } catch (parseError) {
+    } catch {
       console.log(`Backend response is not JSON, getting as text`);
       const textData = await response.text();
       console.log(`Backend response text:`, textData);

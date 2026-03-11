@@ -9,9 +9,9 @@ import {
   Borough,
   SwipeAction,
   DAILY_CAP,
-  BOROUGH_NEIGHBORHOODS,
 } from "@/api/discoveryApi";
 import { LibraryApi } from "@/api/libraryApi";
+import { AppHeader } from "@/components/AppHeader";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { DiscoveryCard } from "@/components/discovery/DiscoveryCard";
 import { AreaPicker } from "@/components/discovery/AreaPicker";
@@ -144,16 +144,16 @@ export default function DiscoverPage() {
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#fdf6f0",
-        maxWidth: 480,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "#fdf6f0" }}>
+      <AppHeader badge="Discover" />
+      <div
+        style={{
+          maxWidth: 480,
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
       <DiscoveryHeader
         seenCount={seenCount}
         dailyCap={DAILY_CAP}
@@ -318,6 +318,7 @@ export default function DiscoverPage() {
           onGoHome={() => router.push("/")}
         />
       )}
+      </div>
     </div>
   );
 }

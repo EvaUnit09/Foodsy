@@ -37,7 +37,7 @@ interface TrendingCarouselProps {
   userBorough?: string;
 }
 
-export function TrendingCarousel({ onSignUpPrompt, isAuthenticated, userBorough }: TrendingCarouselProps) {
+export function TrendingCarousel({ onSignUpPrompt, userBorough }: TrendingCarouselProps) {
   const defaultBorough: Borough =
     userBorough && (["manhattan", "queens", "brooklyn"] as Borough[]).includes(userBorough as Borough)
       ? (userBorough as Borough)
@@ -132,7 +132,7 @@ export function TrendingCarousel({ onSignUpPrompt, isAuthenticated, userBorough 
             <CarouselContent className="-ml-3">
               {restaurants.map((r) => (
                 <CarouselItem key={r.id} className="pl-3 basis-56">
-                  <TrendingCard restaurant={r} onFavorite={onSignUpPrompt} isAuthenticated={isAuthenticated} />
+                  <TrendingCard restaurant={r} onFavorite={onSignUpPrompt} />
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -148,11 +148,9 @@ export function TrendingCarousel({ onSignUpPrompt, isAuthenticated, userBorough 
 function TrendingCard({
   restaurant,
   onFavorite,
-  isAuthenticated,
 }: {
   restaurant: TrendingRestaurant;
   onFavorite: () => void;
-  isAuthenticated?: boolean;
 }) {
   const photo = restaurant.photos?.[0];
 
@@ -172,6 +170,7 @@ function TrendingCard({
     >
       <div className="relative bg-gray-100 overflow-hidden" style={{ height: 130 }}>
         {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={restaurant.name}

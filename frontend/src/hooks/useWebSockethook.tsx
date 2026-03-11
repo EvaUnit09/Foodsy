@@ -121,6 +121,7 @@ export function useSessionWebSocket(sessionId: number) {
       stopPolling();
       client.deactivate();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   const send = (destination: string, body: unknown) => {

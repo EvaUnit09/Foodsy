@@ -66,6 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsAuthenticated(true);
             console.log('AuthContext: Authentication successful from stored data');
             return;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (meError: any) {
             // If /me fails with 401, try refreshing token
             if (meError.status === 401) {
@@ -86,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setIsAuthenticated(true);
                 console.log('AuthContext: Authentication successful after refresh');
                 return;
-              } catch (refreshError: any) {
+              } catch {
                 console.log('AuthContext: Refresh failed, clearing stored data');
                 localStorage.removeItem('user');
                 localStorage.removeItem('accessToken');
@@ -102,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setIsAuthenticated(false);
             }
           }
-        } catch (e) {
+        } catch {
           console.log('AuthContext: Invalid stored user data, clearing');
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
@@ -123,6 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         console.log('AuthContext: Authentication successful');
         
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (refreshError: any) {
         // 401 is expected when no refresh token exists - this is not an error
         if (refreshError.status === 401 || refreshError.message?.includes('401')) {

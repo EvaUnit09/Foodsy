@@ -60,6 +60,7 @@ export function useSessionVoting({
         fetchRemainingVotes();
       }, 500);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRound, isAuthenticated, sessionId]);
 
   // Fetch remaining votes on mount and round change

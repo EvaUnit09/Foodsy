@@ -46,7 +46,7 @@ function OAuth2SuccessContent() {
           console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
           window.location.href = "/";
           
-        } catch (meError: any) {
+        } catch {
           // If /me fails, try refreshing token
           console.log("OAuth2 success page: /me failed, trying refresh token...");
           try {
@@ -71,6 +71,7 @@ function OAuth2SuccessContent() {
             console.log("OAuth2 success page: Authentication successful, redirecting to homepage");
                           window.location.href = "/";
             
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (refreshError: any) {
             // Handle 401 specifically (expected when tokens are invalid)
             if (refreshError.status === 401) {

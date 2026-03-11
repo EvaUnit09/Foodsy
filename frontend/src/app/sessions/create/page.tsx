@@ -36,7 +36,7 @@ export default function CreateSessionPage() {
     
     setSubmitting(true);
     
-    const body: any = {
+    const body: Record<string, unknown> = {
       poolSize,
       roundTime,
       likesPerUser,
@@ -44,7 +44,7 @@ export default function CreateSessionPage() {
     
     // Try browser geolocation; if granted, include coords
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+      const pos = await new Promise<GeolocationPosition>((resolve) => {
         if (!navigator.geolocation) {
           resolve(undefined as unknown as GeolocationPosition);
           return;
