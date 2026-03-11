@@ -60,14 +60,19 @@ public class RestaurantController {
     @GetMapping("/discover")
     public ResponseEntity<List<RestaurantSummaryDto>> getDiscovery(
             @RequestParam(defaultValue = "manhattan") String borough,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String neighborhood) {
         if (limit < 1 || limit > 50) return ResponseEntity.badRequest().build();
         String normalized = borough.trim().toLowerCase();
         if (!DISCOVERY_BOROUGHS.contains(normalized)) {
             return ResponseEntity.badRequest().build();
         }
         String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
-        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, limit));
+        // Normalize neighborhood: null or blank → null
+        String normalizedNeighborhood = (neighborhood != null && !neighborhood.isBlank())
+                ? neighborhood.trim()
+                : null;
+        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, normalizedNeighborhood, limit));
     }
 
     @GetMapping("/trending")

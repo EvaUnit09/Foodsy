@@ -21,6 +21,11 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
      * Find cached restaurant by Google Places place_id
      */
     Optional<RestaurantCache> findByPlaceId(String placeId);
+
+    /**
+     * Batch fetch by a list of place_ids (used for library endpoints)
+     */
+    List<RestaurantCache> findByPlaceIdIn(List<String> placeIds);
     
     /**
      * Find non-expired restaurants by borough
@@ -103,16 +108,20 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
     List<RestaurantCache> findRandomHighRated(@Param("borough") String borough, @Param("now") Instant now, @Param("minRating") Double minRating, @Param("limit") int limit);
 
     /**
-     * Find random restaurants for discovery section (lower rating floor to maximise pool)
+     * Find random restaurants for discovery section (lower rating floor to maximise pool).
+     * When neighborhood is non-null, filters to that neighborhood only.
      */
     @Query(
         value = "SELECT * FROM restaurant_cache " +
-                "WHERE borough = :borough AND expires_at > :now AND rating >= :minRating " +
+                "WHERE borough = :borough " +
+                "AND (:neighborhood IS NULL OR neighborhood = :neighborhood) " +
+                "AND expires_at > :now AND rating >= :minRating " +
                 "ORDER BY RANDOM() LIMIT :limit",
         nativeQuery = true
     )
     List<RestaurantCache> findDiscoveryRestaurants(
         @Param("borough") String borough,
+        @Param("neighborhood") String neighborhood,
         @Param("now") Instant now,
         @Param("minRating") Double minRating,
         @Param("limit") int limit

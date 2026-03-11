@@ -20,7 +20,20 @@ public record GooglePlacesSearchResponse(
             String currentOpeningHours,
             String generativeSummary,
             String reviewSummary,
-            String websiteUri
+            String websiteUri,
+            // Vibe attribute flags from Places API
+            Boolean goodForGroups,
+            Boolean goodForChildren,
+            Boolean liveMusic,
+            Boolean servesBrunch,
+            Boolean servesBreakfast,
+            Boolean servesDinner,
+            Boolean servesWine,
+            Boolean servesVegetarianFood,
+            Boolean delivery,
+            Boolean takeout,
+            Boolean outdoorSeating,
+            Boolean reservable
     ) {}
 
     public record DisplayName(

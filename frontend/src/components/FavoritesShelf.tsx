@@ -1,15 +1,25 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
-import { RestaurantSummaryDto } from "@/api/homepageApi";
+import { DiscoveryRestaurant } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 
 interface FavoritesShelfProps {
-  favorites: RestaurantSummaryDto[];
-  isLoading?: boolean;
   onStartDiscovery: () => void;
 }
 
-export function FavoritesShelf({ favorites, isLoading, onStartDiscovery }: FavoritesShelfProps) {
+export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
+  const [favorites, setFavorites] = useState<DiscoveryRestaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    LibraryApi.getFavorites().then((data) => {
+      setFavorites(data);
+      setIsLoading(false);
+    });
+  }, []);
+
   return (
     <div style={{ margin: "0 32px 24px" }}>
       {/* Header row */}
@@ -111,7 +121,7 @@ export function FavoritesShelf({ favorites, isLoading, onStartDiscovery }: Favor
   );
 }
 
-function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
+function FavoriteCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
   const photo = restaurant.photos?.[0];
 
   return (
@@ -127,6 +137,7 @@ function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
     >
       <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
         {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={restaurant.name}
@@ -198,8 +209,8 @@ function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
               </span>
             </div>
           ) : null}
-          {restaurant.priceLevel && (
-            <span style={{ fontSize: 12, color: "#666" }}>{restaurant.priceLevel}</span>
+          {restaurant.priceRange && (
+            <span style={{ fontSize: 12, color: "#666" }}>{restaurant.priceRange}</span>
           )}
         </div>
       </div>

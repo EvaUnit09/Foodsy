@@ -74,14 +74,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_2", 800, 600)
                 ),
-                4.5,
-                100,
+                4.5, 100,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE,
-                "$-$$",
-                "Mon-Sun: 9am-9pm",
-                "A great place for mock food.",
-                "Loved by locals for its mock cuisine.",
-                "https://www.mockrestaurant1.com"
+                "$-$$", "Mon-Sun: 9am-9pm",
+                "A great place for mock food.", "Loved by locals for its mock cuisine.",
+                "https://www.mockrestaurant1.com",
+                null, null, null, null, null, null, true, null, null, null, true, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_2",
@@ -94,14 +92,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_2", 800, 600)
                 ),
-                4.2,
-                85,
+                4.2, 85,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
-                "$",
-                "Mon-Fri: 10am-8pm",
-                "Affordable and tasty mock meals.",
-                "Great value for the price.",
-                "https://www.mockrestaurant2.com"
+                "$", "Mon-Fri: 10am-8pm",
+                "Affordable and tasty mock meals.", "Great value for the price.",
+                "https://www.mockrestaurant2.com",
+                null, null, null, null, null, null, null, null, true, true, null, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_3",
@@ -114,14 +110,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_2", 800, 600)
                 ),
-                4.8,
-                120,
+                4.8, 120,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE,
-                "$$$",
-                "Sat-Sun: 11am-11pm",
-                "Fine dining mock experience.",
-                "Top-rated by mock foodies.",
-                "https://www.mockrestaurant3.com"
+                "$$$", "Sat-Sun: 11am-11pm",
+                "Fine dining mock experience.", "Top-rated by mock foodies.",
+                "https://www.mockrestaurant3.com",
+                null, null, null, null, null, true, true, null, null, null, null, true
             )
         );
         
@@ -218,7 +212,11 @@ public class GooglePlacesClient {
                     .defaultHeader("X-Goog-FieldMask",
                             "places.id,places.name,places.displayName,places.formattedAddress," +
                             "places.types,places.location,places.photos,places.rating," +
-                            "places.userRatingCount,places.priceLevel,places.websiteUri")
+                            "places.userRatingCount,places.priceLevel,places.websiteUri," +
+                            "places.goodForGroups,places.goodForChildren,places.liveMusic," +
+                            "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
+                            "places.servesWine,places.servesVegetarianFood,places.delivery," +
+                            "places.takeout,places.outdoorSeating,places.reservable")
                     .build();
 
             int capped = Math.max(1, Math.min(20, maxResults));
@@ -342,7 +340,8 @@ public class GooglePlacesClient {
                 currentOpeningHours,
                 generativeSummary,
                 reviewSummary,
-                websiteUri != null ? websiteUri : place.websiteUri()
+                websiteUri != null ? websiteUri : place.websiteUri(),
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
     }
 }

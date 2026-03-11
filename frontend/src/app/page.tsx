@@ -359,11 +359,9 @@ const Index = () => {
           {activeSession && <ActiveSessionBanner {...activeSession} />}
           <DiscoveryEntryCard />
           <FavoritesShelf
-            favorites={favorites}
-            isLoading={isLoadingHomepageData}
             onStartDiscovery={() => router.push("/discover")}
           />
-          <WatchlistShelf watchlist={[]} onStartDiscovery={() => router.push("/discover")} />
+          <WatchlistShelf onStartDiscovery={() => router.push("/discover")} />
           <TrendingCarousel
             onSignUpPrompt={() => {}}
             isAuthenticated={true}
