@@ -15,32 +15,24 @@ export class LibraryApi {
       credentials: "include",
       headers: authHeaders(),
     });
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error(`Failed to load favorites: ${res.status}`);
     return res.json();
   }
 
   static async addFavorite(placeId: string): Promise<void> {
-    try {
-      await fetch(`${API_BASE_URL}/user/library/favorites/${encodeURIComponent(placeId)}`, {
-        method: "POST",
-        credentials: "include",
-        headers: authHeaders(),
-      });
-    } catch {
-      // best-effort
-    }
+    const res = await fetch(
+      `${API_BASE_URL}/user/library/favorites/${encodeURIComponent(placeId)}`,
+      { method: "POST", credentials: "include", headers: authHeaders() }
+    );
+    if (!res.ok) throw new Error(`addFavorite failed: ${res.status}`);
   }
 
   static async removeFavorite(placeId: string): Promise<void> {
-    try {
-      await fetch(`${API_BASE_URL}/user/library/favorites/${encodeURIComponent(placeId)}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: authHeaders(),
-      });
-    } catch {
-      // best-effort
-    }
+    const res = await fetch(
+      `${API_BASE_URL}/user/library/favorites/${encodeURIComponent(placeId)}`,
+      { method: "DELETE", credentials: "include", headers: authHeaders() }
+    );
+    if (!res.ok) throw new Error(`removeFavorite failed: ${res.status}`);
   }
 
   // ── Watchlist ────────────────────────────────────────────────────────────────
@@ -50,31 +42,23 @@ export class LibraryApi {
       credentials: "include",
       headers: authHeaders(),
     });
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error(`Failed to load watchlist: ${res.status}`);
     return res.json();
   }
 
   static async addToWatchlist(placeId: string): Promise<void> {
-    try {
-      await fetch(`${API_BASE_URL}/user/library/watchlist/${encodeURIComponent(placeId)}`, {
-        method: "POST",
-        credentials: "include",
-        headers: authHeaders(),
-      });
-    } catch {
-      // best-effort
-    }
+    const res = await fetch(
+      `${API_BASE_URL}/user/library/watchlist/${encodeURIComponent(placeId)}`,
+      { method: "POST", credentials: "include", headers: authHeaders() }
+    );
+    if (!res.ok) throw new Error(`addToWatchlist failed: ${res.status}`);
   }
 
   static async removeFromWatchlist(placeId: string): Promise<void> {
-    try {
-      await fetch(`${API_BASE_URL}/user/library/watchlist/${encodeURIComponent(placeId)}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: authHeaders(),
-      });
-    } catch {
-      // best-effort
-    }
+    const res = await fetch(
+      `${API_BASE_URL}/user/library/watchlist/${encodeURIComponent(placeId)}`,
+      { method: "DELETE", credentials: "include", headers: authHeaders() }
+    );
+    if (!res.ok) throw new Error(`removeFromWatchlist failed: ${res.status}`);
   }
 }

@@ -10,6 +10,7 @@ import com.foodsy.repository.RestaurantCacheRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
@@ -230,7 +231,7 @@ public class RestaurantCacheService {
                     entry.setTrendingScore(0.0);
                     entry.setLastTrendingCalcAt(now);
                     cacheRepository.save(entry);
-                } catch (Exception e) {
+                } catch (DataIntegrityViolationException | jakarta.validation.ConstraintViolationException e) {
                     logger.error("Error saving restaurant for neighborhood {}: {}", nb.getName(), e.getMessage());
                 }
             }
@@ -644,7 +645,7 @@ public class RestaurantCacheService {
                                 entry.setTrendingScore(0.0);
                                 entry.setLastTrendingCalcAt(now);
                                 cacheRepository.save(entry);
-                            } catch (Exception e) {
+                            } catch (DataIntegrityViolationException | jakarta.validation.ConstraintViolationException e) {
                                 logger.error("Error saving trending restaurant {}: {}", place.id(), e.getMessage());
                             }
                         }
@@ -679,6 +680,7 @@ public class RestaurantCacheService {
         }
     }
 
+    @Transactional
     private void seedNeighborhoods() {
         if (neighborhoodRepository.count() > 0) {
             logger.info("Neighborhoods already seeded, skipping");

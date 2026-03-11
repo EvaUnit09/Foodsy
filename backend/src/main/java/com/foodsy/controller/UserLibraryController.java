@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 public class UserLibraryController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserLibraryController.class);
+    private static final Pattern PLACE_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_\\-]{10,250}$");
 
     private final UserService userService;
     private final UserFavoriteRepository favoriteRepository;
@@ -59,6 +61,7 @@ public class UserLibraryController {
     @PostMapping("/favorites/{placeId}")
     @Transactional
     public ResponseEntity<Void> addFavorite(@PathVariable String placeId, Authentication authentication) {
+        if (!PLACE_ID_PATTERN.matcher(placeId).matches()) return ResponseEntity.badRequest().build();
         Optional<User> userOpt = userService.findByAuthentication(authentication);
         if (userOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
@@ -94,6 +97,7 @@ public class UserLibraryController {
     @PostMapping("/watchlist/{placeId}")
     @Transactional
     public ResponseEntity<Void> addToWatchlist(@PathVariable String placeId, Authentication authentication) {
+        if (!PLACE_ID_PATTERN.matcher(placeId).matches()) return ResponseEntity.badRequest().build();
         Optional<User> userOpt = userService.findByAuthentication(authentication);
         if (userOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 

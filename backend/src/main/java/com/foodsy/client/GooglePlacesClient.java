@@ -25,7 +25,12 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "places.id,places.name,places.displayName,places.formattedAddress,places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri"
+                        "places.id,places.name,places.displayName,places.formattedAddress," +
+                        "places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri," +
+                        "places.goodForGroups,places.goodForChildren,places.liveMusic," +
+                        "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
+                        "places.servesWine,places.servesVegetarianFood,places.delivery," +
+                        "places.takeout,places.outdoorSeating,places.reservable"
                 )
                 .build();
     }
@@ -306,7 +311,10 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount,priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary,websiteUri")
+                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount," +
+                        "priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary,websiteUri," +
+                        "goodForGroups,goodForChildren,liveMusic,servesBrunch,servesBreakfast,servesDinner," +
+                        "servesWine,servesVegetarianFood,delivery,takeout,outdoorSeating,reservable")
                 .build();
         return detailsClient.get()
                 .uri("/places/{placeId}", placeId)
@@ -315,16 +323,16 @@ public class GooglePlacesClient {
     }
 
     private GooglePlacesSearchResponse.Place mergePlaceWithDetails(GooglePlacesSearchResponse.Place place, Map<String, Object> details) {
-        // Helper to extract string or null
         java.util.function.Function<String, String> getString = key -> details.get(key) != null ? details.get(key).toString() : null;
+        java.util.function.Function<String, Boolean> getBool = key -> details.get(key) instanceof Boolean ? (Boolean) details.get(key) : null;
         Double rating = details.get("rating") instanceof Number ? ((Number) details.get("rating")).doubleValue() : place.rating();
         Integer userRatingCount = details.get("userRatingCount") instanceof Number ? ((Number) details.get("userRatingCount")).intValue() : place.userRatingsTotal();
-        String priceLevel = getString.apply("priceLevel");
         String priceRange = getString.apply("priceRange");
         String currentOpeningHours = details.get("currentOpeningHours") != null ? details.get("currentOpeningHours").toString() : null;
         String generativeSummary = getString.apply("generativeSummary");
         String reviewSummary = getString.apply("reviewSummary");
         String websiteUri = getString.apply("websiteUri");
+        // Vibe booleans: prefer details map value, fall back to what's already on the place
         return new GooglePlacesSearchResponse.Place(
                 place.id(),
                 place.name(),
@@ -341,7 +349,18 @@ public class GooglePlacesClient {
                 generativeSummary,
                 reviewSummary,
                 websiteUri != null ? websiteUri : place.websiteUri(),
-                null, null, null, null, null, null, null, null, null, null, null, null
+                getBool.apply("goodForGroups") != null    ? getBool.apply("goodForGroups")    : place.goodForGroups(),
+                getBool.apply("goodForChildren") != null  ? getBool.apply("goodForChildren")  : place.goodForChildren(),
+                getBool.apply("liveMusic") != null        ? getBool.apply("liveMusic")        : place.liveMusic(),
+                getBool.apply("servesBrunch") != null     ? getBool.apply("servesBrunch")     : place.servesBrunch(),
+                getBool.apply("servesBreakfast") != null  ? getBool.apply("servesBreakfast")  : place.servesBreakfast(),
+                getBool.apply("servesDinner") != null     ? getBool.apply("servesDinner")     : place.servesDinner(),
+                getBool.apply("servesWine") != null       ? getBool.apply("servesWine")       : place.servesWine(),
+                getBool.apply("servesVegetarianFood") != null ? getBool.apply("servesVegetarianFood") : place.servesVegetarianFood(),
+                getBool.apply("delivery") != null         ? getBool.apply("delivery")         : place.delivery(),
+                getBool.apply("takeout") != null          ? getBool.apply("takeout")          : place.takeout(),
+                getBool.apply("outdoorSeating") != null   ? getBool.apply("outdoorSeating")   : place.outdoorSeating(),
+                getBool.apply("reservable") != null       ? getBool.apply("reservable")       : place.reservable()
         );
     }
 }

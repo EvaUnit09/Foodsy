@@ -84,8 +84,9 @@ export class DiscoveryApi {
     limit = DAILY_CAP
   ): Promise<DiscoveryRestaurant[]> {
     let url = `${API_BASE_URL}/restaurants/discover?borough=${borough}&limit=${limit}`;
-    if (neighborhood) {
-      url += `&neighborhood=${encodeURIComponent(neighborhood)}`;
+    const trimmedNeighborhood = neighborhood?.trim();
+    if (trimmedNeighborhood) {
+      url += `&neighborhood=${encodeURIComponent(trimmedNeighborhood)}`;
     }
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`Discovery fetch failed: ${res.status}`);

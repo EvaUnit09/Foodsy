@@ -12,10 +12,12 @@ interface FavoritesShelfProps {
 export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
   const [favorites, setFavorites] = useState<DiscoveryRestaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     LibraryApi.getFavorites()
       .then(setFavorites)
+      .catch(() => setFetchError(true))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -67,8 +69,15 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
         </div>
       )}
 
+      {/* Error state */}
+      {!isLoading && fetchError && (
+        <p style={{ fontSize: 13, color: "#aaa" }}>
+          Couldn&apos;t load favorites right now.
+        </p>
+      )}
+
       {/* Empty state */}
-      {!isLoading && favorites.length === 0 && (
+      {!isLoading && !fetchError && favorites.length === 0 && (
         <div
           style={{
             border: "1.5px dashed #e0d8d2",
@@ -101,7 +110,7 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
       )}
 
       {/* Favorites horizontal scroll */}
-      {!isLoading && favorites.length > 0 && (
+      {!isLoading && !fetchError && favorites.length > 0 && (
         <div
           style={{
             display: "flex",

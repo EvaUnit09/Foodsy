@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface NeighborhoodRepository extends JpaRepository<Neighborhood, Long> {
 
-    List<Neighborhood> findByBoroughOrderByDisplayOrder(String borough);
+    List<Neighborhood> findByBoroughIgnoreCaseOrderByDisplayOrder(String borough);
 
     Optional<Neighborhood> findByNameIgnoreCaseAndBoroughIgnoreCase(String name, String borough);
 }

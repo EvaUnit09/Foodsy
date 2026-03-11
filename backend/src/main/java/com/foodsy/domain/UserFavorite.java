@@ -9,7 +9,7 @@ import java.time.Instant;
            @UniqueConstraint(name = "uq_user_favorite", columnNames = {"user_id", "place_id"})
        },
        indexes = {
-           @Index(name = "idx_user_favorite_user_id", columnList = "user_id")
+           @Index(name = "idx_user_favorite_user_id_added_at", columnList = "user_id, added_at")
        })
 public class UserFavorite {
 

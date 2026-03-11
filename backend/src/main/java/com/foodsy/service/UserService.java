@@ -84,10 +84,13 @@ public class UserService {
     public Optional<User> findByAuthentication(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) return Optional.empty();
         String name = authentication.getName();
+        // Try username first to avoid a numeric username accidentally resolving to a different user's ID
+        Optional<User> byUsername = findByUsername(name);
+        if (byUsername.isPresent()) return byUsername;
         try {
             return userRepository.findById(Long.parseLong(name));
         } catch (NumberFormatException e) {
-            return findByUsername(name);
+            return Optional.empty();
         }
     }
 

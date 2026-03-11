@@ -109,13 +109,15 @@ export default function DiscoverPage() {
     setExitAction(action);
 
     if (action === "favorite") {
-      DiscoveryApi.trackFavorite(r.id);
-      LibraryApi.addFavorite(r.id);
-      setSessionFavorites((n) => n + 1);
+      DiscoveryApi.trackFavorite(r.id); // analytics — best-effort, not awaited
+      LibraryApi.addFavorite(r.id)
+        .then(() => setSessionFavorites((n) => n + 1))
+        .catch(() => {}); // don't block the swipe on network errors
     }
     if (action === "watchlist") {
-      LibraryApi.addToWatchlist(r.id);
-      setSessionWatchlist((n) => n + 1);
+      LibraryApi.addToWatchlist(r.id)
+        .then(() => setSessionWatchlist((n) => n + 1))
+        .catch(() => {});
     }
     DiscoveryApi.addSeenId(r.id);
 

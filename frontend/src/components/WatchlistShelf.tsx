@@ -11,10 +11,12 @@ interface WatchlistShelfProps {
 export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
   const [watchlist, setWatchlist] = useState<DiscoveryRestaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     LibraryApi.getWatchlist()
       .then(setWatchlist)
+      .catch(() => setFetchError(true))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -49,7 +51,13 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
         </div>
       </div>
 
-      {!isLoading && watchlist.length === 0 && (
+      {!isLoading && fetchError && (
+        <p style={{ fontSize: 13, color: "#aaa" }}>
+          Couldn&apos;t load your list right now.
+        </p>
+      )}
+
+      {!isLoading && !fetchError && watchlist.length === 0 && (
         <div
           style={{
             border: "1.5px dashed #e0d8d2",
@@ -81,7 +89,7 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
         </div>
       )}
 
-      {!isLoading && watchlist.length > 0 && (
+      {!isLoading && !fetchError && watchlist.length > 0 && (
         <div
           style={{
             display: "flex",

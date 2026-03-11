@@ -97,7 +97,7 @@ public class RestaurantCache {
     @Column(name = "last_trending_calc_at")
     private Instant lastTrendingCalcAt;
 
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "restaurant_cache_vibe_tags", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
     @Column(name = "vibe_tag")
     private List<String> vibeTags;
