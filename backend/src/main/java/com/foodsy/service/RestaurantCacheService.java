@@ -1,13 +1,16 @@
 package com.foodsy.service;
 
 import com.foodsy.client.GooglePlacesClient;
+import com.foodsy.domain.Neighborhood;
 import com.foodsy.domain.RestaurantCache;
 import com.foodsy.dto.GooglePlacesSearchResponse;
 import com.foodsy.dto.RestaurantSummaryDto;
+import com.foodsy.repository.NeighborhoodRepository;
 import com.foodsy.repository.RestaurantCacheRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +74,9 @@ public class RestaurantCacheService {
 
     @Autowired
     private RestaurantCacheRepository cacheRepository;
+
+    @Autowired
+    private NeighborhoodRepository neighborhoodRepository;
 
     @Autowired
     private GooglePlacesClient placesClient;
@@ -143,38 +150,95 @@ public class RestaurantCacheService {
 
     /**
      * Get randomised restaurants for the discovery swipe feature (lower rating floor than spotlight).
-     * Uses a per-borough in-flight gate so only the first caller triggers a cache-warming fetch;
-     * concurrent callers for the same borough wait on the existing CompletableFuture.
+     * When a neighborhood is specified, fetches from that neighborhood's coordinates if the cache is cold.
+     * Uses a per-borough in-flight gate so only the first caller triggers a cache-warming fetch.
      */
-    public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, int limit) {
-        logger.debug("Getting discovery restaurants for borough: {}", borough);
+    public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, String neighborhood, int limit) {
+        logger.debug("Getting discovery restaurants for borough: {}, neighborhood: {}", borough, neighborhood);
 
         Instant now = Instant.now();
-        List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, neighborhood, now, 3.5, limit);
 
         if (!results.isEmpty()) {
             return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
         }
 
         // Cache is empty — gate concurrent fetches so only one thread calls upstream per borough.
+        String gateKey = borough + (neighborhood != null ? ":" + neighborhood : "");
         CompletableFuture<Void> myFuture = new CompletableFuture<>();
-        CompletableFuture<Void> existing = discoveryFetchGate.putIfAbsent(borough, myFuture);
+        CompletableFuture<Void> existing = discoveryFetchGate.putIfAbsent(gateKey, myFuture);
 
         if (existing != null) {
-            // Another thread already started a fetch — wait for it to finish.
             existing.join();
         } else {
-            // We won the race — fetch and notify waiters.
             try {
-                fetchAndCacheTrendingForBorough(borough);
+                if (neighborhood != null) {
+                    fetchAndCacheForNeighborhood(borough, neighborhood);
+                } else {
+                    fetchAndCacheTrendingForBorough(borough);
+                }
             } finally {
-                discoveryFetchGate.remove(borough, myFuture);
+                discoveryFetchGate.remove(gateKey, myFuture);
                 myFuture.complete(null);
             }
         }
 
-        results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        results = cacheRepository.findDiscoveryRestaurants(borough, neighborhood, now, 3.5, limit);
         return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * Fetch restaurants from Google Places for a specific neighborhood, using its stored coordinates.
+     *
+     * Not @Transactional at this level so each upsertRestaurantCache runs in its own transaction (#11).
+     */
+    public void fetchAndCacheForNeighborhood(String borough, String neighborhood) {
+        Optional<Neighborhood> nbOpt = neighborhoodRepository
+                .findByNameIgnoreCaseAndBoroughIgnoreCase(neighborhood, borough);
+
+        if (nbOpt.isEmpty()) {
+            logger.warn("Neighborhood '{}' in '{}' not found in DB, falling back to borough fetch", neighborhood, borough);
+            fetchAndCacheTrendingForBorough(borough);
+            return;
+        }
+
+        Neighborhood nb = nbOpt.get();
+        try {
+            // Check quota before calling upstream (#8)
+            if (!canMakeApiCall() || !canMakeNearbySearchCall()) {
+                logger.warn("API quota exceeded, skipping fetch for neighborhood {}", nb.getName());
+                return;
+            }
+            nearbySearchCalls.incrementAndGet();
+            dailyApiCalls.incrementAndGet();
+            logger.info("Fetching places for neighborhood {} ({}, {}) radius {}m",
+                    nb.getName(), nb.getCenterLat(), nb.getCenterLng(), nb.getRadiusMeters());
+            GooglePlacesSearchResponse response = placesClient.searchTrending(
+                    nb.getCenterLat(), nb.getCenterLng(), nb.getRadiusMeters(), 20);
+
+            List<GooglePlacesSearchResponse.Place> places = response.places();
+            if (places == null || places.isEmpty()) {
+                logger.warn("No results from Google Places for neighborhood {}", nb.getName());
+                return;
+            }
+
+            Instant now = Instant.now();
+            for (int i = 0; i < places.size(); i++) {
+                try {
+                    RestaurantCache entry = upsertRestaurantCache(places.get(i), borough);
+                    entry.setNeighborhood(nb.getName());
+                    entry.setTrendingRank(i + 1);
+                    entry.setTrendingScore(0.0);
+                    entry.setLastTrendingCalcAt(now);
+                    cacheRepository.save(entry);
+                } catch (DataIntegrityViolationException | jakarta.validation.ConstraintViolationException e) {
+                    logger.error("Error saving restaurant for neighborhood {}: {}", nb.getName(), e.getMessage());
+                }
+            }
+            logger.info("Cached {} restaurants for neighborhood {}", places.size(), nb.getName());
+        } catch (Exception e) {
+            logger.error("Error fetching for neighborhood {}: {}", nb.getName(), e.getMessage());
+        }
     }
 
     /**
@@ -337,15 +401,21 @@ public class RestaurantCacheService {
 
     // Helper methods
     private List<RestaurantCache> combineAndLimitResults(
-        List<RestaurantCache> existing, 
-        List<RestaurantCache> newResults, 
+        List<RestaurantCache> existing,
+        List<RestaurantCache> newResults,
         int limit
     ) {
-        return existing.stream()
-            .collect(Collectors.toList())
-            .stream()
-            .limit(limit)
-            .collect(Collectors.toList());
+        // Merge both lists, deduplicating by placeId, then apply limit (#5)
+        java.util.Set<String> seenIds = existing.stream()
+            .map(RestaurantCache::getPlaceId)
+            .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        List<RestaurantCache> combined = new ArrayList<>(existing);
+        for (RestaurantCache r : newResults) {
+            if (seenIds.add(r.getPlaceId())) {
+                combined.add(r);
+            }
+        }
+        return combined.stream().limit(limit).collect(Collectors.toList());
     }
 
     /**
@@ -384,8 +454,44 @@ public class RestaurantCacheService {
                     .collect(Collectors.toList()));
         }
 
+        cache.setVibeTags(deriveVibeTags(place, cache.getPriceLevel()));
         cache.refreshExpiration();
         return cacheRepository.save(cache);
+    }
+
+    private List<String> deriveVibeTags(GooglePlacesSearchResponse.Place place, Integer priceLevel) {
+        List<String> tags = new ArrayList<>();
+        if (Boolean.TRUE.equals(place.servesWine()) || (priceLevel != null && priceLevel >= 3)) {
+            tags.add("Date Night");
+        }
+        if (Boolean.TRUE.equals(place.goodForGroups())) {
+            tags.add("Group Friendly");
+        }
+        if (Boolean.TRUE.equals(place.goodForChildren())) {
+            tags.add("Family Friendly");
+        }
+        if (Boolean.TRUE.equals(place.liveMusic())) {
+            tags.add("Live Music");
+        }
+        if (Boolean.TRUE.equals(place.servesVegetarianFood())) {
+            tags.add("Vegetarian");
+        }
+        if (Boolean.TRUE.equals(place.servesBrunch())) {
+            tags.add("Brunch");
+        }
+        if (priceLevel != null && priceLevel == 1) {
+            tags.add("Casual");
+        }
+        if (priceLevel != null && priceLevel == 3) {
+            tags.add("Fine Dining");
+        }
+        if (Boolean.TRUE.equals(place.outdoorSeating())) {
+            tags.add("Outdoor Seating");
+        }
+        if (Boolean.TRUE.equals(place.delivery())) {
+            tags.add("Delivery");
+        }
+        return tags;
     }
 
     private String extractCategory(List<String> types) {
@@ -503,14 +609,23 @@ public class RestaurantCacheService {
     /**
      * Fetch popular restaurants from Google Places using their own popularity ranking,
      * then upsert them into restaurant_cache with trendingRank set to their order (1 = most popular).
+     *
+     * Not @Transactional at this level: each upsertRestaurantCache call runs in its own transaction
+     * so a single failure doesn't roll back the entire batch (#11).
      */
-    @Transactional
     public void fetchAndCacheTrendingForBorough(String borough) {
         TRENDING_BOROUGHS.stream()
                 .filter(b -> b.name().equalsIgnoreCase(borough))
                 .findFirst()
                 .ifPresentOrElse(b -> {
                     try {
+                        // Check quota before calling upstream (#8)
+                        if (!canMakeApiCall() || !canMakeNearbySearchCall()) {
+                            logger.warn("API quota exceeded, skipping trending fetch for {}", b.name());
+                            return;
+                        }
+                        nearbySearchCalls.incrementAndGet();
+                        dailyApiCalls.incrementAndGet();
                         logger.info("Fetching trending restaurants from Google Places for {}", b.name());
                         GooglePlacesSearchResponse response = placesClient.searchTrending(
                                 b.lat(), b.lng(), b.radiusMeters(), 20);
@@ -530,7 +645,7 @@ public class RestaurantCacheService {
                                 entry.setTrendingScore(0.0);
                                 entry.setLastTrendingCalcAt(now);
                                 cacheRepository.save(entry);
-                            } catch (Exception e) {
+                            } catch (DataIntegrityViolationException | jakarta.validation.ConstraintViolationException e) {
                                 logger.error("Error saving trending restaurant {}: {}", place.id(), e.getMessage());
                             }
                         }
@@ -541,11 +656,13 @@ public class RestaurantCacheService {
                 }, () -> logger.warn("Borough {} not in TRENDING_BOROUGHS, skipping", borough));
     }
 
-    /** On startup, seed any borough that has no trending data yet. Runs async so it doesn't block boot. */
+    /** On startup, seed neighborhoods table and any borough without trending data. Runs async. */
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void seedTrendingOnStartup() {
-        logger.info("Checking trending cache on startup");
+        logger.info("Checking trending cache and neighborhoods on startup");
+        seedNeighborhoods();
+
         Instant now = Instant.now();
         for (TrendingBorough b : TRENDING_BOROUGHS) {
             try {
@@ -561,6 +678,52 @@ public class RestaurantCacheService {
                 logger.error("Startup seed failed for {}: {}", b.name(), e.getMessage());
             }
         }
+    }
+
+    @Transactional
+    private void seedNeighborhoods() {
+        if (neighborhoodRepository.count() > 0) {
+            logger.info("Neighborhoods already seeded, skipping");
+            return;
+        }
+        logger.info("Seeding 30 neighborhoods");
+        List<Neighborhood> neighborhoods = List.of(
+            // Manhattan (display order 0-9)
+            new Neighborhood("SoHo",              "Manhattan", 40.7233, -74.0030, 1000, 0),
+            new Neighborhood("Greenwich Village",  "Manhattan", 40.7335, -74.0027, 1000, 1),
+            new Neighborhood("Upper East Side",    "Manhattan", 40.7736, -73.9566, 1000, 2),
+            new Neighborhood("Midtown",            "Manhattan", 40.7549, -73.9840, 1000, 3),
+            new Neighborhood("Lower East Side",    "Manhattan", 40.7153, -73.9864, 1000, 4),
+            new Neighborhood("Chelsea",            "Manhattan", 40.7465, -74.0014, 1000, 5),
+            new Neighborhood("Tribeca",            "Manhattan", 40.7179, -74.0087, 1000, 6),
+            new Neighborhood("East Village",       "Manhattan", 40.7265, -73.9815, 1000, 7),
+            new Neighborhood("West Village",       "Manhattan", 40.7351, -74.0023, 1000, 8),
+            new Neighborhood("Financial District", "Manhattan", 40.7074, -74.0113, 1000, 9),
+            // Brooklyn (display order 0-9)
+            new Neighborhood("Williamsburg",       "Brooklyn",  40.7081, -73.9571, 1000, 0),
+            new Neighborhood("DUMBO",              "Brooklyn",  40.7033, -73.9892, 1000, 1),
+            new Neighborhood("Park Slope",         "Brooklyn",  40.6726, -73.9785, 1000, 2),
+            new Neighborhood("Bushwick",           "Brooklyn",  40.6944, -73.9213, 1000, 3),
+            new Neighborhood("Crown Heights",      "Brooklyn",  40.6692, -73.9443, 1000, 4),
+            new Neighborhood("Red Hook",           "Brooklyn",  40.6765, -74.0078, 1000, 5),
+            new Neighborhood("Sunset Park",        "Brooklyn",  40.6524, -74.0050, 1000, 6),
+            new Neighborhood("Bay Ridge",          "Brooklyn",  40.6348, -74.0260, 1000, 7),
+            new Neighborhood("Prospect Heights",   "Brooklyn",  40.6773, -73.9681, 1000, 8),
+            new Neighborhood("Carroll Gardens",    "Brooklyn",  40.6788, -73.9995, 1000, 9),
+            // Queens (display order 0-9)
+            new Neighborhood("Astoria",            "Queens",    40.7721, -73.9301, 1000, 0),
+            new Neighborhood("Long Island City",   "Queens",    40.7447, -73.9484, 1000, 1),
+            new Neighborhood("Flushing",           "Queens",    40.7675, -73.8330, 1000, 2),
+            new Neighborhood("Jackson Heights",    "Queens",    40.7556, -73.8830, 1000, 3),
+            new Neighborhood("Forest Hills",       "Queens",    40.7212, -73.8485, 1000, 4),
+            new Neighborhood("Elmhurst",           "Queens",    40.7370, -73.8794, 1000, 5),
+            new Neighborhood("Woodside",           "Queens",    40.7477, -73.9027, 1000, 6),
+            new Neighborhood("Sunnyside",          "Queens",    40.7440, -73.9187, 1000, 7),
+            new Neighborhood("Corona",             "Queens",    40.7519, -73.8656, 1000, 8),
+            new Neighborhood("Ridgewood",          "Queens",    40.7047, -73.9054, 1000, 9)
+        );
+        neighborhoodRepository.saveAll(neighborhoods);
+        logger.info("Seeded {} neighborhoods", neighborhoods.size());
     }
 
     /** Daily job: refresh trending data for all three boroughs at 3 AM server time. */

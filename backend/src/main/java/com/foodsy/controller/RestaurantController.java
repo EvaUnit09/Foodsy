@@ -1,14 +1,17 @@
 package com.foodsy.controller;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import com.foodsy.client.GooglePlacesClient;
 import com.foodsy.domain.Session;
 import com.foodsy.dto.RestaurantDto;
 import com.foodsy.dto.RestaurantSummaryDto;
 import com.foodsy.service.RestaurantCacheService;
 import com.foodsy.service.SessionService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
@@ -23,9 +26,16 @@ import org.springframework.web.client.RestTemplate;
 public class RestaurantController {
     private static final Logger logger = LoggerFactory.getLogger(RestaurantController.class);
 
+    // Allowlist patterns for path variables forwarded to Google Places API (#7)
+    private static final Pattern PLACE_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_\\-]{10,250}$");
+    private static final Pattern PHOTO_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_\\-./]{10,500}$");
+
     private final GooglePlacesClient placesClient;
     private final SessionService sessionService;
     private final RestaurantCacheService restaurantCacheService;
+
+    @Value("${admin.secret:}")
+    private String adminSecret;
 
     public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService,
                                 RestaurantCacheService restaurantCacheService) {
@@ -40,7 +50,13 @@ public class RestaurantController {
             java.util.List.of("Manhattan", "Queens", "Brooklyn");
 
     @PostMapping("/trending/refresh")
-    public ResponseEntity<java.util.Map<String, Object>> refreshTrending() {
+    public ResponseEntity<java.util.Map<String, Object>> refreshTrending(HttpServletRequest request) {
+        // Require admin secret header to prevent unauthorized quota exhaustion (#3)
+        String providedSecret = request.getHeader("X-Admin-Secret");
+        if (adminSecret == null || adminSecret.isBlank() ||
+                !adminSecret.equals(providedSecret)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         java.util.List<String> refreshed = new java.util.ArrayList<>();
         java.util.List<String> failed = new java.util.ArrayList<>();
         for (String borough : TRENDING_BOROUGHS) {
@@ -60,14 +76,19 @@ public class RestaurantController {
     @GetMapping("/discover")
     public ResponseEntity<List<RestaurantSummaryDto>> getDiscovery(
             @RequestParam(defaultValue = "manhattan") String borough,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String neighborhood) {
         if (limit < 1 || limit > 50) return ResponseEntity.badRequest().build();
         String normalized = borough.trim().toLowerCase();
         if (!DISCOVERY_BOROUGHS.contains(normalized)) {
             return ResponseEntity.badRequest().build();
         }
         String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
-        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, limit));
+        // Normalize neighborhood: null or blank → null
+        String normalizedNeighborhood = (neighborhood != null && !neighborhood.isBlank())
+                ? neighborhood.trim()
+                : null;
+        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, normalizedNeighborhood, limit));
     }
 
     @GetMapping("/trending")
@@ -124,21 +145,21 @@ public class RestaurantController {
             @PathVariable String photoId,
             @RequestParam(defaultValue = "800") int maxHeightPx,
             @RequestParam(defaultValue = "800") int maxWidthPx) {
+        // Validate path variables before forwarding to upstream (#7)
+        if (!PLACE_ID_PATTERN.matcher(placeId).matches() ||
+                !PHOTO_ID_PATTERN.matcher(photoId).matches()) {
+            return ResponseEntity.badRequest().build();
+        }
         try {
-            // Build the Google Places photo URL
-            String apiKey = placesClient.getApiKey();
-            
-            // Clean the API key to remove any potential encoding issues
-            
+            // API key goes in header, not query string, to avoid leaking it in server logs (#2)
             String url = String.format(
-                "https://places.googleapis.com/v1/places/%s/photos/%s/media?key=%s&maxHeightPx=%d&maxWidthPx=%d",
-                placeId, photoId, apiKey, maxHeightPx, maxWidthPx
+                "https://places.googleapis.com/v1/places/%s/photos/%s/media?maxHeightPx=%d&maxWidthPx=%d",
+                placeId, photoId, maxHeightPx, maxWidthPx
             );
-            
 
             RestTemplate restTemplate = new RestTemplate();
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            // Google API may require the API key in header, but it's in the URL here
+            headers.set("X-Goog-Api-Key", placesClient.getApiKey());
             org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
             org.springframework.http.ResponseEntity<byte[]> response = restTemplate.exchange(
                 url,

@@ -25,7 +25,12 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "places.id,places.name,places.displayName,places.formattedAddress,places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri"
+                        "places.id,places.name,places.displayName,places.formattedAddress," +
+                        "places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri," +
+                        "places.goodForGroups,places.goodForChildren,places.liveMusic," +
+                        "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
+                        "places.servesWine,places.servesVegetarianFood,places.delivery," +
+                        "places.takeout,places.outdoorSeating,places.reservable"
                 )
                 .build();
     }
@@ -74,14 +79,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_2", 800, 600)
                 ),
-                4.5,
-                100,
+                4.5, 100,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE,
-                "$-$$",
-                "Mon-Sun: 9am-9pm",
-                "A great place for mock food.",
-                "Loved by locals for its mock cuisine.",
-                "https://www.mockrestaurant1.com"
+                "$-$$", "Mon-Sun: 9am-9pm",
+                "A great place for mock food.", "Loved by locals for its mock cuisine.",
+                "https://www.mockrestaurant1.com",
+                null, null, null, null, null, null, true, null, null, null, true, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_2",
@@ -94,14 +97,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_2", 800, 600)
                 ),
-                4.2,
-                85,
+                4.2, 85,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
-                "$",
-                "Mon-Fri: 10am-8pm",
-                "Affordable and tasty mock meals.",
-                "Great value for the price.",
-                "https://www.mockrestaurant2.com"
+                "$", "Mon-Fri: 10am-8pm",
+                "Affordable and tasty mock meals.", "Great value for the price.",
+                "https://www.mockrestaurant2.com",
+                null, null, null, null, null, null, null, null, true, true, null, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_3",
@@ -114,14 +115,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_2", 800, 600)
                 ),
-                4.8,
-                120,
+                4.8, 120,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE,
-                "$$$",
-                "Sat-Sun: 11am-11pm",
-                "Fine dining mock experience.",
-                "Top-rated by mock foodies.",
-                "https://www.mockrestaurant3.com"
+                "$$$", "Sat-Sun: 11am-11pm",
+                "Fine dining mock experience.", "Top-rated by mock foodies.",
+                "https://www.mockrestaurant3.com",
+                null, null, null, null, null, true, true, null, null, null, null, true
             )
         );
         
@@ -218,7 +217,11 @@ public class GooglePlacesClient {
                     .defaultHeader("X-Goog-FieldMask",
                             "places.id,places.name,places.displayName,places.formattedAddress," +
                             "places.types,places.location,places.photos,places.rating," +
-                            "places.userRatingCount,places.priceLevel,places.websiteUri")
+                            "places.userRatingCount,places.priceLevel,places.websiteUri," +
+                            "places.goodForGroups,places.goodForChildren,places.liveMusic," +
+                            "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
+                            "places.servesWine,places.servesVegetarianFood,places.delivery," +
+                            "places.takeout,places.outdoorSeating,places.reservable")
                     .build();
 
             int capped = Math.max(1, Math.min(20, maxResults));
@@ -308,7 +311,10 @@ public class GooglePlacesClient {
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
-                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount,priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary,websiteUri")
+                        "id,displayName,formattedAddress,types,location,photos,rating,userRatingCount," +
+                        "priceLevel,priceRange,currentOpeningHours,generativeSummary,reviewSummary,websiteUri," +
+                        "goodForGroups,goodForChildren,liveMusic,servesBrunch,servesBreakfast,servesDinner," +
+                        "servesWine,servesVegetarianFood,delivery,takeout,outdoorSeating,reservable")
                 .build();
         return detailsClient.get()
                 .uri("/places/{placeId}", placeId)
@@ -317,16 +323,16 @@ public class GooglePlacesClient {
     }
 
     private GooglePlacesSearchResponse.Place mergePlaceWithDetails(GooglePlacesSearchResponse.Place place, Map<String, Object> details) {
-        // Helper to extract string or null
         java.util.function.Function<String, String> getString = key -> details.get(key) != null ? details.get(key).toString() : null;
+        java.util.function.Function<String, Boolean> getBool = key -> details.get(key) instanceof Boolean ? (Boolean) details.get(key) : null;
         Double rating = details.get("rating") instanceof Number ? ((Number) details.get("rating")).doubleValue() : place.rating();
         Integer userRatingCount = details.get("userRatingCount") instanceof Number ? ((Number) details.get("userRatingCount")).intValue() : place.userRatingsTotal();
-        String priceLevel = getString.apply("priceLevel");
         String priceRange = getString.apply("priceRange");
         String currentOpeningHours = details.get("currentOpeningHours") != null ? details.get("currentOpeningHours").toString() : null;
         String generativeSummary = getString.apply("generativeSummary");
         String reviewSummary = getString.apply("reviewSummary");
         String websiteUri = getString.apply("websiteUri");
+        // Vibe booleans: prefer details map value, fall back to what's already on the place
         return new GooglePlacesSearchResponse.Place(
                 place.id(),
                 place.name(),
@@ -342,7 +348,19 @@ public class GooglePlacesClient {
                 currentOpeningHours,
                 generativeSummary,
                 reviewSummary,
-                websiteUri != null ? websiteUri : place.websiteUri()
+                websiteUri != null ? websiteUri : place.websiteUri(),
+                getBool.apply("goodForGroups") != null    ? getBool.apply("goodForGroups")    : place.goodForGroups(),
+                getBool.apply("goodForChildren") != null  ? getBool.apply("goodForChildren")  : place.goodForChildren(),
+                getBool.apply("liveMusic") != null        ? getBool.apply("liveMusic")        : place.liveMusic(),
+                getBool.apply("servesBrunch") != null     ? getBool.apply("servesBrunch")     : place.servesBrunch(),
+                getBool.apply("servesBreakfast") != null  ? getBool.apply("servesBreakfast")  : place.servesBreakfast(),
+                getBool.apply("servesDinner") != null     ? getBool.apply("servesDinner")     : place.servesDinner(),
+                getBool.apply("servesWine") != null       ? getBool.apply("servesWine")       : place.servesWine(),
+                getBool.apply("servesVegetarianFood") != null ? getBool.apply("servesVegetarianFood") : place.servesVegetarianFood(),
+                getBool.apply("delivery") != null         ? getBool.apply("delivery")         : place.delivery(),
+                getBool.apply("takeout") != null          ? getBool.apply("takeout")          : place.takeout(),
+                getBool.apply("outdoorSeating") != null   ? getBool.apply("outdoorSeating")   : place.outdoorSeating(),
+                getBool.apply("reservable") != null       ? getBool.apply("reservable")       : place.reservable()
         );
     }
 }

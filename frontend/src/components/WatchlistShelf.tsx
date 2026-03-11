@@ -1,13 +1,25 @@
 "use client";
 
-import { RestaurantSummaryDto } from "@/api/homepageApi";
+import { useState, useEffect } from "react";
+import { DiscoveryRestaurant } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 
 interface WatchlistShelfProps {
-  watchlist: RestaurantSummaryDto[];
   onStartDiscovery: () => void;
 }
 
-export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfProps) {
+export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
+  const [watchlist, setWatchlist] = useState<DiscoveryRestaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+
+  useEffect(() => {
+    LibraryApi.getWatchlist()
+      .then(setWatchlist)
+      .catch(() => setFetchError(true))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   return (
     <div style={{ margin: "0 32px 24px" }}>
       {/* Header row */}
@@ -31,14 +43,21 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
           >
             Want to Try
           </h2>
-          <span style={{ fontSize: 12, color: "#aaa" }}>
-            {watchlist.length} saved
-          </span>
+          {!isLoading && (
+            <span style={{ fontSize: 12, color: "#aaa" }}>
+              {watchlist.length} saved
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Always empty state for now (no API) */}
-      {watchlist.length === 0 && (
+      {!isLoading && fetchError && (
+        <p style={{ fontSize: 13, color: "#aaa" }}>
+          Couldn&apos;t load your list right now.
+        </p>
+      )}
+
+      {!isLoading && !fetchError && watchlist.length === 0 && (
         <div
           style={{
             border: "1.5px dashed #e0d8d2",
@@ -70,8 +89,7 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
         </div>
       )}
 
-      {/* Watchlist horizontal scroll (future use) */}
-      {watchlist.length > 0 && (
+      {!isLoading && !fetchError && watchlist.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -90,7 +108,7 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
   );
 }
 
-function WatchlistCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
+function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
   const photo = restaurant.photos?.[0];
 
   return (
@@ -106,6 +124,7 @@ function WatchlistCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
     >
       <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
         {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={restaurant.name}

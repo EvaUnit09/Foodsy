@@ -336,6 +336,34 @@ export function DiscoveryCard({
           )}
         </div>
 
+        {restaurant.vibeTags && restaurant.vibeTags.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 5,
+              marginTop: 6,
+            }}
+          >
+            {restaurant.vibeTags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: 11,
+                  background: "#f5ede8",
+                  color: "#e8531a",
+                  borderRadius: 20,
+                  padding: "3px 8px",
+                  whiteSpace: "nowrap",
+                  fontWeight: 600,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {restaurant.generativeSummary && (
           <p
             style={{
@@ -343,7 +371,7 @@ export function DiscoveryCard({
               color: "#666",
               lineHeight: 1.6,
               margin: 0,
-              marginTop: 4,
+              marginTop: 6,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",

@@ -96,7 +96,12 @@ public class RestaurantCache {
     
     @Column(name = "last_trending_calc_at")
     private Instant lastTrendingCalcAt;
-    
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "restaurant_cache_vibe_tags", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
+    @Column(name = "vibe_tag")
+    private List<String> vibeTags;
+
     // Constructors
     public RestaurantCache() {
         // Set expiration to 30 days from now (as per Places API terms)
@@ -316,5 +321,13 @@ public class RestaurantCache {
     
     public void setLastTrendingCalcAt(Instant lastTrendingCalcAt) {
         this.lastTrendingCalcAt = lastTrendingCalcAt;
+    }
+
+    public List<String> getVibeTags() {
+        return vibeTags;
+    }
+
+    public void setVibeTags(List<String> vibeTags) {
+        this.vibeTags = vibeTags;
     }
 } 

@@ -16,6 +16,7 @@ export interface DiscoveryRestaurant {
   address: string;
   userRatingCount: number | null;
   generativeSummary: string | null;
+  vibeTags?: string[];
 }
 
 export const DAILY_CAP = 20;
@@ -79,12 +80,15 @@ export class DiscoveryApi {
   // Fetch discovery restaurants from backend
   static async fetchRestaurants(
     borough: Borough,
+    neighborhood?: string | null,
     limit = DAILY_CAP
   ): Promise<DiscoveryRestaurant[]> {
-    const res = await fetch(
-      `${API_BASE_URL}/restaurants/discover?borough=${borough}&limit=${limit}`,
-      { credentials: "include" }
-    );
+    let url = `${API_BASE_URL}/restaurants/discover?borough=${borough}&limit=${limit}`;
+    const trimmedNeighborhood = neighborhood?.trim();
+    if (trimmedNeighborhood) {
+      url += `&neighborhood=${encodeURIComponent(trimmedNeighborhood)}`;
+    }
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) throw new Error(`Discovery fetch failed: ${res.status}`);
     return res.json();
   }
@@ -135,26 +139,6 @@ export class DiscoveryApi {
 
   static getTodaySeenCount(): number {
     return Math.min(this.getSeenIds().size, DAILY_CAP);
-  }
-
-  // ─── Watchlist (localStorage) ───────────────────────────────────────────────
-
-  static getWatchlist(): DiscoveryRestaurant[] {
-    if (typeof window === "undefined") return [];
-    try {
-      return JSON.parse(localStorage.getItem("discovery_watchlist") || "[]");
-    } catch {
-      return [];
-    }
-  }
-
-  static addToWatchlist(restaurant: DiscoveryRestaurant): void {
-    if (typeof window === "undefined") return;
-    const list = this.getWatchlist();
-    if (!list.find((r) => r.id === restaurant.id)) {
-      list.push(restaurant);
-      localStorage.setItem("discovery_watchlist", JSON.stringify(list));
-    }
   }
 
   // ─── Streak ─────────────────────────────────────────────────────────────────

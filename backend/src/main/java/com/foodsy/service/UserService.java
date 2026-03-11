@@ -4,6 +4,7 @@ import com.foodsy.domain.User;
 import com.foodsy.domain.AuthProvider;
 import com.foodsy.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,6 +77,23 @@ public class UserService {
         return findByEmailOrUsername(identifier);
     }
     
+    /**
+     * Resolve the authenticated User from a Spring Security Authentication object.
+     * The JWT filter stores the username (or user ID) as the principal name.
+     */
+    public Optional<User> findByAuthentication(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) return Optional.empty();
+        String name = authentication.getName();
+        // Try username first to avoid a numeric username accidentally resolving to a different user's ID
+        Optional<User> byUsername = findByUsername(name);
+        if (byUsername.isPresent()) return byUsername;
+        try {
+            return userRepository.findById(Long.parseLong(name));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
     // Check if identifier represents a guest user (not in database)
     public boolean isGuestUser(String identifier) {
         return identifier != null && 

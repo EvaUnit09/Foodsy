@@ -76,6 +76,10 @@ google:
     api:
       key: ${GOOGLE_PLACES_API_KEY}
 
+# Admin endpoints — must supply X-Admin-Secret header matching this value
+admin:
+  secret: ${ADMIN_SECRET:}
+
 # Session Management Configuration
 session:
   timeout:

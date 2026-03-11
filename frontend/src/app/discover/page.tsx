@@ -11,6 +11,7 @@ import {
   DAILY_CAP,
   BOROUGH_NEIGHBORHOODS,
 } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { DiscoveryCard } from "@/components/discovery/DiscoveryCard";
 import { AreaPicker } from "@/components/discovery/AreaPicker";
@@ -40,6 +41,7 @@ export default function DiscoverPage() {
   const [isDone, setIsDone] = useState(false);
 
   const [sessionFavorites, setSessionFavorites] = useState(0);
+  const [sessionWatchlist, setSessionWatchlist] = useState(0);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState(0);
   const [retryKey, setRetryKey] = useState(0);
@@ -75,7 +77,7 @@ export default function DiscoverPage() {
       }
 
       try {
-        const restaurants = await DiscoveryApi.fetchRestaurants(selectedBorough);
+        const restaurants = await DiscoveryApi.fetchRestaurants(selectedBorough, selectedNeighborhood);
         if (aborted) return;
         const filtered = restaurants
           .filter((r) => !ids.has(r.id))
@@ -96,7 +98,7 @@ export default function DiscoverPage() {
 
     loadDeck();
     return () => { aborted = true; };
-  }, [selectedBorough, isAuthenticated, retryKey]);
+  }, [selectedBorough, selectedNeighborhood, isAuthenticated, retryKey]);
 
   // ── Action handler ───────────────────────────────────────────────────────────
   async function handleAction(action: SwipeAction) {
@@ -107,11 +109,15 @@ export default function DiscoverPage() {
     setExitAction(action);
 
     if (action === "favorite") {
-      DiscoveryApi.trackFavorite(r.id);
-      setSessionFavorites((n) => n + 1);
+      DiscoveryApi.trackFavorite(r.id); // analytics — best-effort, not awaited
+      LibraryApi.addFavorite(r.id)
+        .then(() => setSessionFavorites((n) => n + 1))
+        .catch(() => {}); // don't block the swipe on network errors
     }
     if (action === "watchlist") {
-      DiscoveryApi.addToWatchlist(r);
+      LibraryApi.addToWatchlist(r.id)
+        .then(() => setSessionWatchlist((n) => n + 1))
+        .catch(() => {});
     }
     DiscoveryApi.addSeenId(r.id);
 
@@ -133,7 +139,6 @@ export default function DiscoverPage() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const seenCount = seenIds.size;
-  const watchlistCount = DiscoveryApi.getWatchlist().length;
 
   // ── Render guards ─────────────────────────────────────────────────────────────
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
@@ -306,7 +311,7 @@ export default function DiscoverPage() {
       {isDone && (
         <CompletionScreen
           favoriteCount={sessionFavorites}
-          watchlistCount={watchlistCount}
+          watchlistCount={sessionWatchlist}
           seenCount={seenCount}
           streak={streak}
           onChangeArea={() => setShowAreaPicker(true)}
