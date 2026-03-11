@@ -26,7 +26,9 @@ public class GooglePlacesClient {
                 .defaultHeader("X-Goog-Api-Key", apiKey)
                 .defaultHeader("X-Goog-FieldMask",
                         "places.id,places.name,places.displayName,places.formattedAddress," +
-                        "places.types,places.location,places.photos,places.rating,places.priceLevel,places.websiteUri," +
+                        "places.types,places.location,places.photos,places.rating," +
+                        "places.userRatingCount,places.priceLevel,places.websiteUri," +
+                        "places.generativeSummary,places.reviewSummary," +
                         "places.goodForGroups,places.goodForChildren,places.liveMusic," +
                         "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
                         "places.servesWine,places.servesVegetarianFood,places.delivery," +

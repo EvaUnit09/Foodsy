@@ -1,5 +1,6 @@
 package com.foodsy.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 
@@ -15,7 +16,7 @@ public record GooglePlacesSearchResponse(
             Location location,
             List<Photo> photos,
             Double rating,
-            Integer userRatingsTotal,
+            @JsonProperty("userRatingCount") Integer userRatingsTotal,
             PriceLevel priceLevel,
             String priceRange,
             String currentOpeningHours,
