@@ -27,6 +27,8 @@ public class RestaurantSummaryDto {
     private Double latitude;
     private Double longitude;
     
+    private List<String> vibeTags;
+
     // For analytics and recommendations
     private Integer clickCount; // Number of times clicked in last 7 days
     private Double popularityScore; // Calculated based on clicks, rating, etc.
@@ -40,7 +42,12 @@ public class RestaurantSummaryDto {
         this.category = category;
     }
     
-    // Factory method to create from RestaurantCache entity
+    /**
+     * Create a RestaurantSummaryDto populated from the given RestaurantCache entity.
+     *
+     * @param entity the source RestaurantCache whose fields will be copied into the DTO
+     * @return a new RestaurantSummaryDto containing data copied from the provided entity
+     */
     public static RestaurantSummaryDto fromEntity(RestaurantCache entity) {
         RestaurantSummaryDto dto = new RestaurantSummaryDto();
         dto.setPlaceId(entity.getPlaceId());
@@ -59,6 +66,7 @@ public class RestaurantSummaryDto {
         dto.setOpeningHours(entity.getOpeningHours());
         dto.setLatitude(entity.getLatitude());
         dto.setLongitude(entity.getLongitude());
+        dto.setVibeTags(entity.getVibeTags());
         return dto;
     }
     
@@ -218,10 +226,38 @@ public class RestaurantSummaryDto {
         return longitude;
     }
     
+    /**
+     * Set the restaurant's longitude in decimal degrees.
+     *
+     * @param longitude the longitude in decimal degrees (positive for east, negative for west)
+     */
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
     }
     
+    /**
+     * The vibe tags associated with the restaurant.
+     *
+     * @return the list of vibe tag strings, or {@code null} if none have been set
+     */
+    public List<String> getVibeTags() {
+        return vibeTags;
+    }
+
+    /**
+     * Set the list of vibe tags describing the restaurant's atmosphere.
+     *
+     * @param vibeTags a list of short descriptors (e.g., "cozy", "romantic", "family‑friendly"); may be null to clear tags
+     */
+    public void setVibeTags(List<String> vibeTags) {
+        this.vibeTags = vibeTags;
+    }
+
+    /**
+     * Get the number of recorded clicks for this restaurant.
+     *
+     * @return the click count, or `null` if not set
+     */
     public Integer getClickCount() {
         return clickCount;
     }

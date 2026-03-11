@@ -11,6 +11,7 @@ import {
   DAILY_CAP,
   BOROUGH_NEIGHBORHOODS,
 } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { DiscoveryCard } from "@/components/discovery/DiscoveryCard";
 import { AreaPicker } from "@/components/discovery/AreaPicker";
@@ -23,6 +24,13 @@ const BOROUGH_LABELS: Record<Borough, string> = {
   queens: "Queens",
 };
 
+/**
+ * Render the swipe-based restaurant discovery page with area filtering, deck loading, user actions (pass, favorite, watchlist), and completion UI.
+ *
+ * The component loads a daily-limited deck of restaurants for the selected borough/neighborhood (excluding already seen items), presents cards for swiping, tracks session favorites and watchlist additions, records seen items and completion, and exposes controls for changing area or returning home.
+ *
+ * @returns A React element representing the Discover page UI
+ */
 export default function DiscoverPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -40,6 +48,7 @@ export default function DiscoverPage() {
   const [isDone, setIsDone] = useState(false);
 
   const [sessionFavorites, setSessionFavorites] = useState(0);
+  const [sessionWatchlist, setSessionWatchlist] = useState(0);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState(0);
   const [retryKey, setRetryKey] = useState(0);
@@ -75,7 +84,7 @@ export default function DiscoverPage() {
       }
 
       try {
-        const restaurants = await DiscoveryApi.fetchRestaurants(selectedBorough);
+        const restaurants = await DiscoveryApi.fetchRestaurants(selectedBorough, selectedNeighborhood);
         if (aborted) return;
         const filtered = restaurants
           .filter((r) => !ids.has(r.id))
@@ -96,7 +105,7 @@ export default function DiscoverPage() {
 
     loadDeck();
     return () => { aborted = true; };
-  }, [selectedBorough, isAuthenticated, retryKey]);
+  }, [selectedBorough, selectedNeighborhood, isAuthenticated, retryKey]);
 
   // ── Action handler ───────────────────────────────────────────────────────────
   async function handleAction(action: SwipeAction) {
@@ -108,10 +117,12 @@ export default function DiscoverPage() {
 
     if (action === "favorite") {
       DiscoveryApi.trackFavorite(r.id);
+      LibraryApi.addFavorite(r.id);
       setSessionFavorites((n) => n + 1);
     }
     if (action === "watchlist") {
-      DiscoveryApi.addToWatchlist(r);
+      LibraryApi.addToWatchlist(r.id);
+      setSessionWatchlist((n) => n + 1);
     }
     DiscoveryApi.addSeenId(r.id);
 
@@ -133,7 +144,6 @@ export default function DiscoverPage() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const seenCount = seenIds.size;
-  const watchlistCount = DiscoveryApi.getWatchlist().length;
 
   // ── Render guards ─────────────────────────────────────────────────────────────
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
@@ -306,7 +316,7 @@ export default function DiscoverPage() {
       {isDone && (
         <CompletionScreen
           favoriteCount={sessionFavorites}
-          watchlistCount={watchlistCount}
+          watchlistCount={sessionWatchlist}
           seenCount={seenCount}
           streak={streak}
           onChangeArea={() => setShowAreaPicker(true)}

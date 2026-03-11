@@ -18,9 +18,20 @@ import java.util.Optional;
 public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache, Long> {
     
     /**
-     * Find cached restaurant by Google Places place_id
-     */
+ * Retrieve the cached RestaurantCache for a Google Places place_id.
+ *
+ * @param placeId the Google Places `place_id` to look up
+ * @return an Optional containing the cached RestaurantCache for the specified place_id if present, otherwise an empty Optional
+ */
     Optional<RestaurantCache> findByPlaceId(String placeId);
+
+    /**
+ * Find cached restaurants matching any of the given Google Places `place_id` values.
+ *
+ * @param placeIds the list of Google Places `place_id` strings to look up
+ * @return a list of matching RestaurantCache entities, empty if none match
+ */
+    List<RestaurantCache> findByPlaceIdIn(List<String> placeIds);
     
     /**
      * Find non-expired restaurants by borough
@@ -97,22 +108,40 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
     boolean existsByPlaceIdAndNotExpired(@Param("placeId") String placeId, @Param("now") Instant now);
     
     /**
-     * Find random restaurants for spotlight section
+     * Selects a random sample of high-rated, non-expired restaurants in a borough.
+     *
+     * @param borough   the borough to search
+     * @param now       instant used to filter out expired entries (restaurants with expiresAt after this instant)
+     * @param minRating inclusive minimum rating to consider
+     * @param limit     maximum number of restaurants to return
+     * @return          a list of restaurants matching the criteria in random order, up to the specified limit
      */
     @Query(value = "SELECT * FROM restaurant_cache WHERE borough = :borough AND expires_at > :now AND rating >= :minRating ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
     List<RestaurantCache> findRandomHighRated(@Param("borough") String borough, @Param("now") Instant now, @Param("minRating") Double minRating, @Param("limit") int limit);
 
     /**
-     * Find random restaurants for discovery section (lower rating floor to maximise pool)
+     * Selects random restaurants for the discovery section within a borough, optionally filtered by neighborhood.
+     *
+     * Finds non-expired restaurants with rating greater than or equal to minRating, ordered randomly and limited to the specified number of results.
+     *
+     * @param borough the borough to search
+     * @param neighborhood the neighborhood to filter by; pass null to disable neighborhood filtering
+     * @param now the reference instant used to determine whether entries are expired
+     * @param minRating inclusive minimum rating required for results
+     * @param limit maximum number of results to return
+     * @return a list of matching RestaurantCache entities in random order, up to {@code limit} entries
      */
     @Query(
         value = "SELECT * FROM restaurant_cache " +
-                "WHERE borough = :borough AND expires_at > :now AND rating >= :minRating " +
+                "WHERE borough = :borough " +
+                "AND (:neighborhood IS NULL OR neighborhood = :neighborhood) " +
+                "AND expires_at > :now AND rating >= :minRating " +
                 "ORDER BY RANDOM() LIMIT :limit",
         nativeQuery = true
     )
     List<RestaurantCache> findDiscoveryRestaurants(
         @Param("borough") String borough,
+        @Param("neighborhood") String neighborhood,
         @Param("now") Instant now,
         @Param("minRating") Double minRating,
         @Param("limit") int limit

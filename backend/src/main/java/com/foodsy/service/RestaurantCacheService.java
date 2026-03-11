@@ -1,9 +1,11 @@
 package com.foodsy.service;
 
 import com.foodsy.client.GooglePlacesClient;
+import com.foodsy.domain.Neighborhood;
 import com.foodsy.domain.RestaurantCache;
 import com.foodsy.dto.GooglePlacesSearchResponse;
 import com.foodsy.dto.RestaurantSummaryDto;
+import com.foodsy.repository.NeighborhoodRepository;
 import com.foodsy.repository.RestaurantCacheRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +73,9 @@ public class RestaurantCacheService {
 
     @Autowired
     private RestaurantCacheRepository cacheRepository;
+
+    @Autowired
+    private NeighborhoodRepository neighborhoodRepository;
 
     @Autowired
     private GooglePlacesClient placesClient;
@@ -142,39 +148,101 @@ public class RestaurantCacheService {
 
 
     /**
-     * Get randomised restaurants for the discovery swipe feature (lower rating floor than spotlight).
-     * Uses a per-borough in-flight gate so only the first caller triggers a cache-warming fetch;
-     * concurrent callers for the same borough wait on the existing CompletableFuture.
+     * Retrieve discovery-mode restaurants for a borough or specific neighborhood, using cached results when available.
+     *
+     * If the cache is empty, triggers a single upstream cache-warming fetch for the borough (or borough:neighborhood) while other concurrent callers wait for completion.
+     *
+     * @param borough     the borough to search (e.g., "Manhattan")
+     * @param neighborhood optional neighborhood name; if null, discovery is performed at the borough level
+     * @param limit       maximum number of restaurants to return
+     * @return            a list of discovery RestaurantSummaryDto objects (may be empty)
      */
-    public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, int limit) {
-        logger.debug("Getting discovery restaurants for borough: {}", borough);
+    public List<RestaurantSummaryDto> getDiscoveryRestaurants(String borough, String neighborhood, int limit) {
+        logger.debug("Getting discovery restaurants for borough: {}, neighborhood: {}", borough, neighborhood);
 
         Instant now = Instant.now();
-        List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        List<RestaurantCache> results = cacheRepository.findDiscoveryRestaurants(borough, neighborhood, now, 3.5, limit);
 
         if (!results.isEmpty()) {
             return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
         }
 
         // Cache is empty — gate concurrent fetches so only one thread calls upstream per borough.
+        String gateKey = borough + (neighborhood != null ? ":" + neighborhood : "");
         CompletableFuture<Void> myFuture = new CompletableFuture<>();
-        CompletableFuture<Void> existing = discoveryFetchGate.putIfAbsent(borough, myFuture);
+        CompletableFuture<Void> existing = discoveryFetchGate.putIfAbsent(gateKey, myFuture);
 
         if (existing != null) {
-            // Another thread already started a fetch — wait for it to finish.
             existing.join();
         } else {
-            // We won the race — fetch and notify waiters.
             try {
-                fetchAndCacheTrendingForBorough(borough);
+                if (neighborhood != null) {
+                    fetchAndCacheForNeighborhood(borough, neighborhood);
+                } else {
+                    fetchAndCacheTrendingForBorough(borough);
+                }
             } finally {
-                discoveryFetchGate.remove(borough, myFuture);
+                discoveryFetchGate.remove(gateKey, myFuture);
                 myFuture.complete(null);
             }
         }
 
-        results = cacheRepository.findDiscoveryRestaurants(borough, now, 3.5, limit);
+        results = cacheRepository.findDiscoveryRestaurants(borough, neighborhood, now, 3.5, limit);
         return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches restaurants for a named neighborhood from Google Places and upserts them into the local cache.
+     *
+     * If the neighborhood is not present in the database, this method falls back to fetching trending data for the borough.
+     * Successful results are upserted into RestaurantCache and annotated with the neighborhood name, a trending rank,
+     * a trending score, and the timestamp of the last trending calculation. Errors for individual places are logged and
+     * do not abort processing of other results.
+     *
+     * @param borough     the borough containing the neighborhood
+     * @param neighborhood the neighborhood name whose stored coordinates will be used for the search
+     */
+    @Transactional
+    public void fetchAndCacheForNeighborhood(String borough, String neighborhood) {
+        Optional<Neighborhood> nbOpt = neighborhoodRepository
+                .findByNameIgnoreCaseAndBoroughIgnoreCase(neighborhood, borough);
+
+        if (nbOpt.isEmpty()) {
+            logger.warn("Neighborhood '{}' in '{}' not found in DB, falling back to borough fetch", neighborhood, borough);
+            fetchAndCacheTrendingForBorough(borough);
+            return;
+        }
+
+        Neighborhood nb = nbOpt.get();
+        try {
+            logger.info("Fetching places for neighborhood {} ({}, {}) radius {}m",
+                    nb.getName(), nb.getCenterLat(), nb.getCenterLng(), nb.getRadiusMeters());
+            GooglePlacesSearchResponse response = placesClient.searchTrending(
+                    nb.getCenterLat(), nb.getCenterLng(), nb.getRadiusMeters(), 20);
+
+            List<GooglePlacesSearchResponse.Place> places = response.places();
+            if (places == null || places.isEmpty()) {
+                logger.warn("No results from Google Places for neighborhood {}", nb.getName());
+                return;
+            }
+
+            Instant now = Instant.now();
+            for (int i = 0; i < places.size(); i++) {
+                try {
+                    RestaurantCache entry = upsertRestaurantCache(places.get(i), borough);
+                    entry.setNeighborhood(nb.getName());
+                    entry.setTrendingRank(i + 1);
+                    entry.setTrendingScore(0.0);
+                    entry.setLastTrendingCalcAt(now);
+                    cacheRepository.save(entry);
+                } catch (Exception e) {
+                    logger.error("Error saving restaurant for neighborhood {}: {}", nb.getName(), e.getMessage());
+                }
+            }
+            logger.info("Cached {} restaurants for neighborhood {}", places.size(), nb.getName());
+        } catch (Exception e) {
+            logger.error("Error fetching for neighborhood {}: {}", nb.getName(), e.getMessage());
+        }
     }
 
     /**
@@ -349,9 +417,14 @@ public class RestaurantCacheService {
     }
 
     /**
-     * Find-or-create a RestaurantCache row by place_id (upsert), then populate all fields.
-     * Using find-or-create everywhere means we never INSERT a duplicate place_id row.
-     */
+         * Creates or updates a RestaurantCache for the given Google Places result, populates identifying,
+         * location, metadata, and derived fields (e.g., category, price level, vibe tags, expiration), then saves
+         * and returns the persistent entity.
+         *
+         * @param place   the Google Places search result to upsert into the cache
+         * @param borough the borough name to assign to the cached restaurant
+         * @return        the saved RestaurantCache entity with updated fields
+         */
     @Transactional
     RestaurantCache upsertRestaurantCache(GooglePlacesSearchResponse.Place place, String borough) {
         RestaurantCache cache = cacheRepository.findByPlaceId(place.id())
@@ -384,10 +457,59 @@ public class RestaurantCacheService {
                     .collect(Collectors.toList()));
         }
 
+        cache.setVibeTags(deriveVibeTags(place, cache.getPriceLevel()));
         cache.refreshExpiration();
         return cacheRepository.save(cache);
     }
 
+    /**
+     * Derives descriptive "vibe" tags for a place based on its attributes and price level.
+     *
+     * @param place the Google Places response place to evaluate
+     * @param priceLevel the normalized internal price level (1 = inexpensive, 2 = moderate, 3 = expensive), or null if unknown
+     * @return a list of vibe tags (for example: "Date Night", "Group Friendly", "Family Friendly", "Live Music", "Vegetarian", "Brunch", "Casual", "Fine Dining", "Outdoor Seating", "Delivery")
+     */
+    private List<String> deriveVibeTags(GooglePlacesSearchResponse.Place place, Integer priceLevel) {
+        List<String> tags = new ArrayList<>();
+        if (Boolean.TRUE.equals(place.servesWine()) || (priceLevel != null && priceLevel >= 3)) {
+            tags.add("Date Night");
+        }
+        if (Boolean.TRUE.equals(place.goodForGroups())) {
+            tags.add("Group Friendly");
+        }
+        if (Boolean.TRUE.equals(place.goodForChildren())) {
+            tags.add("Family Friendly");
+        }
+        if (Boolean.TRUE.equals(place.liveMusic())) {
+            tags.add("Live Music");
+        }
+        if (Boolean.TRUE.equals(place.servesVegetarianFood())) {
+            tags.add("Vegetarian");
+        }
+        if (Boolean.TRUE.equals(place.servesBrunch())) {
+            tags.add("Brunch");
+        }
+        if (priceLevel != null && priceLevel == 1) {
+            tags.add("Casual");
+        }
+        if (priceLevel != null && priceLevel == 3) {
+            tags.add("Fine Dining");
+        }
+        if (Boolean.TRUE.equals(place.outdoorSeating())) {
+            tags.add("Outdoor Seating");
+        }
+        if (Boolean.TRUE.equals(place.delivery())) {
+            tags.add("Delivery");
+        }
+        return tags;
+    }
+
+    /**
+     * Derives a user-facing cuisine or venue category from a list of Google place types.
+     *
+     * @param types the list of place type identifiers (e.g., "italian_restaurant", "cafe"); may be null or empty
+     * @return the mapped category (e.g., "Italian", "Cafe", "Bar") or "Restaurant" if no specific mapping is found
+     */
     private String extractCategory(List<String> types) {
         if (types == null || types.isEmpty()) {
             return "Restaurant";
@@ -541,11 +663,19 @@ public class RestaurantCacheService {
                 }, () -> logger.warn("Borough {} not in TRENDING_BOROUGHS, skipping", borough));
     }
 
-    /** On startup, seed any borough that has no trending data yet. Runs async so it doesn't block boot. */
+    /**
+     * Seed the neighborhoods table and ensure each trending borough has initial trending data at application startup.
+     *
+     * <p>On startup this method seeds predefined neighborhoods if missing, then iterates TRENDING_BOROUGHS:
+     * for each borough it checks for existing recent trending entries and triggers a fetch-and-cache of trending
+     * places when none are present. Progress and per-borough errors are logged but do not abort the overall process.
+     */
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void seedTrendingOnStartup() {
-        logger.info("Checking trending cache on startup");
+        logger.info("Checking trending cache and neighborhoods on startup");
+        seedNeighborhoods();
+
         Instant now = Instant.now();
         for (TrendingBorough b : TRENDING_BOROUGHS) {
             try {
@@ -563,7 +693,64 @@ public class RestaurantCacheService {
         }
     }
 
-    /** Daily job: refresh trending data for all three boroughs at 3 AM server time. */
+    /**
+     * Seed the database with a predefined set of neighborhoods if the neighborhoods table is empty.
+     *
+     * <p>Checks the NeighborhoodRepository; if no neighborhoods exist, inserts a fixed list of 30
+     * neighborhood records spanning Manhattan, Brooklyn, and Queens and logs the seeded count. If
+     * neighborhoods already exist, the method returns without making changes.
+     */
+    private void seedNeighborhoods() {
+        if (neighborhoodRepository.count() > 0) {
+            logger.info("Neighborhoods already seeded, skipping");
+            return;
+        }
+        logger.info("Seeding 30 neighborhoods");
+        List<Neighborhood> neighborhoods = List.of(
+            // Manhattan (display order 0-9)
+            new Neighborhood("SoHo",              "Manhattan", 40.7233, -74.0030, 1000, 0),
+            new Neighborhood("Greenwich Village",  "Manhattan", 40.7335, -74.0027, 1000, 1),
+            new Neighborhood("Upper East Side",    "Manhattan", 40.7736, -73.9566, 1000, 2),
+            new Neighborhood("Midtown",            "Manhattan", 40.7549, -73.9840, 1000, 3),
+            new Neighborhood("Lower East Side",    "Manhattan", 40.7153, -73.9864, 1000, 4),
+            new Neighborhood("Chelsea",            "Manhattan", 40.7465, -74.0014, 1000, 5),
+            new Neighborhood("Tribeca",            "Manhattan", 40.7179, -74.0087, 1000, 6),
+            new Neighborhood("East Village",       "Manhattan", 40.7265, -73.9815, 1000, 7),
+            new Neighborhood("West Village",       "Manhattan", 40.7351, -74.0023, 1000, 8),
+            new Neighborhood("Financial District", "Manhattan", 40.7074, -74.0113, 1000, 9),
+            // Brooklyn (display order 0-9)
+            new Neighborhood("Williamsburg",       "Brooklyn",  40.7081, -73.9571, 1000, 0),
+            new Neighborhood("DUMBO",              "Brooklyn",  40.7033, -73.9892, 1000, 1),
+            new Neighborhood("Park Slope",         "Brooklyn",  40.6726, -73.9785, 1000, 2),
+            new Neighborhood("Bushwick",           "Brooklyn",  40.6944, -73.9213, 1000, 3),
+            new Neighborhood("Crown Heights",      "Brooklyn",  40.6692, -73.9443, 1000, 4),
+            new Neighborhood("Red Hook",           "Brooklyn",  40.6765, -74.0078, 1000, 5),
+            new Neighborhood("Sunset Park",        "Brooklyn",  40.6524, -74.0050, 1000, 6),
+            new Neighborhood("Bay Ridge",          "Brooklyn",  40.6348, -74.0260, 1000, 7),
+            new Neighborhood("Prospect Heights",   "Brooklyn",  40.6773, -73.9681, 1000, 8),
+            new Neighborhood("Carroll Gardens",    "Brooklyn",  40.6788, -73.9995, 1000, 9),
+            // Queens (display order 0-9)
+            new Neighborhood("Astoria",            "Queens",    40.7721, -73.9301, 1000, 0),
+            new Neighborhood("Long Island City",   "Queens",    40.7447, -73.9484, 1000, 1),
+            new Neighborhood("Flushing",           "Queens",    40.7675, -73.8330, 1000, 2),
+            new Neighborhood("Jackson Heights",    "Queens",    40.7556, -73.8830, 1000, 3),
+            new Neighborhood("Forest Hills",       "Queens",    40.7212, -73.8485, 1000, 4),
+            new Neighborhood("Elmhurst",           "Queens",    40.7370, -73.8794, 1000, 5),
+            new Neighborhood("Woodside",           "Queens",    40.7477, -73.9027, 1000, 6),
+            new Neighborhood("Sunnyside",          "Queens",    40.7440, -73.9187, 1000, 7),
+            new Neighborhood("Corona",             "Queens",    40.7519, -73.8656, 1000, 8),
+            new Neighborhood("Ridgewood",          "Queens",    40.7047, -73.9054, 1000, 9)
+        );
+        neighborhoodRepository.saveAll(neighborhoods);
+        logger.info("Seeded {} neighborhoods", neighborhoods.size());
+    }
+
+    /**
+     * Runs a scheduled daily refresh of trending data for all configured trending boroughs.
+     *
+     * <p>Executes once per day at 03:00 server time. Each borough's refresh is attempted independently;
+     * failures for a single borough are caught and logged without aborting the remaining refreshes.
+     */
     @Scheduled(cron = "0 0 3 * * *")
     public void refreshAllTrendingBoroughs() {
         logger.info("Starting scheduled trending refresh for all boroughs");

@@ -1,13 +1,26 @@
 "use client";
 
-import { RestaurantSummaryDto } from "@/api/homepageApi";
+import { useState, useEffect } from "react";
+import { DiscoveryRestaurant } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 
 interface WatchlistShelfProps {
-  watchlist: RestaurantSummaryDto[];
   onStartDiscovery: () => void;
 }
 
-export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfProps) {
+/**
+ * Render a watchlist shelf that displays saved restaurants and an empty-state prompt.
+ *
+ * @param onStartDiscovery - Callback invoked when the "Start Discovering" button is clicked.
+ * @returns The watchlist shelf element: a header with the saved count; if no items, an empty-state panel with a "Start Discovering" button; otherwise a horizontally scrollable row of WatchlistCard components for each saved restaurant.
+ */
+export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
+  const [watchlist, setWatchlist] = useState<DiscoveryRestaurant[]>([]);
+
+  useEffect(() => {
+    LibraryApi.getWatchlist().then(setWatchlist);
+  }, []);
+
   return (
     <div style={{ margin: "0 32px 24px" }}>
       {/* Header row */}
@@ -37,7 +50,6 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
         </div>
       </div>
 
-      {/* Always empty state for now (no API) */}
       {watchlist.length === 0 && (
         <div
           style={{
@@ -70,7 +82,6 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
         </div>
       )}
 
-      {/* Watchlist horizontal scroll (future use) */}
       {watchlist.length > 0 && (
         <div
           style={{
@@ -90,7 +101,13 @@ export function WatchlistShelf({ watchlist, onStartDiscovery }: WatchlistShelfPr
   );
 }
 
-function WatchlistCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
+/**
+ * Renders a compact card displaying a restaurant's primary image (when available), name, and category.
+ *
+ * @param restaurant - The DiscoveryRestaurant whose name, category, and primary photo (if present) are displayed.
+ * @returns A JSX element representing the watchlist card for the provided restaurant.
+ */
+function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
   const photo = restaurant.photos?.[0];
 
   return (
@@ -106,6 +123,7 @@ function WatchlistCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
     >
       <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
         {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={restaurant.name}

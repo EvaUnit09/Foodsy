@@ -1,15 +1,33 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
-import { RestaurantSummaryDto } from "@/api/homepageApi";
+import { DiscoveryRestaurant } from "@/api/discoveryApi";
+import { LibraryApi } from "@/api/libraryApi";
 
 interface FavoritesShelfProps {
-  favorites: RestaurantSummaryDto[];
-  isLoading?: boolean;
   onStartDiscovery: () => void;
 }
 
-export function FavoritesShelf({ favorites, isLoading, onStartDiscovery }: FavoritesShelfProps) {
+/**
+ * Render a horizontally scrollable shelf that loads and displays the user's saved restaurants and shows appropriate loading and empty states.
+ *
+ * The component fetches favorites on mount, displays a loading skeleton while fetching, shows an empty prompt with a "Start Discovering" button when there are no saved items, and renders favorite cards when data is available.
+ *
+ * @param onStartDiscovery - Callback invoked when the user clicks the "Start Discovering" button in the empty state
+ * @returns The React element representing the favorites shelf
+ */
+export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
+  const [favorites, setFavorites] = useState<DiscoveryRestaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    LibraryApi.getFavorites().then((data) => {
+      setFavorites(data);
+      setIsLoading(false);
+    });
+  }, []);
+
   return (
     <div style={{ margin: "0 32px 24px" }}>
       {/* Header row */}
@@ -111,7 +129,13 @@ export function FavoritesShelf({ favorites, isLoading, onStartDiscovery }: Favor
   );
 }
 
-function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
+/**
+ * Render a compact card displaying a favorite restaurant's photo, name, category, rating, and price range.
+ *
+ * @param restaurant - The DiscoveryRestaurant to display. The card uses the first entry of `restaurant.photos` as the image when available.
+ * @returns A JSX element representing the favorite restaurant card.
+ */
+function FavoriteCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
   const photo = restaurant.photos?.[0];
 
   return (
@@ -127,6 +151,7 @@ function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
     >
       <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
         {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photo}
             alt={restaurant.name}
@@ -198,8 +223,8 @@ function FavoriteCard({ restaurant }: { restaurant: RestaurantSummaryDto }) {
               </span>
             </div>
           ) : null}
-          {restaurant.priceLevel && (
-            <span style={{ fontSize: 12, color: "#666" }}>{restaurant.priceLevel}</span>
+          {restaurant.priceRange && (
+            <span style={{ fontSize: 12, color: "#666" }}>{restaurant.priceRange}</span>
           )}
         </div>
       </div>

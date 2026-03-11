@@ -96,8 +96,18 @@ public class RestaurantCache {
     
     @Column(name = "last_trending_calc_at")
     private Instant lastTrendingCalcAt;
-    
-    // Constructors
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "restaurant_cache_vibe_tags", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
+    @Column(name = "vibe_tag")
+    private List<String> vibeTags;
+
+    /**
+     * Initializes a new RestaurantCache with its expiration set 30 days from now.
+     *
+     * This default constructor applies the Places API 30-day expiration rule by setting
+     * the `expiresAt` timestamp to 30 days after the current instant.
+     */
     public RestaurantCache() {
         // Set expiration to 30 days from now (as per Places API terms)
         this.expiresAt = Instant.now().plusSeconds(30 * 24 * 60 * 60); // 30 days
@@ -314,7 +324,32 @@ public class RestaurantCache {
         return lastTrendingCalcAt;
     }
     
+    /**
+     * Set the timestamp when the trending score was last calculated.
+     *
+     * May be null to indicate that the trending score has not been computed yet.
+     *
+     * @param lastTrendingCalcAt the Instant of the last trending calculation, or null if never calculated
+     */
     public void setLastTrendingCalcAt(Instant lastTrendingCalcAt) {
         this.lastTrendingCalcAt = lastTrendingCalcAt;
+    }
+
+    /**
+     * Gets the list of vibe tags associated with this restaurant cache.
+     *
+     * @return the list of vibe tags, or {@code null} if none are set
+     */
+    public List<String> getVibeTags() {
+        return vibeTags;
+    }
+
+    /**
+     * Replaces the restaurant's vibe tags with the given list.
+     *
+     * @param vibeTags list of vibe tags to associate with the restaurant; may be {@code null} to clear existing tags
+     */
+    public void setVibeTags(List<String> vibeTags) {
+        this.vibeTags = vibeTags;
     }
 } 

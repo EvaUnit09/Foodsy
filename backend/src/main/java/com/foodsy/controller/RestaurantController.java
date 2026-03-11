@@ -57,19 +57,41 @@ public class RestaurantController {
     private static final java.util.List<String> DISCOVERY_BOROUGHS =
             java.util.List.of("manhattan", "brooklyn", "queens");
 
+    /**
+     * Return discovery restaurant summaries for the given borough, optional neighborhood, and result limit.
+     *
+     * @param borough     borough to search; case-insensitive, one of "manhattan", "brooklyn", "queens" (default "manhattan")
+     * @param limit       maximum number of results to return; must be between 1 and 50 (default 20)
+     * @param neighborhood optional neighborhood filter; blank or null is treated as no neighborhood filter
+     * @return            200 OK with a list of RestaurantSummaryDto when parameters are valid; 400 Bad Request when `limit` is outside 1–50 or `borough` is unsupported
+     */
     @GetMapping("/discover")
     public ResponseEntity<List<RestaurantSummaryDto>> getDiscovery(
             @RequestParam(defaultValue = "manhattan") String borough,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String neighborhood) {
         if (limit < 1 || limit > 50) return ResponseEntity.badRequest().build();
         String normalized = borough.trim().toLowerCase();
         if (!DISCOVERY_BOROUGHS.contains(normalized)) {
             return ResponseEntity.badRequest().build();
         }
         String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
-        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, limit));
+        // Normalize neighborhood: null or blank → null
+        String normalizedNeighborhood = (neighborhood != null && !neighborhood.isBlank())
+                ? neighborhood.trim()
+                : null;
+        return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, normalizedNeighborhood, limit));
     }
 
+    /**
+     * Retrieve trending restaurants for a supported borough.
+     *
+     * If `borough` is not one of the supported boroughs (manhattan, queens, brooklyn, bronx, staten island),
+     * the endpoint responds with 400 Bad Request.
+     *
+     * @param borough the borough name (case-insensitive). Defaults to "manhattan".
+     * @return a list of trending RestaurantSummaryDto for the specified borough.
+     */
     @GetMapping("/trending")
     public ResponseEntity<List<RestaurantSummaryDto>> getTrending(
             @RequestParam(defaultValue = "manhattan") String borough) {

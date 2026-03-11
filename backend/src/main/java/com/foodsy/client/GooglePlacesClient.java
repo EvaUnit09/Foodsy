@@ -61,6 +61,13 @@ public class GooglePlacesClient {
         }
     }
 
+    /**
+     * Create a fixed mock GooglePlacesSearchResponse containing three sample Place entries.
+     *
+     * This response is used for testing and as a fallback when the real Google Places API is not available.
+     *
+     * @return a GooglePlacesSearchResponse containing three predefined Place objects representing sample restaurants
+     */
     private GooglePlacesSearchResponse createMockResponse() {
         List<GooglePlacesSearchResponse.Place> mockPlaces = List.of(
             new GooglePlacesSearchResponse.Place(
@@ -74,14 +81,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_1_2", 800, 600)
                 ),
-                4.5,
-                100,
+                4.5, 100,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_MODERATE,
-                "$-$$",
-                "Mon-Sun: 9am-9pm",
-                "A great place for mock food.",
-                "Loved by locals for its mock cuisine.",
-                "https://www.mockrestaurant1.com"
+                "$-$$", "Mon-Sun: 9am-9pm",
+                "A great place for mock food.", "Loved by locals for its mock cuisine.",
+                "https://www.mockrestaurant1.com",
+                null, null, null, null, null, null, true, null, null, null, true, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_2",
@@ -94,14 +99,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_2_2", 800, 600)
                 ),
-                4.2,
-                85,
+                4.2, 85,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_INEXPENSIVE,
-                "$",
-                "Mon-Fri: 10am-8pm",
-                "Affordable and tasty mock meals.",
-                "Great value for the price.",
-                "https://www.mockrestaurant2.com"
+                "$", "Mon-Fri: 10am-8pm",
+                "Affordable and tasty mock meals.", "Great value for the price.",
+                "https://www.mockrestaurant2.com",
+                null, null, null, null, null, null, null, null, true, true, null, null
             ),
             new GooglePlacesSearchResponse.Place(
                 "mock_place_3",
@@ -114,14 +117,12 @@ public class GooglePlacesClient {
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_1", 800, 600),
                     new GooglePlacesSearchResponse.Photo("mock_photo_3_2", 800, 600)
                 ),
-                4.8,
-                120,
+                4.8, 120,
                 GooglePlacesSearchResponse.PriceLevel.PRICE_LEVEL_EXPENSIVE,
-                "$$$",
-                "Sat-Sun: 11am-11pm",
-                "Fine dining mock experience.",
-                "Top-rated by mock foodies.",
-                "https://www.mockrestaurant3.com"
+                "$$$", "Sat-Sun: 11am-11pm",
+                "Fine dining mock experience.", "Top-rated by mock foodies.",
+                "https://www.mockrestaurant3.com",
+                null, null, null, null, null, true, true, null, null, null, null, true
             )
         );
         
@@ -197,9 +198,15 @@ public class GooglePlacesClient {
     }
 
     /**
-     * Search for popular restaurants near a point using Google's own popularity ranking.
-     * Uses rankPreference=POPULARITY so results are ordered by Google's signals, not distance.
-     * Requests the full field mask in one call to avoid N+1 detail fetches.
+     * Finds restaurants near the given location ranked by Google's popularity signals.
+     *
+     * Limits the number of results to between 1 and 20 and filters out places with no type information.
+     *
+     * @param latitude    latitude of the search center
+     * @param longitude   longitude of the search center
+     * @param radiusMeters search radius in meters
+     * @param maxResults  requested maximum number of results; will be capped to the range 1..20
+     * @return a GooglePlacesSearchResponse containing up to the capped number of restaurant places ordered by Google's popularity ranking; returns an empty response if the search fails
      */
     public GooglePlacesSearchResponse searchTrending(
             double latitude,
@@ -218,7 +225,11 @@ public class GooglePlacesClient {
                     .defaultHeader("X-Goog-FieldMask",
                             "places.id,places.name,places.displayName,places.formattedAddress," +
                             "places.types,places.location,places.photos,places.rating," +
-                            "places.userRatingCount,places.priceLevel,places.websiteUri")
+                            "places.userRatingCount,places.priceLevel,places.websiteUri," +
+                            "places.goodForGroups,places.goodForChildren,places.liveMusic," +
+                            "places.servesBrunch,places.servesBreakfast,places.servesDinner," +
+                            "places.servesWine,places.servesVegetarianFood,places.delivery," +
+                            "places.takeout,places.outdoorSeating,places.reservable")
                     .build();
 
             int capped = Math.max(1, Math.min(20, maxResults));
@@ -316,6 +327,13 @@ public class GooglePlacesClient {
                 .body(Map.class);
     }
 
+    /**
+     * Merge an existing Place with additional detail fields and return an updated Place.
+     *
+     * @param place   the original Place to augment
+     * @param details a map of detail fields (as returned from the place details API)
+     * @return a new Place whose fields are taken from {@code details} when present and fall back to values from {@code place} when absent
+     */
     private GooglePlacesSearchResponse.Place mergePlaceWithDetails(GooglePlacesSearchResponse.Place place, Map<String, Object> details) {
         // Helper to extract string or null
         java.util.function.Function<String, String> getString = key -> details.get(key) != null ? details.get(key).toString() : null;
@@ -342,7 +360,8 @@ public class GooglePlacesClient {
                 currentOpeningHours,
                 generativeSummary,
                 reviewSummary,
-                websiteUri != null ? websiteUri : place.websiteUri()
+                websiteUri != null ? websiteUri : place.websiteUri(),
+                null, null, null, null, null, null, null, null, null, null, null, null
         );
     }
 }

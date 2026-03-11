@@ -39,6 +39,15 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+/**
+ * Render a swipe-style discovery card for a restaurant with optional ghost styling and a photo carousel.
+ *
+ * @param restaurant - The restaurant data used to populate the card (name, photos, category, rating, priceRange, vibeTags, generativeSummary, etc.).
+ * @param exitAction - Optional swipe action that triggers an exit overlay and exit transform (e.g., pass, favorite, watchlist).
+ * @param isGhost - When true, render the card in a subdued "ghost" state used for stacked background cards.
+ * @param ghostDepth - When `isGhost` is true, controls visual depth (1 or 2) to adjust scale, translation, and opacity.
+ * @returns A React element representing the discovery card for the provided restaurant.
+ */
 export function DiscoveryCard({
   restaurant,
   exitAction,
@@ -336,6 +345,34 @@ export function DiscoveryCard({
           )}
         </div>
 
+        {restaurant.vibeTags && restaurant.vibeTags.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 5,
+              marginTop: 6,
+            }}
+          >
+            {restaurant.vibeTags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: 11,
+                  background: "#f5ede8",
+                  color: "#e8531a",
+                  borderRadius: 20,
+                  padding: "3px 8px",
+                  whiteSpace: "nowrap",
+                  fontWeight: 600,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {restaurant.generativeSummary && (
           <p
             style={{
@@ -343,7 +380,7 @@ export function DiscoveryCard({
               color: "#666",
               lineHeight: 1.6,
               margin: 0,
-              marginTop: 4,
+              marginTop: 6,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",

@@ -4,6 +4,7 @@ import com.foodsy.domain.User;
 import com.foodsy.domain.AuthProvider;
 import com.foodsy.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,7 +67,12 @@ public class UserService {
         return user.getUsername();
     }
     
-    // Method to resolve user from identifier (supports both registered users and guests)
+    /**
+     * Resolves a User from an identifier that may be an email or a username.
+     *
+     * @param identifier the email or username to resolve; may be null or blank
+     * @return an Optional containing the matching User if found, or Optional.empty() if the identifier is null, blank, or no registered user matches
+     */
     public Optional<User> resolveUserFromIdentifier(String identifier) {
         if (identifier == null || identifier.trim().isEmpty()) {
             return Optional.empty();
@@ -76,7 +82,28 @@ public class UserService {
         return findByEmailOrUsername(identifier);
     }
     
-    // Check if identifier represents a guest user (not in database)
+    /**
+     * Resolve a User from a Spring Security Authentication by mapping the authentication name to a user ID or username.
+     *
+     * @param authentication the Authentication containing the principal name (may be null or unauthenticated)
+     * @return an Optional containing the resolved User if found; empty otherwise
+     */
+    public Optional<User> findByAuthentication(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) return Optional.empty();
+        String name = authentication.getName();
+        try {
+            return userRepository.findById(Long.parseLong(name));
+        } catch (NumberFormatException e) {
+            return findByUsername(name);
+        }
+    }
+
+    /**
+     * Determines whether the provided identifier corresponds to a guest user (no registered user exists for it).
+     *
+     * @param identifier an email address or username to check; may be null or blank
+     * @return `true` if the identifier is non-null, not empty after trimming, and no user exists with that email or username; `false` otherwise
+     */
     public boolean isGuestUser(String identifier) {
         return identifier != null && 
                !identifier.trim().isEmpty() && 
