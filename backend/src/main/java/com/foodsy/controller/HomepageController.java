@@ -7,10 +7,13 @@ import com.foodsy.domain.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +27,9 @@ public class HomepageController {
 
     private static final Set<String> VALID_BOROUGHS =
         Set.of("Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island");
+
+    @Value("${admin.secret:}")
+    private String adminSecret;
 
     @Autowired
     private HomepageService homepageService;
@@ -58,38 +64,55 @@ public class HomepageController {
     }
 
     @PostMapping("/refresh/{borough}")
-    public ResponseEntity<HomepageService.RefreshResult> refreshBoroughData(@PathVariable String borough) {
+    public ResponseEntity<Map<String, Object>> refreshBoroughData(
+            @PathVariable String borough, HttpServletRequest request) {
+        String provided = request.getHeader("X-Admin-Secret");
+        if (adminSecret == null || adminSecret.isBlank() || !adminSecret.equals(provided)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try {
             if (!VALID_BOROUGHS.contains(borough)) {
                 return ResponseEntity.badRequest().build();
             }
             HomepageService.RefreshResult result = homepageService.refreshBoroughData(borough);
-            return result.success()
-                ? ResponseEntity.ok(result)
-                : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+            if (result.success()) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "borough", borough,
+                    "restaurantsRefreshed", result.restaurantsRefreshed(),
+                    "refreshTimeMs", result.refreshTimeMs()
+                ));
+            }
+            logger.error("Refresh failed for borough {}: {}", borough, result.errorMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Failed to refresh borough data"));
         } catch (Exception e) {
-            logger.error("Error refreshing borough data: {}", e.getMessage());
+            logger.error("Error refreshing borough data for {}: {}", borough, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping("/trending/update/{borough}")
-    public ResponseEntity<Map<String, Object>> updateTrendingScores(@PathVariable String borough) {
+    public ResponseEntity<Map<String, Object>> updateTrendingScores(
+            @PathVariable String borough, HttpServletRequest request) {
+        String provided = request.getHeader("X-Admin-Secret");
+        if (adminSecret == null || adminSecret.isBlank() || !adminSecret.equals(provided)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try {
             if (!VALID_BOROUGHS.contains(borough)) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Invalid borough: " + borough));
+                return ResponseEntity.badRequest().build();
             }
             homepageService.updateTrendingScoresForBorough(borough);
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Updated trending scores for " + borough,
                 "borough", borough,
                 "timestamp", System.currentTimeMillis()
             ));
         } catch (Exception e) {
             logger.error("Error updating trending scores for borough {}: {}", borough, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "error", e.getMessage()));
+                .body(Map.of("success", false, "message", "Internal server error"));
         }
     }
 
@@ -103,7 +126,7 @@ public class HomepageController {
         } catch (Exception e) {
             logger.error("Error getting trending stats for borough {}: {}", borough, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+                .body(Map.of("error", "Internal server error"));
         }
     }
 
@@ -119,7 +142,7 @@ public class HomepageController {
         } catch (Exception e) {
             logger.error("Health check failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Map.of("status", "unhealthy", "error", e.getMessage()));
+                .body(Map.of("status", "unhealthy"));
         }
     }
 

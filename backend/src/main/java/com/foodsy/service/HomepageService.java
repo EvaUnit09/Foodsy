@@ -159,6 +159,11 @@ public class HomepageService {
             List<RestaurantSummaryDto> refreshed = restaurantCacheService.fetchAndCacheForBorough(borough, 50);
             long refreshTime = System.currentTimeMillis() - startTime;
 
+            if (refreshed.isEmpty()) {
+                logger.warn("Refresh returned 0 restaurants for borough: {} — possible quota exhaustion or fetch failure", borough);
+                return new RefreshResult(borough, 0, refreshTime, false, "No restaurants returned; quota may be exhausted");
+            }
+
             logger.info("Successfully refreshed {} restaurants for borough: {} in {}ms",
                        refreshed.size(), borough, refreshTime);
 

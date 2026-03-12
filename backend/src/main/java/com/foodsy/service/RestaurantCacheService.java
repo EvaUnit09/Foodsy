@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -774,10 +775,14 @@ public class RestaurantCacheService {
             return;
         }
 
-        // Migration: backfill bbox values for existing rows that predate this change.
+        // Migration: backfill bbox values and insert any template rows missing from the DB.
         Map<String, Neighborhood> templateMap = templates.stream().collect(
             Collectors.toMap(n -> n.getName().toLowerCase() + "|" + n.getBorough().toLowerCase(), n -> n));
         List<Neighborhood> existing = neighborhoodRepository.findAll();
+        Set<String> existingKeys = existing.stream()
+            .map(n -> n.getName().toLowerCase() + "|" + n.getBorough().toLowerCase())
+            .collect(Collectors.toSet());
+
         boolean anyUpdated = false;
         for (Neighborhood nb : existing) {
             if (nb.hasBbox()) continue;
@@ -793,7 +798,15 @@ public class RestaurantCacheService {
         }
         if (anyUpdated) {
             logger.info("Backfilled bbox values for existing neighborhoods");
-        } else {
+        }
+
+        List<Neighborhood> missing = templates.stream()
+            .filter(t -> !existingKeys.contains(t.getName().toLowerCase() + "|" + t.getBorough().toLowerCase()))
+            .collect(Collectors.toList());
+        if (!missing.isEmpty()) {
+            neighborhoodRepository.saveAll(missing);
+            logger.info("Inserted {} missing neighborhood(s)", missing.size());
+        } else if (!anyUpdated) {
             logger.info("Neighborhoods already fully seeded, skipping");
         }
     }

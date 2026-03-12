@@ -29,6 +29,7 @@ async function fetchActiveSession(): Promise<ActiveSessionData | null> {
     const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
     const res = await fetch("/api/sessions/active", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
       cache: "no-store",
     });
     if (!res.ok) return null;
