@@ -57,7 +57,16 @@ public class RestaurantCacheService {
     private static final List<TrendingBorough> TRENDING_BOROUGHS = List.of(
         new TrendingBorough("Manhattan", 40.7549, -73.9840, 5000),
         new TrendingBorough("Queens",    40.7282, -73.7949, 5000),
-        new TrendingBorough("Brooklyn",  40.7210, -73.9580, 5000)
+        new TrendingBorough("Brooklyn",  40.6782, -73.9442, 5000)
+    );
+
+    // Bounding boxes for borough-level filtering: drop anything returned by Google Places
+    // that actually falls outside the target borough.
+    private record BoroughBbox(double latMin, double latMax, double lngMin, double lngMax) {}
+    private static final Map<String, BoroughBbox> BOROUGH_BBOXES = Map.of(
+        "Manhattan", new BoroughBbox(40.699, 40.882, -74.022, -73.907),
+        "Brooklyn",  new BoroughBbox(40.551, 40.739, -74.042, -73.833),
+        "Queens",    new BoroughBbox(40.541, 40.800, -73.962, -73.700)
     );
 
     // Borough neighborhoods for targeted searches
@@ -187,6 +196,23 @@ public class RestaurantCacheService {
         return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
     }
 
+    private boolean isWithinNeighborhoodBbox(GooglePlacesSearchResponse.Place place, Neighborhood nb) {
+        if (!nb.hasBbox() || place.location() == null) return true;
+        double lat = place.location().latitude();
+        double lng = place.location().longitude();
+        return lat >= nb.getBboxLatMin() && lat <= nb.getBboxLatMax()
+            && lng >= nb.getBboxLngMin() && lng <= nb.getBboxLngMax();
+    }
+
+    private boolean isWithinBoroughBbox(GooglePlacesSearchResponse.Place place, String borough) {
+        BoroughBbox bbox = BOROUGH_BBOXES.get(borough);
+        if (bbox == null || place.location() == null) return true;
+        double lat = place.location().latitude();
+        double lng = place.location().longitude();
+        return lat >= bbox.latMin() && lat <= bbox.latMax()
+            && lng >= bbox.lngMin() && lng <= bbox.lngMax();
+    }
+
     /**
      * Fetch restaurants from Google Places for a specific neighborhood, using its stored coordinates.
      *
@@ -221,6 +247,11 @@ public class RestaurantCacheService {
                 logger.warn("No results from Google Places for neighborhood {}", nb.getName());
                 return;
             }
+
+            places = places.stream()
+                    .filter(p -> isWithinNeighborhoodBbox(p, nb))
+                    .toList();
+            logger.debug("After bbox filter: {} places remain for neighborhood {}", places.size(), nb.getName());
 
             Instant now = Instant.now();
             for (int i = 0; i < places.size(); i++) {
@@ -636,6 +667,11 @@ public class RestaurantCacheService {
                             return;
                         }
 
+                        places = places.stream()
+                                .filter(p -> isWithinBoroughBbox(p, b.name()))
+                                .toList();
+                        logger.debug("After bbox filter: {} places remain for borough {}", places.size(), b.name());
+
                         Instant now = Instant.now();
                         for (int i = 0; i < places.size(); i++) {
                             GooglePlacesSearchResponse.Place place = places.get(i);
@@ -682,48 +718,73 @@ public class RestaurantCacheService {
 
     @Transactional
     private void seedNeighborhoods() {
-        if (neighborhoodRepository.count() > 0) {
-            logger.info("Neighborhoods already seeded, skipping");
+        // constructor: name, borough, centerLat, centerLng, radiusMeters, displayOrder,
+        //              bboxLatMin, bboxLatMax, bboxLngMin, bboxLngMax
+        List<Neighborhood> templates = List.of(
+            // Manhattan
+            new Neighborhood("SoHo",              "Manhattan", 40.7233, -74.0030, 1000, 0,  40.718, 40.730, -74.010, -73.995),
+            new Neighborhood("Greenwich Village",  "Manhattan", 40.7335, -74.0027, 1000, 1,  40.726, 40.738, -74.010, -73.993),
+            new Neighborhood("Upper East Side",    "Manhattan", 40.7736, -73.9566, 1000, 2,  40.762, 40.784, -73.965, -73.939),
+            new Neighborhood("Midtown",            "Manhattan", 40.7549, -73.9840, 1000, 3,  40.747, 40.762, -73.997, -73.969),
+            new Neighborhood("Lower East Side",    "Manhattan", 40.7153, -73.9864, 1000, 4,  40.710, 40.723, -73.993, -73.970),
+            new Neighborhood("Chelsea",            "Manhattan", 40.7465, -74.0014, 1000, 5,  40.739, 40.753, -74.010, -73.990),
+            new Neighborhood("Tribeca",            "Manhattan", 40.7179, -74.0087, 1000, 6,  40.714, 40.724, -74.018, -74.002),
+            new Neighborhood("East Village",       "Manhattan", 40.7265, -73.9815, 1000, 7,  40.720, 40.733, -73.993, -73.970),
+            new Neighborhood("West Village",       "Manhattan", 40.7351, -74.0023, 1000, 8,  40.729, 40.739, -74.010, -73.997),
+            new Neighborhood("Financial District", "Manhattan", 40.7074, -74.0113, 1000, 9,  40.699, 40.712, -74.022, -74.000),
+            // Brooklyn
+            new Neighborhood("Williamsburg",       "Brooklyn",  40.7081, -73.9571, 1000, 0,  40.696, 40.720, -73.974, -73.933),
+            new Neighborhood("DUMBO",              "Brooklyn",  40.7033, -73.9892, 1000, 1,  40.697, 40.706, -73.994, -73.980),
+            new Neighborhood("Park Slope",         "Brooklyn",  40.6726, -73.9785, 1000, 2,  40.659, 40.681, -73.991, -73.966),
+            new Neighborhood("Bushwick",           "Brooklyn",  40.6944, -73.9213, 1000, 3,  40.683, 40.709, -73.934, -73.901),
+            new Neighborhood("Crown Heights",      "Brooklyn",  40.6692, -73.9443, 1000, 4,  40.656, 40.678, -73.958, -73.926),
+            new Neighborhood("Red Hook",           "Brooklyn",  40.6765, -74.0078, 1000, 5,  40.670, 40.683, -74.016, -73.996),
+            new Neighborhood("Sunset Park",        "Brooklyn",  40.6524, -74.0050, 1000, 6,  40.640, 40.659, -74.013, -73.990),
+            new Neighborhood("Bay Ridge",          "Brooklyn",  40.6348, -74.0260, 1000, 7,  40.619, 40.648, -74.045, -74.012),
+            new Neighborhood("Prospect Heights",   "Brooklyn",  40.6773, -73.9681, 1000, 8,  40.669, 40.682, -73.979, -73.957),
+            new Neighborhood("Carroll Gardens",    "Brooklyn",  40.6788, -73.9995, 1000, 9,  40.671, 40.685, -74.006, -73.988),
+            // Queens
+            new Neighborhood("Astoria",            "Queens",    40.7721, -73.9301, 1000, 0,  40.759, 40.783, -73.948, -73.903),
+            new Neighborhood("Long Island City",   "Queens",    40.7447, -73.9484, 1000, 1,  40.737, 40.756, -73.961, -73.930),
+            new Neighborhood("Flushing",           "Queens",    40.7675, -73.8330, 1000, 2,  40.755, 40.779, -73.849, -73.815),
+            new Neighborhood("Jackson Heights",    "Queens",    40.7556, -73.8830, 1000, 3,  40.745, 40.763, -73.897, -73.870),
+            new Neighborhood("Forest Hills",       "Queens",    40.7212, -73.8485, 1000, 4,  40.712, 40.729, -73.861, -73.833),
+            new Neighborhood("Elmhurst",           "Queens",    40.7370, -73.8794, 1000, 5,  40.729, 40.746, -73.892, -73.860),
+            new Neighborhood("Woodside",           "Queens",    40.7477, -73.9027, 1000, 6,  40.740, 40.757, -73.917, -73.892),
+            new Neighborhood("Sunnyside",          "Queens",    40.7440, -73.9187, 1000, 7,  40.737, 40.751, -73.930, -73.910),
+            new Neighborhood("Corona",             "Queens",    40.7519, -73.8656, 1000, 8,  40.742, 40.759, -73.878, -73.851),
+            new Neighborhood("Ridgewood",          "Queens",    40.7047, -73.9054, 1000, 9,  40.697, 40.713, -73.921, -73.891)
+        );
+
+        long count = neighborhoodRepository.count();
+        if (count == 0) {
+            neighborhoodRepository.saveAll(templates);
+            logger.info("Seeded {} neighborhoods", templates.size());
             return;
         }
-        logger.info("Seeding 30 neighborhoods");
-        List<Neighborhood> neighborhoods = List.of(
-            // Manhattan (display order 0-9)
-            new Neighborhood("SoHo",              "Manhattan", 40.7233, -74.0030, 1000, 0),
-            new Neighborhood("Greenwich Village",  "Manhattan", 40.7335, -74.0027, 1000, 1),
-            new Neighborhood("Upper East Side",    "Manhattan", 40.7736, -73.9566, 1000, 2),
-            new Neighborhood("Midtown",            "Manhattan", 40.7549, -73.9840, 1000, 3),
-            new Neighborhood("Lower East Side",    "Manhattan", 40.7153, -73.9864, 1000, 4),
-            new Neighborhood("Chelsea",            "Manhattan", 40.7465, -74.0014, 1000, 5),
-            new Neighborhood("Tribeca",            "Manhattan", 40.7179, -74.0087, 1000, 6),
-            new Neighborhood("East Village",       "Manhattan", 40.7265, -73.9815, 1000, 7),
-            new Neighborhood("West Village",       "Manhattan", 40.7351, -74.0023, 1000, 8),
-            new Neighborhood("Financial District", "Manhattan", 40.7074, -74.0113, 1000, 9),
-            // Brooklyn (display order 0-9)
-            new Neighborhood("Williamsburg",       "Brooklyn",  40.7081, -73.9571, 1000, 0),
-            new Neighborhood("DUMBO",              "Brooklyn",  40.7033, -73.9892, 1000, 1),
-            new Neighborhood("Park Slope",         "Brooklyn",  40.6726, -73.9785, 1000, 2),
-            new Neighborhood("Bushwick",           "Brooklyn",  40.6944, -73.9213, 1000, 3),
-            new Neighborhood("Crown Heights",      "Brooklyn",  40.6692, -73.9443, 1000, 4),
-            new Neighborhood("Red Hook",           "Brooklyn",  40.6765, -74.0078, 1000, 5),
-            new Neighborhood("Sunset Park",        "Brooklyn",  40.6524, -74.0050, 1000, 6),
-            new Neighborhood("Bay Ridge",          "Brooklyn",  40.6348, -74.0260, 1000, 7),
-            new Neighborhood("Prospect Heights",   "Brooklyn",  40.6773, -73.9681, 1000, 8),
-            new Neighborhood("Carroll Gardens",    "Brooklyn",  40.6788, -73.9995, 1000, 9),
-            // Queens (display order 0-9)
-            new Neighborhood("Astoria",            "Queens",    40.7721, -73.9301, 1000, 0),
-            new Neighborhood("Long Island City",   "Queens",    40.7447, -73.9484, 1000, 1),
-            new Neighborhood("Flushing",           "Queens",    40.7675, -73.8330, 1000, 2),
-            new Neighborhood("Jackson Heights",    "Queens",    40.7556, -73.8830, 1000, 3),
-            new Neighborhood("Forest Hills",       "Queens",    40.7212, -73.8485, 1000, 4),
-            new Neighborhood("Elmhurst",           "Queens",    40.7370, -73.8794, 1000, 5),
-            new Neighborhood("Woodside",           "Queens",    40.7477, -73.9027, 1000, 6),
-            new Neighborhood("Sunnyside",          "Queens",    40.7440, -73.9187, 1000, 7),
-            new Neighborhood("Corona",             "Queens",    40.7519, -73.8656, 1000, 8),
-            new Neighborhood("Ridgewood",          "Queens",    40.7047, -73.9054, 1000, 9)
-        );
-        neighborhoodRepository.saveAll(neighborhoods);
-        logger.info("Seeded {} neighborhoods", neighborhoods.size());
+
+        // Migration: backfill bbox values for existing rows that predate this change.
+        Map<String, Neighborhood> templateMap = templates.stream().collect(
+            Collectors.toMap(n -> n.getName().toLowerCase() + "|" + n.getBorough().toLowerCase(), n -> n));
+        List<Neighborhood> existing = neighborhoodRepository.findAll();
+        boolean anyUpdated = false;
+        for (Neighborhood nb : existing) {
+            if (nb.hasBbox()) continue;
+            Neighborhood tmpl = templateMap.get(nb.getName().toLowerCase() + "|" + nb.getBorough().toLowerCase());
+            if (tmpl != null) {
+                nb.setBboxLatMin(tmpl.getBboxLatMin());
+                nb.setBboxLatMax(tmpl.getBboxLatMax());
+                nb.setBboxLngMin(tmpl.getBboxLngMin());
+                nb.setBboxLngMax(tmpl.getBboxLngMax());
+                neighborhoodRepository.save(nb);
+                anyUpdated = true;
+            }
+        }
+        if (anyUpdated) {
+            logger.info("Backfilled bbox values for existing neighborhoods");
+        } else {
+            logger.info("Neighborhoods already fully seeded, skipping");
+        }
     }
 
     /** Daily job: refresh trending data for all three boroughs at 3 AM server time. */

@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Star, Heart } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/button";
 import { AppHeader } from "@/components/AppHeader";
 
-import { TasteProfileOnboarding } from "@/components/TasteProfileOnboarding";
 import { TrendingCarousel } from "@/components/TrendingCarousel";
 import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { HowItWorks } from "@/components/HowItWorks";
@@ -17,20 +15,7 @@ import { ActiveSessionBanner } from "@/components/ActiveSessionBanner";
 import { DiscoveryEntryCard } from "@/components/DiscoveryEntryCard";
 import { FavoritesShelf } from "@/components/FavoritesShelf";
 import { WatchlistShelf } from "@/components/WatchlistShelf";
-import { useHomepageApi, HomepageResponseDto, RestaurantSummaryDto, TasteProfileDto, API_BASE_URL } from "@/api/homepageApi";
 import { useRouter } from "next/navigation";
-
-/* -------------------------------------------------------------------------- */
-/*  1.  Page component                                                         */
-/* -------------------------------------------------------------------------- */
-
-// Simple notification utility
-const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-  console.log(`[${type.toUpperCase()}] ${message}`);
-  // You can replace this with your preferred notification system
-};
-
-const GOOGLE_PHOTO_PROXY = `${API_BASE_URL}/restaurants/photos`;
 
 interface ActiveSessionData {
   sessionId: string;
@@ -61,161 +46,28 @@ async function fetchActiveSession(): Promise<ActiveSessionData | null> {
   }
 }
 
-// Ensure we have a sync helper for .map()
-function enrichWithPhotoUrls(r: RestaurantSummaryDto, max = 1): RestaurantSummaryDto {
-  if (!r) return r;
-  if (r.photoReferences && !r.photos) {
-    r.photos = r.photoReferences
-      .slice(0, max)
-      .map((ref: string) =>
-        `${GOOGLE_PHOTO_PROXY}/${r.id}/${ref}?maxWidthPx=600&maxHeightPx=600`
-      );
-  }
-  return r;
-}
-
 const Index = () => {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const homepageApi = useHomepageApi();
-  
-  // Debug logging
-  console.log("Homepage: Authentication state - isAuthenticated:", isAuthenticated, "user:", user);
-  
-  // Removed search functionality
-  
-  // Homepage/Dashboard state
+
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [homepageData, setHomepageData] = useState<HomepageResponseDto | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSessionData | null>(null);
 
-  // Load homepage data and check onboarding status
-  const loadHomepageData = useCallback(async () => {
-    if (!isAuthenticated) return;
-
-    try {
-      const [data, session] = await Promise.all([
-        homepageApi.getHomepageData(true),
-        fetchActiveSession(),
-      ]);
-      const hydrated = {
-        ...data,
-        yourPicks: (data.yourPicks ?? []).map(enrichWithPhotoUrls),
-        highlights: (data.highlights ?? []).map(enrichWithPhotoUrls),
-        trending: (data.trending ?? []).map(enrichWithPhotoUrls),
-        spotlight: (data.spotlight ?? []).map(enrichWithPhotoUrls),
-      };
-      setHomepageData(hydrated);
-      setActiveSession(session);
-
-      console.log("Homepage data loaded - hasOnboarded:", data.hasOnboarded);
-
-      if (data.hasOnboarded === false) {
-        setShowOnboarding(true);
-      } else {
-        setShowOnboarding(false);
-      }
-    } catch (err) {
-      console.error("Error loading homepage data:", err);
-      if (err instanceof Error && err.message.includes('401')) {
-        console.log("User not authenticated - showing basic homepage");
-      } else {
-        showNotification("Failed to load personalized content", "error");
-      }
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchActiveSession().then(setActiveSession);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    // Only load personalized data for authenticated users
-    if (isAuthenticated) {
-      loadHomepageData();
-    }
-  }, [isAuthenticated, loadHomepageData]);
-
-  const handleOnboardingComplete = async (tasteProfile: {
-    preferredCuisines: string[];
-    priceRange: string;
-    preferredBorough: string;
-  }) => {
-    console.log("Starting taste profile creation:", tasteProfile);
-    try {
-      const tasteProfileDto: TasteProfileDto = {
-        preferredCuisines: tasteProfile.preferredCuisines,
-        priceRange: tasteProfile.priceRange,
-        preferredBorough: tasteProfile.preferredBorough,
-        isVegan: tasteProfile.preferredCuisines.includes("Vegan"),
-        isVegetarian: tasteProfile.preferredCuisines.includes("Vegetarian"),
-      };
-
-      console.log("Creating taste profile with DTO:", tasteProfileDto);
-      await homepageApi.createTasteProfile(tasteProfileDto);
-      console.log("Taste profile created successfully");
-      
-      await homepageApi.trackTasteProfileComplete();
-      console.log("Analytics tracked");
-      
-      showNotification("Taste profile created successfully!", "success");
-      setShowOnboarding(false);
-      console.log("Onboarding hidden, reloading homepage data...");
-      
-      // Wait a moment to ensure backend transaction is committed before reloading
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Reload homepage data with personalized recommendations
-      await loadHomepageData();
-      console.log("Homepage data reloaded");
-    } catch (err) {
-      console.error("Error creating taste profile:", err);
-      showNotification("Failed to save taste profile. Please try again.", "error");
-      // Don't hide onboarding on error - let user try again
-    }
-  };
-
-  const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-    showNotification("You can set up your taste profile later from your profile page!", "success");
-  };
-
-  const handleStartSession = async () => {
-    try {
-      await homepageApi.trackSessionStart();
-      router.push("/sessions/create");
-    } catch (err) {
-      console.error("Error tracking session start:", err);
-      router.push("/sessions/create");
-    }
-  };
-
-  const handleJoinSession = async () => {
-    try {
-      await homepageApi.trackSessionJoin();
-      router.push("/sessions/Joinpage");
-    } catch (err) {
-      console.error("Error tracking session join:", err);
-      router.push("/sessions/Joinpage");
-    }
-  };
-
-  // Show onboarding if needed
-  if (showOnboarding) {
-    return (
-      <TasteProfileOnboarding
-        onComplete={handleOnboardingComplete}
-        onSkip={isAuthenticated ? handleOnboardingSkip : undefined}
-      />
-    );
-  }
+  const handleStartSession = () => router.push("/sessions/create");
+  const handleJoinSession = () => router.push("/sessions/Joinpage");
 
   return (
     <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
       <AppHeader />
 
-      {/* Main content wrapper with flex-1 to fill space */}
       <main className="flex-1">
 
-      {/* Authenticated dashboard - new scroll layout */}
       {isAuthenticated && (
         <>
           <GreetingHeader
@@ -232,36 +84,10 @@ const Index = () => {
           <TrendingCarousel
             onSignUpPrompt={() => {}}
             isAuthenticated={true}
-            userBorough={homepageData ? undefined : undefined}
           />
         </>
       )}
 
-      {/* Taste Profile Setup Banner - Show for authenticated users who haven't completed onboarding */}
-      {isAuthenticated && homepageData && homepageData.hasOnboarded === false && !showOnboarding && (
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                <Star className="w-4 h-4" />
-              </div>
-              <span className="font-medium">
-                Get personalized restaurant recommendations! Complete your taste profile.
-              </span>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-white border-white/30 hover:bg-white/10"
-              onClick={() => setShowOnboarding(true)}
-            >
-              Setup Now
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Hero Section - Only for anonymous users */}
       {!isAuthenticated && (
         <section className="relative px-4 sm:px-8" style={{ padding: "56px 32px 48px" }}>
           <div className="max-w-4xl mx-auto text-center">
@@ -305,7 +131,6 @@ const Index = () => {
         </section>
       )}
 
-      {/* Anonymous sections */}
       {!isAuthenticated && (
         <TrendingCarousel onSignUpPrompt={() => setShowSignUpPrompt(true)} />
       )}
@@ -318,9 +143,6 @@ const Index = () => {
         <FinalCTA onSignUp={() => setShowSignUpPrompt(true)} />
       )}
 
-
-
-      {/* Sign-up prompt modal (triggered by favorite button in carousel) */}
       {showSignUpPrompt && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
@@ -365,18 +187,15 @@ const Index = () => {
         </div>
       )}
 
-      
-      
       </main>
 
-      {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">F</span>
             </div>
-                                  <span className="text-xl font-bold" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
+            <span className="text-xl font-bold" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
           </div>
           <p className="text-gray-400">
             Stop the dinner debate. Start enjoying great meals together.
@@ -387,7 +206,4 @@ const Index = () => {
   );
 };
 
-/* -------------------------------------------------------------------------- */
-/*  3.  Export                                                                */
-/* -------------------------------------------------------------------------- */
 export default Index;

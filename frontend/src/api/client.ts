@@ -73,36 +73,10 @@ export interface VoteDto {
   createdAt: string;
 }
 
-// Homepage DTOs
-export interface HomepageResponseDto {
-  message: string;
-  user?: User;
-  analytics?: HomepageAnalyticsDto;
-}
-
-export interface TasteProfileDto {
-  dietaryPreferences: string[];
-  foodAllergies: string[];
-  favoriteCuisines: string[];
-}
-
 export interface CacheStatsDto {
   totalCached: number;
   lastUpdated: string;
   cacheHitRate: number;
-}
-
-export interface HomepageAnalyticsDto {
-  totalSessions: number;
-  totalVotes: number;
-  averageSessionDuration: number;
-}
-
-export interface AnalyticsEventDto {
-  eventType: string;
-  eventData: Record<string, unknown>;
-  userId?: string;
-  sessionId?: string;
 }
 
 // API Error class for better error handling
@@ -266,44 +240,14 @@ export class ApiClient {
   };
   
   /**
-   * Homepage API endpoints (reusing existing homepageApi functionality)
+   * Homepage API endpoints
    */
   static homepage = {
-    getData: (): Promise<HomepageResponseDto> =>
-      ApiClient.request<HomepageResponseDto>("/homepage"),
-      
-    getDataAnonymous: (): Promise<HomepageResponseDto> =>
-      ApiClient.request<HomepageResponseDto>("/homepage"),
-      
-    createTasteProfile: (profile: TasteProfileDto): Promise<void> =>
-      ApiClient.request<void>("/homepage/taste-profile", {
-        method: "POST",
-        body: JSON.stringify(profile)
-      }),
-      
-    getTasteProfile: (): Promise<TasteProfileDto> =>
-      ApiClient.request<TasteProfileDto>("/homepage/taste-profile"),
-      
-    updateTasteProfile: (profile: TasteProfileDto): Promise<void> =>
-      ApiClient.request<void>("/homepage/taste-profile", {
-        method: "PUT",
-        body: JSON.stringify(profile)
-      }),
-      
-    trackEvent: (event: AnalyticsEventDto): Promise<void> =>
-      ApiClient.request<void>("/homepage/analytics", {
-        method: "POST",
-        body: JSON.stringify({
-          ...event,
-          timestamp: new Date().toISOString()
-        })
-      }),
-      
     refreshCache: (): Promise<void> =>
       ApiClient.request<void>("/homepage/cache/refresh", {
         method: "POST"
       }),
-      
+
     getCacheStats: (): Promise<CacheStatsDto> =>
       ApiClient.request<CacheStatsDto>("/homepage/cache/stats")
   };
