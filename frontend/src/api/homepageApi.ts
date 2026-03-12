@@ -56,28 +56,6 @@ export class HomepageApi {
     return response.json();
   }
 
-  static async refreshRestaurantCache(): Promise<void> {
-    const response = await fetch(buildUrl("/homepage/cache/refresh"), {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to refresh cache: ${response.statusText}`);
-    }
-  }
-
-  static async getCacheStats(): Promise<{
-    totalRestaurants: number;
-    lastUpdated: string;
-    expiredCount: number;
-    quotaUsage: number;
-  }> {
-    const response = await fetch(buildUrl("/homepage/cache/stats"), {
-      credentials: "include",
-    });
-    return await this.handleResponse(response);
-  }
 }
 
 export class HomepageApiError extends Error {

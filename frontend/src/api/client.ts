@@ -73,11 +73,6 @@ export interface VoteDto {
   createdAt: string;
 }
 
-export interface CacheStatsDto {
-  totalCached: number;
-  lastUpdated: string;
-  cacheHitRate: number;
-}
 
 // API Error class for better error handling
 export class ApiError extends Error {
@@ -242,15 +237,7 @@ export class ApiClient {
   /**
    * Homepage API endpoints
    */
-  static homepage = {
-    refreshCache: (): Promise<void> =>
-      ApiClient.request<void>("/homepage/cache/refresh", {
-        method: "POST"
-      }),
-
-    getCacheStats: (): Promise<CacheStatsDto> =>
-      ApiClient.request<CacheStatsDto>("/homepage/cache/stats")
-  };
+  static homepage = {};
   
   /**
    * Utility methods

@@ -26,7 +26,7 @@ interface ActiveSessionData {
 
 async function fetchActiveSession(): Promise<ActiveSessionData | null> {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
     const res = await fetch("/api/sessions/active", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       cache: "no-store",
@@ -172,7 +172,7 @@ const Index = () => {
               onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
               onClick={() => {
-                window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`;
+                window.location.href = `/api/oauth2/authorization/google`;
               }}
             >
               Sign Up with Google

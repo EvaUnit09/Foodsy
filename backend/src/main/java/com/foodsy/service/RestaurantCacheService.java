@@ -332,9 +332,10 @@ public class RestaurantCacheService {
     }
 
     /**
-     * Fetch restaurants from API and cache them
+     * Fetch restaurants from API and cache them.
+     * Not @Transactional at this level so each upsertRestaurantCache runs in its own transaction;
+     * a single bad place doesn't roll back the entire batch.
      */
-    @Transactional
     public List<RestaurantSummaryDto> fetchAndCacheForBorough(String borough, int limit) {
         if (!canMakeApiCall() || !canMakeNearbySearchCall()) {
             logger.warn("API quota exceeded, cannot fetch restaurants for borough: {}", borough);
@@ -344,26 +345,35 @@ public class RestaurantCacheService {
         try {
             logger.info("Fetching restaurants from Places API for borough: {}", borough);
 
-            // Get coordinates for borough center (simplified)
             BoroughCoordinates coords = getBoroughCoordinates(borough);
-
-            // Increment API call counters
             nearbySearchCalls.incrementAndGet();
             dailyApiCalls.incrementAndGet();
 
             GooglePlacesSearchResponse response = placesClient.searchNearby(
                 coords.latitude(), coords.longitude(), 5000.0, limit);
 
-            List<RestaurantCache> cached = response.places().stream()
-                .map(place -> upsertRestaurantCache(place, borough))
-                .collect(Collectors.toList());
+            List<GooglePlacesSearchResponse.Place> places = response.places();
+            if (places == null || places.isEmpty()) {
+                return List.of();
+            }
+
+            places = places.stream()
+                .filter(p -> isWithinBoroughBbox(p, borough))
+                .toList();
+            logger.debug("After bbox filter: {} places remain for borough {}", places.size(), borough);
+
+            List<RestaurantSummaryDto> results = new ArrayList<>();
+            for (GooglePlacesSearchResponse.Place place : places) {
+                try {
+                    results.add(RestaurantSummaryDto.fromEntity(upsertRestaurantCache(place, borough)));
+                } catch (DataIntegrityViolationException | jakarta.validation.ConstraintViolationException e) {
+                    logger.error("Error saving restaurant {}: {}", place.id(), e.getMessage());
+                }
+            }
 
             logger.info("Successfully fetched and cached {} restaurants for borough: {}",
-                       cached.size(), borough);
-
-            return cached.stream()
-                .map(RestaurantSummaryDto::fromEntity)
-                .collect(Collectors.toList());
+                       results.size(), borough);
+            return results;
 
         } catch (Exception e) {
             logger.error("Error fetching restaurants for borough {}: {}", borough, e.getMessage());
@@ -423,6 +433,7 @@ public class RestaurantCacheService {
         return placeDetailsCalls.get() < MAX_DAILY_PLACE_DETAILS;
     }
     
+    @Scheduled(cron = "0 0 0 * * *")
     public void resetDailyCounters() {
         logger.info("Resetting daily API call counters");
         dailyApiCalls.set(0);
