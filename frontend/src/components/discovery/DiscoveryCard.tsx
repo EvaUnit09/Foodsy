@@ -239,9 +239,33 @@ export function DiscoveryCard({
                 border: "none",
                 cursor: "pointer",
                 zIndex: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                paddingLeft: 10,
               }}
               aria-label="Previous photo"
-            />
+            >
+              {photoIndex > 0 && (
+                <span
+                  style={{
+                    pointerEvents: "none",
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "rgba(0,0,0,0.38)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  ‹
+                </span>
+              )}
+            </button>
             <button
               onClick={() =>
                 setPhotoIndex((p) => Math.min(photos.length - 1, p + 1))
@@ -256,9 +280,33 @@ export function DiscoveryCard({
                 border: "none",
                 cursor: "pointer",
                 zIndex: 3,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                paddingRight: 10,
               }}
               aria-label="Next photo"
-            />
+            >
+              {photoIndex < photos.length - 1 && (
+                <span
+                  style={{
+                    pointerEvents: "none",
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "rgba(0,0,0,0.38)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  ›
+                </span>
+              )}
+            </button>
           </>
         )}
 

@@ -1,149 +1,145 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Star, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { AppHeader } from "@/components/AppHeader";
 import { DiscoveryRestaurant } from "@/api/discoveryApi";
 import { LibraryApi } from "@/api/libraryApi";
 
-interface FavoritesShelfProps {
-  onStartDiscovery: () => void;
-}
+export default function FavoritesPage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
   const [favorites, setFavorites] = useState<DiscoveryRestaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
     LibraryApi.getFavorites()
       .then(setFavorites)
       .catch(() => setFetchError(true))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [isAuthenticated]);
 
   function handleRemove(id: string) {
     setFavorites((prev) => prev.filter((r) => r.id !== id));
     LibraryApi.removeFavorite(id).catch(() => {});
   }
 
+  if (authLoading || (!isAuthenticated && !authLoading)) return null;
+
   return (
-    <div style={{ marginBottom: 24 }}>
-      {/* Header row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 14,
-          padding: "0 32px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <h2
+    <div style={{ minHeight: "100vh", background: "#fdf6f0" }}>
+      <AppHeader badge="Favorites" />
+
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "24px 20px" }}>
+        {/* Back + title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              display: "flex",
+              alignItems: "center",
+              color: "#555",
+            }}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1
             style={{
               fontFamily: "'Georgia', serif",
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: 700,
               color: "#1a1a1a",
               margin: 0,
             }}
           >
             Your Favorites
-          </h2>
+          </h1>
           {!isLoading && (
-            <span style={{ fontSize: 12, color: "#aaa" }}>
+            <span style={{ fontSize: 13, color: "#aaa", marginLeft: 4 }}>
               {favorites.length} saved
             </span>
           )}
         </div>
-        {favorites.length > 0 && (
-          <a
-            href="/favorites"
-            style={{ fontSize: 13, color: "#e8531a", fontWeight: 600, textDecoration: "none" }}
+
+        {/* Loading */}
+        {isLoading && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: 16,
+            }}
           >
-            See All
-          </a>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {!isLoading && fetchError && (
+          <p style={{ fontSize: 14, color: "#aaa", textAlign: "center", paddingTop: 60 }}>
+            Couldn&apos;t load favorites right now.
+          </p>
+        )}
+
+        {/* Empty */}
+        {!isLoading && !fetchError && favorites.length === 0 && (
+          <div style={{ textAlign: "center", paddingTop: 80 }}>
+            <p style={{ fontSize: 15, color: "#888", marginBottom: 20 }}>
+              No favorites yet — heart restaurants while discovering to save them here.
+            </p>
+            <button
+              onClick={() => router.push("/discover")}
+              style={{
+                background: "#e8531a",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                border: "none",
+                borderRadius: 10,
+                padding: "11px 24px",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+            >
+              Start Discovering
+            </button>
+          </div>
+        )}
+
+        {/* Grid */}
+        {!isLoading && !fetchError && favorites.length > 0 && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {favorites.map((r) => (
+              <FavoriteCard key={r.id} restaurant={r} onRemove={() => handleRemove(r.id)} />
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Loading skeleton */}
-      {isLoading && (
-        <div
-          style={{
-            display: "flex",
-            gap: 14,
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            paddingLeft: 32,
-            paddingRight: 32,
-            paddingBottom: 4,
-          }}
-        >
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* Error state */}
-      {!isLoading && fetchError && (
-        <p style={{ fontSize: 13, color: "#aaa", padding: "0 32px" }}>
-          Couldn&apos;t load favorites right now.
-        </p>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && !fetchError && favorites.length === 0 && (
-        <div
-          style={{
-            margin: "0 32px",
-            border: "1.5px dashed #e0d8d2",
-            borderRadius: 12,
-            padding: "32px 24px",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ fontSize: 14, color: "#888", marginBottom: 14 }}>
-            Heart restaurants to build your list
-          </p>
-          <button
-            onClick={onStartDiscovery}
-            style={{
-              background: "#e8531a",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 13,
-              border: "none",
-              borderRadius: 8,
-              padding: "9px 18px",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
-          >
-            Start Discovering
-          </button>
-        </div>
-      )}
-
-      {/* Favorites horizontal scroll */}
-      {!isLoading && !fetchError && favorites.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 14,
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            paddingLeft: 32,
-            paddingRight: 32,
-            paddingBottom: 4,
-          }}
-        >
-          {favorites.map((r) => (
-            <FavoriteCard key={r.id} restaurant={r} onRemove={() => handleRemove(r.id)} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -160,8 +156,6 @@ function FavoriteCard({
   return (
     <div
       style={{
-        flexShrink: 0,
-        width: 200,
         background: "#fff",
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
@@ -249,10 +243,7 @@ function FavoriteCard({
 
       {/* Remove button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
+        onClick={onRemove}
         aria-label={`Remove ${restaurant.name} from favorites`}
         style={{
           position: "absolute",
@@ -282,13 +273,7 @@ function FavoriteCard({
 function SkeletonCard() {
   return (
     <div
-      style={{
-        flexShrink: 0,
-        width: 200,
-        borderRadius: 12,
-        overflow: "hidden",
-        border: "1px solid #f0f0f0",
-      }}
+      style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #f0f0f0" }}
       className="animate-pulse"
     >
       <div style={{ height: 130, background: "#e5e5e5" }} />

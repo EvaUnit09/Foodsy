@@ -62,7 +62,7 @@ export function AppHeader({ badge }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/favorites")}
             >
               <Heart className="w-4 h-4 mr-2" />
               Favorites

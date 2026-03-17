@@ -174,6 +174,8 @@ export function AreaPicker({
               {n}
             </button>
           ))}
+          {/* Trailing spacer so last chip isn't flush against the edge when scrolled */}
+          <div style={{ flexShrink: 0, width: 4 }} aria-hidden="true" />
         </div>
 
         {/* Done button */}

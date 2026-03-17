@@ -178,13 +178,21 @@ export default function DiscoverPage() {
           fontSize: 13,
           fontWeight: 600,
           color: "#555",
+          maxWidth: "100%",
         }}
       >
-        <span>
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "calc(100vw - 80px)",
+          }}
+        >
           {BOROUGH_LABELS[selectedBorough]}
           {selectedNeighborhood ? ` · ${selectedNeighborhood}` : ""}
         </span>
-        <span style={{ fontSize: 10, color: "#888" }}>▾</span>
+        <span style={{ fontSize: 10, color: "#888", flexShrink: 0 }}>▾</span>
       </button>
 
       {/* Main content */}
@@ -205,7 +213,7 @@ export default function DiscoverPage() {
               position: "relative",
               width: "100%",
               maxWidth: 420,
-              height: 520,
+              height: "clamp(350px, calc(100vh - 320px), 520px)",
               borderRadius: 20,
               background: "#f5ede8",
               animation: "pulse 1.5s ease-in-out infinite",
@@ -257,7 +265,7 @@ export default function DiscoverPage() {
                 position: "relative",
                 width: "100%",
                 maxWidth: 420,
-                height: 520,
+                height: "clamp(350px, calc(100vh - 320px), 520px)",
               }}
             >
               {deck[currentIndex + 2] && (

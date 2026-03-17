@@ -20,8 +20,13 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  function handleRemove(id: string) {
+    setWatchlist((prev) => prev.filter((r) => r.id !== id));
+    LibraryApi.removeFromWatchlist(id).catch(() => {});
+  }
+
   return (
-    <div style={{ margin: "0 32px 24px" }}>
+    <div style={{ marginBottom: 24 }}>
       {/* Header row */}
       <div
         style={{
@@ -29,6 +34,7 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 14,
+          padding: "0 32px",
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -49,10 +55,18 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
             </span>
           )}
         </div>
+        {watchlist.length > 0 && (
+          <a
+            href="/watchlist"
+            style={{ fontSize: 13, color: "#e8531a", fontWeight: 600, textDecoration: "none" }}
+          >
+            See All
+          </a>
+        )}
       </div>
 
       {!isLoading && fetchError && (
-        <p style={{ fontSize: 13, color: "#aaa" }}>
+        <p style={{ fontSize: 13, color: "#aaa", padding: "0 32px" }}>
           Couldn&apos;t load your list right now.
         </p>
       )}
@@ -60,6 +74,7 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
       {!isLoading && !fetchError && watchlist.length === 0 && (
         <div
           style={{
+            margin: "0 32px",
             border: "1.5px dashed #e0d8d2",
             borderRadius: 12,
             padding: "32px 24px",
@@ -96,11 +111,13 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
             gap: 14,
             overflowX: "auto",
             scrollbarWidth: "none",
+            paddingLeft: 32,
+            paddingRight: 32,
             paddingBottom: 4,
           }}
         >
           {watchlist.map((r) => (
-            <WatchlistCard key={r.id} restaurant={r} />
+            <WatchlistCard key={r.id} restaurant={r} onRemove={() => handleRemove(r.id)} />
           ))}
         </div>
       )}
@@ -108,14 +125,17 @@ export function WatchlistShelf({ onStartDiscovery }: WatchlistShelfProps) {
   );
 }
 
-function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
+function WatchlistCard({
+  restaurant,
+  onRemove,
+}: {
+  restaurant: DiscoveryRestaurant;
+  onRemove: () => void;
+}) {
   const photo = restaurant.photos?.[0];
 
   return (
-    <a
-      href={restaurant.websiteUri ?? undefined}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
       style={{
         flexShrink: 0,
         width: 200,
@@ -123,63 +143,101 @@ function WatchlistCard({ restaurant }: { restaurant: DiscoveryRestaurant }) {
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
         overflow: "hidden",
-        display: "block",
-        textDecoration: "none",
-        cursor: restaurant.websiteUri ? "pointer" : "default",
+        position: "relative",
       }}
     >
-      <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photo}
-            alt={restaurant.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            loading="lazy"
-          />
-        ) : (
-          <div
+      <a
+        href={restaurant.websiteUri ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "block",
+          textDecoration: "none",
+          cursor: restaurant.websiteUri ? "pointer" : "default",
+        }}
+      >
+        <div style={{ position: "relative", height: 130, background: "#f5f5f5" }}>
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt={restaurant.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              loading="lazy"
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f5f0ff",
+              }}
+            >
+              <span style={{ fontSize: 32 }}>🔖</span>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "10px 12px 12px" }}>
+          <h3
             style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#f5f0ff",
+              fontWeight: 700,
+              fontSize: 13,
+              color: "#1a1a1a",
+              margin: 0,
+              marginBottom: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            <span style={{ fontSize: 32 }}>🔖</span>
-          </div>
-        )}
-      </div>
-      <div style={{ padding: "10px 12px 12px" }}>
-        <h3
-          style={{
-            fontWeight: 700,
-            fontSize: 13,
-            color: "#1a1a1a",
-            margin: 0,
-            marginBottom: 2,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {restaurant.name}
-        </h3>
-        <p
-          style={{
-            fontSize: 11,
-            color: "#888",
-            margin: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {restaurant.category}
-        </p>
-      </div>
-    </a>
+            {restaurant.name}
+          </h3>
+          <p
+            style={{
+              fontSize: 11,
+              color: "#888",
+              margin: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {restaurant.category}
+          </p>
+        </div>
+      </a>
+
+      {/* Remove button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        aria-label={`Remove ${restaurant.name} from watchlist`}
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          background: "rgba(0,0,0,0.55)",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontSize: 13,
+          fontWeight: 700,
+          lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+    </div>
   );
 }
