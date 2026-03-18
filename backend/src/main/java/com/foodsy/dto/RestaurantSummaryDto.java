@@ -29,6 +29,7 @@ public class RestaurantSummaryDto {
     
     private List<String> vibeTags;
     private String websiteUri;
+    private List<String> photoUrls;
 
     // For analytics and recommendations
     private Integer clickCount; // Number of times clicked in last 7 days
@@ -64,6 +65,7 @@ public class RestaurantSummaryDto {
         dto.setLongitude(entity.getLongitude());
         dto.setVibeTags(entity.getVibeTags());
         dto.setWebsiteUri(entity.getWebsiteUri());
+        dto.setPhotoUrls(entity.getPhotoUrls());
         return dto;
     }
     
@@ -155,10 +157,14 @@ public class RestaurantSummaryDto {
     @JsonProperty("photos")
     @JsonGetter("photos")
     public List<String> getPhotos() {
+        // Prefer S3 URLs when available
+        if (photoUrls != null && !photoUrls.isEmpty()) {
+            return photoUrls;
+        }
         if (photoReferences == null || photoReferences.isEmpty()) {
             return List.of();
         }
-        // Convert photo references to full URLs using the proxy endpoint
+        // Fall back to proxy URL construction
         return photoReferences.stream()
                 .map(ref -> {
                     // Extract just the photo ID from the full photo name
@@ -241,6 +247,14 @@ public class RestaurantSummaryDto {
 
     public void setWebsiteUri(String websiteUri) {
         this.websiteUri = websiteUri;
+    }
+
+    public List<String> getPhotoUrls() {
+        return photoUrls;
+    }
+
+    public void setPhotoUrls(List<String> photoUrls) {
+        this.photoUrls = photoUrls;
     }
 
     public Integer getClickCount() {

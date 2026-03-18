@@ -76,6 +76,12 @@ google:
     api:
       key: ${GOOGLE_PLACES_API_KEY}
 
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME:foodsy-restaurant-photos}
+    region: ${AWS_REGION:us-east-1}
+    photo-base-url: ${AWS_S3_PHOTO_BASE_URL:https://foodsy-restaurant-photos.s3.amazonaws.com}
+
 # Admin endpoints — must supply X-Admin-Secret header matching this value
 admin:
   secret: ${ADMIN_SECRET:}

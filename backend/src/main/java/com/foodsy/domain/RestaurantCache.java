@@ -102,6 +102,11 @@ public class RestaurantCache {
     @Column(name = "vibe_tag")
     private List<String> vibeTags;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "restaurant_cache_photo_urls", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
+    @Column(name = "photo_url", columnDefinition = "TEXT")
+    private List<String> photoUrls = new java.util.ArrayList<>();
+
     // Constructors
     public RestaurantCache() {
         // Set expiration to 30 days from now (as per Places API terms)
@@ -329,5 +334,13 @@ public class RestaurantCache {
 
     public void setVibeTags(List<String> vibeTags) {
         this.vibeTags = vibeTags;
+    }
+
+    public List<String> getPhotoUrls() {
+        return photoUrls;
+    }
+
+    public void setPhotoUrls(List<String> photoUrls) {
+        this.photoUrls = photoUrls;
     }
 } 
