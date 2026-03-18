@@ -27,20 +27,38 @@ export function AreaPicker({
   const boroughLabel =
     BOROUGHS.find((b) => b.key === selectedBorough)?.label ?? "Area";
 
+  // Options: null = "Any", then each neighborhood
+  const options: (string | null)[] = [null, ...BOROUGH_NEIGHBORHOODS[selectedBorough]];
+  const currentIndex = options.indexOf(selectedNeighborhood);
+  const safeIndex = currentIndex === -1 ? 0 : currentIndex;
+
+  function prev() {
+    if (safeIndex > 0) onNeighborhoodChange(options[safeIndex - 1]);
+  }
+
+  function next() {
+    if (safeIndex < options.length - 1) onNeighborhoodChange(options[safeIndex + 1]);
+  }
+
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     sheetRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, safeIndex, options.length]);
+
+  const displayLabel = selectedNeighborhood ?? `Any ${boroughLabel}`;
 
   return (
     <>
-      {/* Backdrop — not focusable */}
+      {/* Backdrop */}
       <div
         onClick={onClose}
         aria-hidden="true"
@@ -90,7 +108,7 @@ export function AreaPicker({
         </div>
 
         {/* Borough tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           {BOROUGHS.map(({ key, label }) => (
             <button
               key={key}
@@ -106,8 +124,7 @@ export function AreaPicker({
                 borderRadius: 20,
                 border: "1.5px solid",
                 borderColor: key === selectedBorough ? "#e8531a" : "#e0e0e0",
-                background:
-                  key === selectedBorough ? "#e8531a" : "transparent",
+                background: key === selectedBorough ? "#e8531a" : "transparent",
                 color: key === selectedBorough ? "#fff" : "#555",
                 fontWeight: 700,
                 fontSize: 13,
@@ -119,70 +136,87 @@ export function AreaPicker({
           ))}
         </div>
 
-        {/* Neighborhood chips */}
+        {/* Neighborhood cycler */}
         <div
           style={{
             display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            paddingBottom: 8,
-            scrollbarWidth: "none",
+            alignItems: "center",
+            gap: 12,
+            background: "#f9f5f2",
+            borderRadius: 14,
+            padding: "12px 14px",
+            marginBottom: 20,
           }}
         >
-          {/* "Any" chip */}
           <button
-            onClick={() => onNeighborhoodChange(null)}
+            onClick={prev}
+            disabled={safeIndex === 0}
+            aria-label="Previous neighborhood"
             style={{
               flexShrink: 0,
-              padding: "6px 14px",
-              borderRadius: 20,
-              border: "1.5px solid",
-              borderColor:
-                selectedNeighborhood === null ? "#e8531a" : "#e0e0e0",
-              background:
-                selectedNeighborhood === null ? "#e8531a" : "transparent",
-              color: selectedNeighborhood === null ? "#fff" : "#555",
-              fontWeight: 600,
-              fontSize: 12,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              border: "1.5px solid #e0e0e0",
+              background: safeIndex === 0 ? "#f0f0f0" : "#fff",
+              color: safeIndex === 0 ? "#ccc" : "#555",
+              fontSize: 18,
+              cursor: safeIndex === 0 ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
             }}
           >
-            Any {boroughLabel}
+            ‹
           </button>
 
-          {BOROUGH_NEIGHBORHOODS[selectedBorough].map((n) => (
-            <button
-              key={n}
-              onClick={() => onNeighborhoodChange(n)}
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <div
               style={{
-                flexShrink: 0,
-                padding: "6px 14px",
-                borderRadius: 20,
-                border: "1.5px solid",
-                borderColor:
-                  selectedNeighborhood === n ? "#e8531a" : "#e0e0e0",
-                background:
-                  selectedNeighborhood === n ? "#e8531a" : "transparent",
-                color: selectedNeighborhood === n ? "#fff" : "#555",
-                fontWeight: 600,
-                fontSize: 12,
-                cursor: "pointer",
+                fontWeight: 700,
+                fontSize: 14,
+                color: "#1a1a1a",
                 whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              {n}
-            </button>
-          ))}
-          {/* Trailing spacer so last chip isn't flush against the edge when scrolled */}
-          <div style={{ flexShrink: 0, width: 4 }} aria-hidden="true" />
+              {displayLabel}
+            </div>
+            <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>
+              {safeIndex + 1} of {options.length}
+            </div>
+          </div>
+
+          <button
+            onClick={next}
+            disabled={safeIndex === options.length - 1}
+            aria-label="Next neighborhood"
+            style={{
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              border: "1.5px solid #e0e0e0",
+              background: safeIndex === options.length - 1 ? "#f0f0f0" : "#fff",
+              color: safeIndex === options.length - 1 ? "#ccc" : "#555",
+              fontSize: 18,
+              cursor: safeIndex === options.length - 1 ? "default" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+            }}
+          >
+            ›
+          </button>
         </div>
 
         {/* Done button */}
         <button
           onClick={onClose}
           style={{
-            marginTop: 20,
             width: "100%",
             padding: "13px 0",
             background: "#e8531a",
