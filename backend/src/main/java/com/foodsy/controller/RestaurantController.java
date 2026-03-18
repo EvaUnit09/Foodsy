@@ -170,6 +170,7 @@ public class RestaurantController {
             MediaType contentType = response.getHeaders().getContentType();
             return ResponseEntity.status(response.getStatusCode())
                     .contentType(contentType != null ? contentType : MediaType.IMAGE_JPEG)
+                    .header("Cache-Control", "public, max-age=2592000, immutable")
                     .body(response.getBody());
         } catch (RestClientResponseException e) {
             logger.error("Google Places API error: {} - {}", e.getRawStatusCode(), e.getResponseBodyAsString());
