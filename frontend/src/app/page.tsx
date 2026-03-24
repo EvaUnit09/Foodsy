@@ -173,7 +173,7 @@ const Index = () => {
               onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
               onClick={() => {
-                window.location.href = `/api/oauth2/authorization/google`;
+                window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`;
               }}
             >
               Sign Up with Google
