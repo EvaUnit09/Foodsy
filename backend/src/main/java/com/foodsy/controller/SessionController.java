@@ -47,7 +47,8 @@ public class SessionController {
         String sessionId,
         int participantCount,
         int restaurantCount,
-        long elapsedMinutes
+        long elapsedMinutes,
+        boolean isHost
     ) {}
 
     // Add DTO definition at the top or in a separate file
@@ -130,12 +131,14 @@ public class SessionController {
         int round = session.getRound() != null ? session.getRound() : 1;
         int restaurantCount = restaurantRepo.findBySessionIdAndRound(session.getId(), round).size();
         long elapsedMinutes = (Instant.now().toEpochMilli() - session.getCreatedAt().toEpochMilli()) / 60_000;
+        boolean isHost = userId.equals(session.getCreatorId() != null ? session.getCreatorId().trim().toLowerCase() : "");
 
         return ResponseEntity.ok(new ActiveSessionDto(
             String.valueOf(session.getId()),
             participantCount,
             restaurantCount,
-            elapsedMinutes
+            elapsedMinutes,
+            isHost
         ));
     }
 
@@ -418,6 +421,24 @@ public class SessionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to reset votes: " + e.getMessage()));
         }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> closeSession(@PathVariable Long id, Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        Session session = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        String userId = principal.getName().trim().toLowerCase();
+        String creatorId = session.getCreatorId() != null ? session.getCreatorId().trim().toLowerCase() : "";
+        if (!userId.equals(creatorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the host can close this session");
+        }
+        sessionService.endSession(id, "closed by host");
+        messagingTemplate.convertAndSend("/topic/session/" + id,
+            new SessionEventsController.SessionEvent("sessionClosed", Map.of("sessionId", id)));
+        return ResponseEntity.noContent().build();
     }
 
     // Get voting status for all participants

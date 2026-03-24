@@ -22,6 +22,7 @@ interface ActiveSessionData {
   participantCount: number;
   restaurantCount: number;
   elapsedMinutes: number;
+  isHost: boolean;
 }
 
 async function fetchActiveSession(): Promise<ActiveSessionData | null> {
@@ -41,6 +42,7 @@ async function fetchActiveSession(): Promise<ActiveSessionData | null> {
       participantCount: s.participantCount ?? 0,
       restaurantCount: s.restaurantCount ?? 0,
       elapsedMinutes: s.elapsedMinutes ?? 0,
+      isHost: s.isHost ?? false,
     };
   } catch {
     return null;
@@ -63,6 +65,21 @@ const Index = () => {
   const handleStartSession = () => router.push("/sessions/create");
   const handleJoinSession = () => router.push("/sessions/Joinpage");
 
+  const handleCloseSession = async () => {
+    if (!activeSession) return;
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/api/sessions/${activeSession.sessionId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (res.ok) setActiveSession(null);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
       <AppHeader />
@@ -76,7 +93,7 @@ const Index = () => {
             onStartSession={handleStartSession}
             onJoinSession={handleJoinSession}
           />
-          {activeSession && <ActiveSessionBanner {...activeSession} />}
+          {activeSession && <ActiveSessionBanner {...activeSession} onClose={handleCloseSession} />}
           <DiscoveryEntryCard />
           <FavoritesShelf
             onStartDiscovery={() => router.push("/discover")}

@@ -1,6 +1,6 @@
 "use client";
 import { useSessionWebSocket } from "@/hooks/useWebSockethook";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, {
   useState,
   useEffect,
@@ -124,6 +124,7 @@ const fetchSession = async (sessionId: number) => {
 /* --------------------------- component --------------------------- */
 export default function SessionPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id;
   const sessionId = id ? Number(id) : 0;
 
@@ -398,6 +399,9 @@ export default function SessionPage() {
         }
         break;
       }
+      case 'sessionClosed':
+        router.push('/');
+        break;
       case 'participantJoined': {
         const userId = event.payload.userId as string;
         setParticipants((prev) => {

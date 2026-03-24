@@ -7,6 +7,8 @@ interface ActiveSessionBannerProps {
   participantCount: number;
   restaurantCount: number;
   elapsedMinutes: number;
+  isHost: boolean;
+  onClose: () => void;
 }
 
 export function ActiveSessionBanner({
@@ -14,6 +16,8 @@ export function ActiveSessionBanner({
   participantCount,
   restaurantCount,
   elapsedMinutes,
+  isHost,
+  onClose,
 }: ActiveSessionBannerProps) {
   const router = useRouter();
 
@@ -53,24 +57,57 @@ export function ActiveSessionBanner({
           </span>
         </div>
       </div>
-      <button
-        onClick={() => router.push(`/sessions/${sessionId}`)}
-        style={{
-          background: "#e8531a",
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 13,
-          border: "none",
-          borderRadius: 8,
-          padding: "8px 16px",
-          cursor: "pointer",
-          whiteSpace: "nowrap",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
-      >
-        Rejoin Session
-      </button>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {isHost && (
+          <button
+            onClick={() => {
+              if (window.confirm("Close this session? All participants will be disconnected.")) {
+                onClose();
+              }
+            }}
+            style={{
+              background: "transparent",
+              color: "#9ca3af",
+              fontWeight: 600,
+              fontSize: 13,
+              border: "1.5px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "8px 14px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#ef4444";
+              e.currentTarget.style.borderColor = "#ef4444";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#9ca3af";
+              e.currentTarget.style.borderColor = "#e5e7eb";
+            }}
+          >
+            Close Session
+          </button>
+        )}
+        <button
+          onClick={() => router.push(`/sessions/${sessionId}`)}
+          style={{
+            background: "#e8531a",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 13,
+            border: "none",
+            borderRadius: 8,
+            padding: "8px 16px",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+        >
+          Rejoin Session
+        </button>
+      </div>
     </div>
   );
 }
