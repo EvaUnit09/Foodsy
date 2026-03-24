@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Heart } from "lucide-react";
+import { Heart, MapPin } from "lucide-react";
 
 interface ActionButtonsProps {
   onPass: () => void;
@@ -119,23 +119,18 @@ export function ActionButtons({
           onClick={onWatchlist}
           size={64}
           bg="#3b82f6"
-          label="Save"
+          label="Wanna Go"
           ringColor="#3b82f6"
           disabled={disabled}
         >
-          <svg aria-hidden="true" width={24} height={24} viewBox="0 0 24 24" fill="none">
-            <path
-              d="M5 3h14a1 1 0 011 1v17l-8-4-8 4V4a1 1 0 011-1z"
-              fill="white"
-            />
-          </svg>
+          <MapPin size={24} fill="white" color="white" />
         </CircleButton>
 
         <CircleButton
           onClick={onFavorite}
           size={52}
           bg="#e8531a"
-          label="Like"
+          label="Been Here"
           ringColor="#e8531a"
           disabled={disabled}
         >
@@ -144,7 +139,7 @@ export function ActionButtons({
       </div>
 
       <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>
-        ← Pass &nbsp;&nbsp; Save ↑ &nbsp;&nbsp; Favorite →
+        ← Pass &nbsp;&nbsp; Wanna Go ↑ &nbsp;&nbsp; Been Here →
       </div>
     </div>
   );

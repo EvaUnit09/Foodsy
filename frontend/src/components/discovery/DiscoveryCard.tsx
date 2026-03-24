@@ -24,8 +24,8 @@ const ACTION_COLORS: Record<SwipeAction, string> = {
 
 const ACTION_LABELS: Record<SwipeAction, string> = {
   pass: "✕ Passed",
-  favorite: "❤️ Favorited!",
-  watchlist: "🔖 Saved!",
+  favorite: "✓ Been Here!",
+  watchlist: "📍 Wanna Go!",
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -421,7 +421,7 @@ export function DiscoveryCard({
               margin: 0,
               marginTop: 6,
               display: "-webkit-box",
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 4,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}

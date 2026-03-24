@@ -83,8 +83,8 @@ export function CompletionScreen({
       >
         {[
           { value: seenCount, label: "Explored" },
-          { value: favoriteCount, label: "Liked" },
-          { value: watchlistCount, label: "Saved" },
+          { value: favoriteCount, label: "Been Here" },
+          { value: watchlistCount, label: "Wanna Go" },
         ].map(({ value, label }) => (
           <div
             key={label}
