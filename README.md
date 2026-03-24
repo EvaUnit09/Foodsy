@@ -1,5 +1,5 @@
 # Foodsy
-A real-time social dining coordination app that solves the "where should we eat?" problem for groups. Create a session, invite friends with a join code, and vote on nearby restaurants together — no more endless back-and-forth.
+A real-time social dining coordination app that solves the "where should we eat?" problem for groups. Create a session, invite friends with a join code, and vote on nearby restaurants together. No more endless back-and-forth.
 
 ## Tech Stack
 - Frontend: React, Next.js, deployed on Vercel
