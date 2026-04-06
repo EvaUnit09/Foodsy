@@ -7,14 +7,6 @@
   --foreground: #171717;
 }
 
-/* Dark mode  -> just change to dark*/
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
