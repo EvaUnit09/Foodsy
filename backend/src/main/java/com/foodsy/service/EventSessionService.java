@@ -105,12 +105,14 @@ public class EventSessionService {
             });
         }
 
-        // Check if all participants have responded
-        List<SessionParticipant> allParticipants = participantRepo.findBySessionId(sessionId);
-        long respondedCount = rsvpRepo.countBySessionId(sessionId);
-        if (respondedCount >= allParticipants.size() && allParticipants.size() >= 2) {
-            session.setStatus("ENDED");
-            sessionRepository.save(session);
+        // Auto-complete when all expected participants have responded
+        Integer expectedParticipants = session.getExpectedParticipants();
+        if (expectedParticipants != null && expectedParticipants >= 2) {
+            long respondedCount = rsvpRepo.countBySessionId(sessionId);
+            if (respondedCount >= expectedParticipants) {
+                session.setStatus("ENDED");
+                sessionRepository.save(session);
+            }
         }
 
         return rsvp;
