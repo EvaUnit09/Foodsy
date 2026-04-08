@@ -8,10 +8,13 @@ import com.foodsy.dto.RestaurantDto;
 import com.foodsy.dto.RestaurantSummaryDto;
 import com.foodsy.service.RestaurantCacheService;
 import com.foodsy.service.SessionService;
+import com.foodsy.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
@@ -33,15 +36,18 @@ public class RestaurantController {
     private final GooglePlacesClient placesClient;
     private final SessionService sessionService;
     private final RestaurantCacheService restaurantCacheService;
+    private final UserService userService;
 
     @Value("${admin.secret:}")
     private String adminSecret;
 
     public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService,
-                                RestaurantCacheService restaurantCacheService) {
+                                RestaurantCacheService restaurantCacheService,
+                                UserService userService) {
         this.placesClient = placesClient;
         this.sessionService = sessionService;
         this.restaurantCacheService = restaurantCacheService;
+        this.userService = userService;
     }
     private static final java.util.Set<String> SUPPORTED_BOROUGHS =
             java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
@@ -77,17 +83,30 @@ public class RestaurantController {
     public ResponseEntity<List<RestaurantSummaryDto>> getDiscovery(
             @RequestParam(defaultValue = "manhattan") String borough,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(required = false) String neighborhood) {
+            @RequestParam(required = false) String neighborhood,
+            Authentication authentication) {
         if (limit < 1 || limit > 50) return ResponseEntity.badRequest().build();
         String normalized = borough.trim().toLowerCase();
         if (!DISCOVERY_BOROUGHS.contains(normalized)) {
             return ResponseEntity.badRequest().build();
         }
         String capitalized = Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1);
-        // Normalize neighborhood: null or blank → null
         String normalizedNeighborhood = (neighborhood != null && !neighborhood.isBlank())
                 ? neighborhood.trim()
                 : null;
+
+        // Route authenticated users to their personalized daily feed
+        boolean isRealUser = authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+        if (isRealUser) {
+            return userService.findByAuthentication(authentication)
+                    .map(user -> ResponseEntity.ok(
+                            restaurantCacheService.getDailyUserFeed(user, capitalized, limit)))
+                    .orElseGet(() -> ResponseEntity.ok(
+                            restaurantCacheService.getDiscoveryRestaurants(capitalized, normalizedNeighborhood, limit)));
+        }
+
         return ResponseEntity.ok(restaurantCacheService.getDiscoveryRestaurants(capitalized, normalizedNeighborhood, limit));
     }
 

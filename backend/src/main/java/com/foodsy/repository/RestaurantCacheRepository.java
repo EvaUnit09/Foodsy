@@ -160,6 +160,17 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
     );
     
     /**
+     * Count non-expired restaurants for a specific borough + neighborhood combo.
+     * Used to gate neighborhood-level seeding at startup.
+     */
+    @Query("SELECT COUNT(r) FROM RestaurantCache r WHERE r.borough = :borough " +
+           "AND r.neighborhood = :neighborhood AND r.expiresAt > :now")
+    long countByBoroughAndNeighborhoodNotExpired(
+        @Param("borough") String borough,
+        @Param("neighborhood") String neighborhood,
+        @Param("now") Instant now);
+
+    /**
      * Count restaurants by borough (for statistics)
      */
     long countByBorough(String borough);

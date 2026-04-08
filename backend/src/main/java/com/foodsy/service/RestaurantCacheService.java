@@ -3,10 +3,13 @@ package com.foodsy.service;
 import com.foodsy.client.GooglePlacesClient;
 import com.foodsy.domain.Neighborhood;
 import com.foodsy.domain.RestaurantCache;
+import com.foodsy.domain.User;
+import com.foodsy.domain.UserDailyFeed;
 import com.foodsy.dto.GooglePlacesSearchResponse;
 import com.foodsy.dto.RestaurantSummaryDto;
 import com.foodsy.repository.NeighborhoodRepository;
 import com.foodsy.repository.RestaurantCacheRepository;
+import com.foodsy.repository.UserDailyFeedRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +24,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,6 +94,9 @@ public class RestaurantCacheService {
 
     @Autowired
     private NeighborhoodRepository neighborhoodRepository;
+
+    @Autowired
+    private UserDailyFeedRepository dailyFeedRepository;
 
     @Autowired
     private GooglePlacesClient placesClient;
@@ -173,6 +183,17 @@ public class RestaurantCacheService {
             return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
         }
 
+        // Before hitting the API, try the borough-wide pool (ignoring neighborhood filter).
+        // This avoids triggering a Google API call when we already have data at the borough level.
+        if (neighborhood != null) {
+            List<RestaurantCache> boroughFallback = cacheRepository
+                    .findDiscoveryRestaurants(borough, null, now, 3.5, limit);
+            if (!boroughFallback.isEmpty()) {
+                logger.info("Neighborhood '{}' cache cold — serving {} from borough pool", neighborhood, boroughFallback.size());
+                return boroughFallback.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
+            }
+        }
+
         // Cache is empty — gate concurrent fetches so only one thread calls upstream per borough.
         String gateKey = borough + (neighborhood != null ? ":" + neighborhood : "");
         CompletableFuture<Void> myFuture = new CompletableFuture<>();
@@ -195,6 +216,65 @@ public class RestaurantCacheService {
 
         results = cacheRepository.findDiscoveryRestaurants(borough, neighborhood, now, 3.5, limit);
         return results.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * Returns a deterministic, personalized set of restaurants for the given user and borough.
+     * The same set is served all day; it changes the next calendar day.
+     * Authenticated users are routed here from RestaurantController.
+     */
+    @Transactional
+    public List<RestaurantSummaryDto> getDailyUserFeed(User user, String borough, int limit) {
+        LocalDate today = LocalDate.now();
+
+        Optional<UserDailyFeed> existing = dailyFeedRepository
+                .findByUserIdAndFeedDateAndBorough(user.getId(), today, borough);
+        if (existing.isPresent()) {
+            List<String> ids = Arrays.asList(existing.get().getPlaceIds().split(","));
+            List<RestaurantCache> rows = cacheRepository.findByPlaceIdIn(ids);
+            Map<String, RestaurantCache> byId = rows.stream()
+                    .collect(Collectors.toMap(RestaurantCache::getPlaceId, r -> r));
+            return ids.stream()
+                    .map(byId::get)
+                    .filter(Objects::nonNull)
+                    .map(RestaurantSummaryDto::fromEntity)
+                    .collect(Collectors.toList());
+        }
+
+        List<RestaurantCache> pool = cacheRepository
+                .findByBoroughNotExpired(borough, Instant.now(), PageRequest.of(0, 200))
+                .getContent();
+
+        if (pool.isEmpty()) {
+            logger.info("Borough pool empty for {} — falling back to random discovery", borough);
+            return getDiscoveryRestaurants(borough, null, limit);
+        }
+
+        List<RestaurantCache> selected = deterministicShuffle(pool, user.getId())
+                .stream().limit(limit).collect(Collectors.toList());
+
+        String csv = selected.stream()
+                .map(RestaurantCache::getPlaceId)
+                .collect(Collectors.joining(","));
+        UserDailyFeed feed = new UserDailyFeed();
+        feed.setUser(user);
+        feed.setFeedDate(today);
+        feed.setBorough(borough);
+        feed.setPlaceIds(csv);
+        dailyFeedRepository.save(feed);
+
+        return selected.stream().map(RestaurantSummaryDto::fromEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * Deterministic shuffle: same userId + same calendar day → same ordering.
+     * Different users or different days → different ordering.
+     */
+    private List<RestaurantCache> deterministicShuffle(List<RestaurantCache> pool, Long userId) {
+        long seed = (long) userId.hashCode() * 31L + LocalDate.now().toEpochDay();
+        List<RestaurantCache> copy = new ArrayList<>(pool);
+        Collections.shuffle(copy, new Random(seed));
+        return copy;
     }
 
     private boolean isWithinNeighborhoodBbox(GooglePlacesSearchResponse.Place place, Neighborhood nb) {
@@ -440,6 +520,9 @@ public class RestaurantCacheService {
         dailyApiCalls.set(0);
         nearbySearchCalls.set(0);
         placeDetailsCalls.set(0);
+
+        int deleted = dailyFeedRepository.deleteOlderThan(LocalDate.now().minusDays(7));
+        logger.info("Deleted {} stale user_daily_feed rows", deleted);
     }
 
     // Helper methods
@@ -726,6 +809,31 @@ public class RestaurantCacheService {
                 logger.error("Startup seed failed for {}: {}", b.name(), e.getMessage());
             }
         }
+
+        seedAllNeighborhoods();
+    }
+
+    /**
+     * Seed restaurant data for any neighborhood that has no cached entries.
+     * Called once at startup — subsequent restarts skip all 30 since the pool is populated.
+     */
+    private void seedAllNeighborhoods() {
+        Instant now = Instant.now();
+        List<Neighborhood> all = neighborhoodRepository.findAll();
+        logger.info("Checking neighborhood pool coverage for {} neighborhoods", all.size());
+        for (Neighborhood nb : all) {
+            try {
+                long count = cacheRepository.countByBoroughAndNeighborhoodNotExpired(
+                        nb.getBorough(), nb.getName(), now);
+                if (count == 0) {
+                    logger.info("Seeding neighborhood {} ({})", nb.getName(), nb.getBorough());
+                    fetchAndCacheForNeighborhood(nb.getBorough(), nb.getName());
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to seed neighborhood {} ({}): {}", nb.getName(), nb.getBorough(), e.getMessage());
+            }
+        }
+        logger.info("Neighborhood pool seeding complete");
     }
 
     @Transactional
