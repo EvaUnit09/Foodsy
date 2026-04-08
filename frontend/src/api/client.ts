@@ -42,11 +42,14 @@ export interface AuthResponse {
 }
 
 export interface SessionRequest {
-  poolSize: number;
-  roundTime: number;
-  likesPerUser: number;
+  poolSize?: number;
+  roundTime?: number;
+  likesPerUser?: number;
   lat?: number;
   lng?: number;
+  diningBorough?: string;
+  diningNeighborhood?: string;
+  sessionType?: string;
 }
 
 export interface Session {
@@ -57,6 +60,25 @@ export interface Session {
   poolSize: number;
   roundTime: number;
   likesPerUser: number;
+  diningBorough?: string;
+  diningNeighborhood?: string;
+  sessionType?: string;
+}
+
+export interface RecommendedRestaurant {
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  rating: number;
+  priceLevel: string;
+  distanceFromCentroidKm: number;
+}
+
+export interface RecommendationResult {
+  restaurants: RecommendedRestaurant[];
+  participantsWithLocation: number;
+  totalParticipants: number;
 }
 
 export interface VoteRequest {
@@ -287,7 +309,10 @@ export class ApiClient {
       ApiClient.request<RestaurantDto[]>(`/sessions/${sessionId}/final-rankings`),
       
     getWinner: (sessionId: string): Promise<User> =>
-      ApiClient.request<User>(`/sessions/${sessionId}/winner`)
+      ApiClient.request<User>(`/sessions/${sessionId}/winner`),
+
+    getRecommended: (sessionId: string): Promise<RecommendationResult> =>
+      ApiClient.request<RecommendationResult>(`/sessions/${sessionId}/recommended`)
   };
   
   /**

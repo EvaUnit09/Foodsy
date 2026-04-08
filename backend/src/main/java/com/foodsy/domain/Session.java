@@ -25,6 +25,10 @@ public class Session {
     private Instant lastActivityAt = Instant.now(); // Track last user activity
     private Instant expiresAt; // When session should auto-close
 
+    private String diningBorough;
+    private String diningNeighborhood;
+    private String sessionType = "STANDARD"; // STANDARD, OFFLINE, EVENT
+
     @Column(name = "join_code", unique = true, nullable = false, length = 6)
     private String joinCode;
 
@@ -123,4 +127,12 @@ public class Session {
         return !"ended".equals(status) && !"expired".equals(status) && !isExpired();
     }
 
+    public String getDiningBorough() { return diningBorough; }
+    public void setDiningBorough(String diningBorough) { this.diningBorough = diningBorough; }
+
+    public String getDiningNeighborhood() { return diningNeighborhood; }
+    public void setDiningNeighborhood(String diningNeighborhood) { this.diningNeighborhood = diningNeighborhood; }
+
+    public String getSessionType() { return sessionType; }
+    public void setSessionType(String sessionType) { this.sessionType = sessionType; }
 }

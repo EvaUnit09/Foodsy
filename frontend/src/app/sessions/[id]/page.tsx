@@ -17,6 +17,7 @@ import { SessionStatusBanners } from "@/components/SessionStatusBanners";
 import { ParticipantsSection } from "@/components/ParticipantsSection";
 import { RestaurantNavigation } from "@/components/RestaurantNavigation";
 import { FinalResultsScreen } from "@/components/FinalResultsScreen";
+import { GroupRecommendationsPanel } from "@/components/GroupRecommendationsPanel";
 import { VoteType } from "@/api/voteApi";
 
 /* -------------------- types & constants ----------------------- */
@@ -129,7 +130,7 @@ export default function SessionPage() {
   const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -551,6 +552,12 @@ export default function SessionPage() {
       />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {session?.diningBorough && (
+          <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
+            Eating in: <span className="font-medium text-gray-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
+          </div>
+        )}
+
         <SessionStatusBanners
           sessionComplete={sessionComplete}
           winner={winner}
@@ -561,6 +568,10 @@ export default function SessionPage() {
           isHost={isHost}
           likesPerUser={session?.likesPerUser || 0}
         />
+
+        {!sessionStarted && !sessionComplete && (
+          <GroupRecommendationsPanel sessionId={String(sessionId)} />
+        )}
 
         <ParticipantsSection
           participants={participants}

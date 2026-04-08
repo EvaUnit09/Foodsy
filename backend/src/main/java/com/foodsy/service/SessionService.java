@@ -19,6 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.foodsy.domain.Neighborhood;
+import com.foodsy.repository.NeighborhoodRepository;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -31,22 +34,28 @@ import java.util.Comparator;
 public class SessionService {
     private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
 
+    private static final int DEFAULT_POOL_SIZE = 10;
+    private static final int DEFAULT_ROUND_TIME = 2;
+    private static final int DEFAULT_LIKES_PER_USER = 3;
+
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository restaurantRepo;
     private final GooglePlacesClient placesClient;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final IpGeoClient ipGeoClient;
+    private final NeighborhoodRepository neighborhoodRepository;
 
-    
+
     @Value("${session.timeout.max-duration-hours:1}")
     private int maxDurationHours;
 
-    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, GooglePlacesClient placesClient, SessionParticipantRepository sessionParticipantRepository, IpGeoClient ipGeoClient) {
+    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, GooglePlacesClient placesClient, SessionParticipantRepository sessionParticipantRepository, IpGeoClient ipGeoClient, NeighborhoodRepository neighborhoodRepository) {
         this.sessionRepository = sessionRepo;
         this.restaurantRepo = restaurantRepo;
         this.placesClient = placesClient;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.ipGeoClient = ipGeoClient;
+        this.neighborhoodRepository = neighborhoodRepository;
     }
     public Session createSession(Session session) {
         try {
@@ -117,22 +126,35 @@ public class SessionService {
      * Radius default: 4000m. Diversified seeding TBD.
      */
     public Session createSession(SessionRequest req, String creatorId, String clientIp) {
-        if (creatorId == null || req == null || req.getPoolSize() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: creatorId, poolSize");
+        if (creatorId == null || req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: creatorId");
         }
 
         Session session = new Session();
         session.setCreatorId(creatorId);
-        session.setPoolSize(req.getPoolSize());
-        session.setRoundTime(req.getRoundTime());
-        session.setLikesPerUser(req.getLikesPerUser());
+        session.setPoolSize(req.getPoolSize() != null ? req.getPoolSize() : DEFAULT_POOL_SIZE);
+        session.setRoundTime(req.getRoundTime() != null ? req.getRoundTime() : DEFAULT_ROUND_TIME);
+        session.setLikesPerUser(req.getLikesPerUser() != null ? req.getLikesPerUser() : DEFAULT_LIKES_PER_USER);
+        session.setSessionType(req.getSessionType() != null ? req.getSessionType() : "STANDARD");
+        session.setDiningBorough(req.getDiningBorough());
+        session.setDiningNeighborhood(req.getDiningNeighborhood());
         session.setStatus("OPEN");
 
         Session saved = createSession(session);
 
-        // Resolve coordinates: provided lat/lng else IP geo fallback
+        // If dining location is specified, resolve coordinates from neighborhood table
         Double lat = req.getLat();
         Double lng = req.getLng();
+        if (lat == null && lng == null && req.getDiningNeighborhood() != null && req.getDiningBorough() != null) {
+            neighborhoodRepository.findByNameIgnoreCaseAndBoroughIgnoreCase(
+                    req.getDiningNeighborhood(), req.getDiningBorough()
+            ).ifPresent(neighborhood -> {
+                req.setLat(neighborhood.getCenterLat());
+                req.setLng(neighborhood.getCenterLng());
+            });
+            lat = req.getLat();
+            lng = req.getLng();
+        }
         if (lat == null || lng == null) {
             ipGeoClient.lookup(clientIp).ifPresent(coords -> {
                 // box into Double

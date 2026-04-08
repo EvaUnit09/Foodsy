@@ -1,24 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Check, Copy as CopyIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Check, Copy as CopyIcon } from "lucide-react";
 import { Button } from "@/components/button";
-import { Input } from "@/components/input";
 import { Card, CardContent } from "@/components/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiClient, SessionRequest } from "@/api/client";
+import { ApiClient, SessionRequest, NeighborhoodDto } from "@/api/client";
+
+const BOROUGHS = ["Manhattan", "Brooklyn", "Queens"];
 
 export default function CreateSessionPage() {
-  const [poolSize, setPoolSize] = useState(20);
-  const [roundTime, setRoundTime] = useState(5);
-  const [likesPerUser, setLikesPerUser] = useState(7);
+  const [diningBorough, setDiningBorough] = useState("");
+  const [diningNeighborhood, setDiningNeighborhood] = useState("");
+  const [neighborhoods, setNeighborhoods] = useState<NeighborhoodDto[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [createdSession, setCreatedSession] = useState<{ id: string; joinCode: string } | null>(null);
   const { user, isAuthenticated } = useAuth();
+
+  // Pre-fill from user's profile location
+  useEffect(() => {
+    if (user?.homeBorough) {
+      setDiningBorough(user.homeBorough);
+      if (user.homeNeighborhood) {
+        setDiningNeighborhood(user.homeNeighborhood);
+      }
+    }
+  }, [user]);
+
+  // Fetch neighborhoods when borough changes
+  useEffect(() => {
+    if (diningBorough) {
+      ApiClient.neighborhoods.getByBorough(diningBorough).then(setNeighborhoods).catch(() => setNeighborhoods([]));
+    } else {
+      setNeighborhoods([]);
+    }
+  }, [diningBorough]);
 
   const handleCopy = (text: string, type: "code" | "link") => {
     navigator.clipboard.writeText(text);
@@ -28,39 +48,40 @@ export default function CreateSessionPage() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
       alert("Please sign in to create a session.");
       return;
     }
-    
+
     setSubmitting(true);
-    
+
     const body: SessionRequest = {
-      poolSize,
-      roundTime,
-      likesPerUser,
+      diningBorough: diningBorough || undefined,
+      diningNeighborhood: diningNeighborhood || undefined,
     };
-    
-    // Try browser geolocation; if granted, include coords
-    try {
-      const pos = await new Promise<GeolocationPosition>((resolve) => {
-        if (!navigator.geolocation) {
-          resolve(undefined as unknown as GeolocationPosition);
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(resolve, () => resolve(undefined as unknown as GeolocationPosition), {
-          enableHighAccuracy: false,
-          timeout: 3000,
-          maximumAge: 60000,
+
+    // Try browser geolocation as fallback if no dining location
+    if (!diningBorough) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve) => {
+          if (!navigator.geolocation) {
+            resolve(undefined as unknown as GeolocationPosition);
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, () => resolve(undefined as unknown as GeolocationPosition), {
+            enableHighAccuracy: false,
+            timeout: 3000,
+            maximumAge: 60000,
+          });
         });
-      });
-      if (pos && pos.coords) {
-        body.lat = pos.coords.latitude;
-        body.lng = pos.coords.longitude;
-      }
-    } catch {}
-    
+        if (pos && pos.coords) {
+          body.lat = pos.coords.latitude;
+          body.lng = pos.coords.longitude;
+        }
+      } catch { /* ignore */ }
+    }
+
     try {
       const session = await ApiClient.sessions.create(body);
       setCreatedSession({ id: session.id, joinCode: session.joinCode });
@@ -100,10 +121,6 @@ export default function CreateSessionPage() {
                 </span>
               </div>
             </div>
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
           </div>
         </div>
       </header>
@@ -116,7 +133,7 @@ export default function CreateSessionPage() {
               Create a Voting Session
             </h1>
             <p className="text-lg text-gray-600">
-              Set up your session and invite friends to vote on tonight&apos;s dinner spot!
+              Pick where you want to eat and invite friends to vote!
             </p>
           </div>
 
@@ -177,7 +194,7 @@ export default function CreateSessionPage() {
                   <h2 className="text-2xl font-bold text-gray-900">Sign In Required</h2>
                   <p className="text-gray-600">You need to be signed in to create a voting session.</p>
                   <Button
-                                         onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
+                    onClick={() => window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`}
                     className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium rounded-lg flex items-center justify-center transition-colors"
                   >
                     Sign In with Google
@@ -192,55 +209,57 @@ export default function CreateSessionPage() {
                       </p>
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pool Size
+
+                  {/* Dining Location */}
+                  <div className="space-y-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700">
+                      <MapPin className="w-4 h-4 mr-2 text-orange-600" />
+                      Where are you eating?
                     </label>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={30}
-                      value={poolSize}
-                      onChange={(e) => setPoolSize(Number(e.target.value))}
-                      className="h-12 text-lg border-gray-200 focus:border-orange-300"
-                      required
-                    />
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Borough</label>
+                      <select
+                        value={diningBorough}
+                        onChange={(e) => {
+                          setDiningBorough(e.target.value);
+                          setDiningNeighborhood("");
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-300 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white"
+                      >
+                        <option value="">Select borough</option>
+                        {BOROUGHS.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Neighborhood</label>
+                      <select
+                        value={diningNeighborhood}
+                        onChange={(e) => setDiningNeighborhood(e.target.value)}
+                        disabled={!diningBorough || neighborhoods.length === 0}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-300 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                      >
+                        <option value="">Select neighborhood</option>
+                        {neighborhoods.map((n) => (
+                          <option key={n.id} value={n.name}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {!diningBorough && (
+                      <p className="text-xs text-gray-400">
+                        If no location is selected, we will use your browser location or a default area.
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Round Time (minutes)
-                    </label>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={10}
-                      value={roundTime}
-                      onChange={(e) => setRoundTime(Number(e.target.value))}
-                      className="h-12 text-lg border-gray-200 focus:border-orange-300"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Likes per User
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={likesPerUser}
-                      onChange={(e) => setLikesPerUser(Number(e.target.value))}
-                      className="h-12 text-lg border-gray-200 focus:border-orange-300"
-                      required
-                    />
-                  </div>
+
                   <Button
                     type="submit"
                     size="lg"
                     disabled={submitting}
                     className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                   >
-                    {submitting ? "Creating…" : "Start Session"}
+                    {submitting ? "Creating..." : "Start Session"}
                   </Button>
                 </form>
               )}

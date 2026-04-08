@@ -10,6 +10,9 @@ public class SessionRequest {
     private Integer likesPerUser;
     private Double lat;
     private Double lng;
+    private String diningBorough;
+    private String diningNeighborhood;
+    private String sessionType;
 
     public Integer getPoolSize() { return poolSize; }
     public void setPoolSize(Integer poolSize) { this.poolSize = poolSize; }
@@ -25,6 +28,15 @@ public class SessionRequest {
 
     public Double getLng() { return lng; }
     public void setLng(Double lng) { this.lng = lng; }
+
+    public String getDiningBorough() { return diningBorough; }
+    public void setDiningBorough(String diningBorough) { this.diningBorough = diningBorough; }
+
+    public String getDiningNeighborhood() { return diningNeighborhood; }
+    public void setDiningNeighborhood(String diningNeighborhood) { this.diningNeighborhood = diningNeighborhood; }
+
+    public String getSessionType() { return sessionType; }
+    public void setSessionType(String sessionType) { this.sessionType = sessionType; }
 }
 
 
