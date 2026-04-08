@@ -135,10 +135,29 @@ public class SessionService {
         session.setPoolSize(req.getPoolSize() != null ? req.getPoolSize() : DEFAULT_POOL_SIZE);
         session.setRoundTime(req.getRoundTime() != null ? req.getRoundTime() : DEFAULT_ROUND_TIME);
         session.setLikesPerUser(req.getLikesPerUser() != null ? req.getLikesPerUser() : DEFAULT_LIKES_PER_USER);
-        session.setSessionType(req.getSessionType() != null ? req.getSessionType() : "STANDARD");
+        String sessionType = req.getSessionType() != null ? req.getSessionType() : "STANDARD";
+        session.setSessionType(sessionType);
         session.setDiningBorough(req.getDiningBorough());
         session.setDiningNeighborhood(req.getDiningNeighborhood());
-        session.setStatus("OPEN");
+
+        // OFFLINE/EVENT sessions require dining location and expected participants
+        if ("OFFLINE".equals(sessionType) || "EVENT".equals(sessionType)) {
+            if (req.getDiningBorough() == null || req.getDiningNeighborhood() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dining location is required for offline/event sessions");
+            }
+            if (req.getExpectedParticipants() == null || req.getExpectedParticipants() < 2) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected participants must be at least 2");
+            }
+            if (req.getVotingDeadline() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Voting deadline is required");
+            }
+            session.setExpectedParticipants(req.getExpectedParticipants());
+            session.setVotingDeadline(Instant.parse(req.getVotingDeadline()));
+            // OFFLINE/EVENT sessions go straight to voting
+            session.setStatus("voting");
+        } else {
+            session.setStatus("OPEN");
+        }
 
         Session saved = createSession(session);
 

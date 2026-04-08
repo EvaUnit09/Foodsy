@@ -83,8 +83,12 @@ public class SessionController {
         Integer roundTime,
         String diningBorough,
         String diningNeighborhood,
-        String sessionType
+        String sessionType,
+        Integer expectedParticipants,
+        String votingDeadline
     ) {}
+
+    record OfflineVoteSubmission(List<String> likedProviderIds) {}
 
     public SessionController(SessionRepository repo,
                              SessionRestaurantRepository restaurantRepo,
@@ -184,6 +188,10 @@ public class SessionController {
                 if (diningBorough instanceof String) req.setDiningBorough((String) diningBorough);
                 if (diningNeighborhood instanceof String) req.setDiningNeighborhood((String) diningNeighborhood);
                 if (sessionType instanceof String) req.setSessionType((String) sessionType);
+                Object expectedParticipants = map.get("expectedParticipants");
+                Object votingDeadline = map.get("votingDeadline");
+                if (expectedParticipants instanceof Number) req.setExpectedParticipants(((Number) expectedParticipants).intValue());
+                if (votingDeadline instanceof String) req.setVotingDeadline((String) votingDeadline);
             } else {
                 throw new IllegalArgumentException("Invalid payload");
             }
@@ -223,7 +231,9 @@ public class SessionController {
             session.getRoundTime(),
             session.getDiningBorough(),
             session.getDiningNeighborhood(),
-            session.getSessionType()
+            session.getSessionType(),
+            session.getExpectedParticipants(),
+            session.getVotingDeadline() != null ? session.getVotingDeadline().toString() : null
         );
     }
 
@@ -504,5 +514,41 @@ public class SessionController {
         repo.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
         return locationService.getRecommendedRestaurants(id);
+    }
+
+    @PostMapping("/{id}/submit-votes")
+    public ResponseEntity<Map<String, Object>> submitOfflineVotes(
+            @PathVariable Long id,
+            @RequestBody OfflineVoteSubmission submission,
+            Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        String userId = principal.getName().trim().toLowerCase();
+        Map<String, Object> result = voteService.submitOfflineVotes(id, userId, submission.likedProviderIds());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<Void> forceCompleteSession(@PathVariable Long id, Principal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        Session session = repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        String userId = principal.getName().trim().toLowerCase();
+        String creatorId = session.getCreatorId() != null ? session.getCreatorId().trim().toLowerCase() : "";
+        if (!userId.equals(creatorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the host can complete this session");
+        }
+        voteService.completeOfflineSession(session);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/voting-progress")
+    public Map<String, Object> getVotingProgress(@PathVariable Long id) {
+        repo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        return voteService.getVotingProgress(id);
     }
 }

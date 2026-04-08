@@ -50,6 +50,8 @@ export interface SessionRequest {
   diningBorough?: string;
   diningNeighborhood?: string;
   sessionType?: string;
+  expectedParticipants?: number;
+  votingDeadline?: string;
 }
 
 export interface Session {
@@ -78,6 +80,20 @@ export interface RecommendedRestaurant {
 export interface RecommendationResult {
   restaurants: RecommendedRestaurant[];
   participantsWithLocation: number;
+  totalParticipants: number;
+}
+
+export interface VotingProgress {
+  expectedParticipants: number;
+  joinedCount: number;
+  submittedCount: number;
+  votingDeadline: string;
+  participants: { userId: string; votingStatus: string }[];
+}
+
+export interface OfflineVoteResult {
+  submitted: boolean;
+  submittedCount: number;
   totalParticipants: number;
 }
 
@@ -312,7 +328,21 @@ export class ApiClient {
       ApiClient.request<User>(`/sessions/${sessionId}/winner`),
 
     getRecommended: (sessionId: string): Promise<RecommendationResult> =>
-      ApiClient.request<RecommendationResult>(`/sessions/${sessionId}/recommended`)
+      ApiClient.request<RecommendationResult>(`/sessions/${sessionId}/recommended`),
+
+    submitOfflineVotes: (sessionId: string, likedProviderIds: string[]): Promise<OfflineVoteResult> =>
+      ApiClient.request<OfflineVoteResult>(`/sessions/${sessionId}/submit-votes`, {
+        method: "POST",
+        body: JSON.stringify({ likedProviderIds }),
+      }),
+
+    forceComplete: (sessionId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/complete`, {
+        method: "POST",
+      }),
+
+    getVotingProgress: (sessionId: string): Promise<VotingProgress> =>
+      ApiClient.request<VotingProgress>(`/sessions/${sessionId}/voting-progress`)
   };
   
   /**

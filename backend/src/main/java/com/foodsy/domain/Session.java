@@ -28,6 +28,8 @@ public class Session {
     private String diningBorough;
     private String diningNeighborhood;
     private String sessionType = "STANDARD"; // STANDARD, OFFLINE, EVENT
+    private Integer expectedParticipants;
+    private Instant votingDeadline;
 
     @Column(name = "join_code", unique = true, nullable = false, length = 6)
     private String joinCode;
@@ -135,4 +137,10 @@ public class Session {
 
     public String getSessionType() { return sessionType; }
     public void setSessionType(String sessionType) { this.sessionType = sessionType; }
+
+    public Integer getExpectedParticipants() { return expectedParticipants; }
+    public void setExpectedParticipants(Integer expectedParticipants) { this.expectedParticipants = expectedParticipants; }
+
+    public Instant getVotingDeadline() { return votingDeadline; }
+    public void setVotingDeadline(Instant votingDeadline) { this.votingDeadline = votingDeadline; }
 }

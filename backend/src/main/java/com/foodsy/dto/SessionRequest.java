@@ -13,6 +13,8 @@ public class SessionRequest {
     private String diningBorough;
     private String diningNeighborhood;
     private String sessionType;
+    private Integer expectedParticipants;
+    private String votingDeadline; // ISO-8601 timestamp
 
     public Integer getPoolSize() { return poolSize; }
     public void setPoolSize(Integer poolSize) { this.poolSize = poolSize; }
@@ -37,6 +39,12 @@ public class SessionRequest {
 
     public String getSessionType() { return sessionType; }
     public void setSessionType(String sessionType) { this.sessionType = sessionType; }
+
+    public Integer getExpectedParticipants() { return expectedParticipants; }
+    public void setExpectedParticipants(Integer expectedParticipants) { this.expectedParticipants = expectedParticipants; }
+
+    public String getVotingDeadline() { return votingDeadline; }
+    public void setVotingDeadline(String votingDeadline) { this.votingDeadline = votingDeadline; }
 }
 
 
