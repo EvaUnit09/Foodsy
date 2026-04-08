@@ -45,6 +45,15 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Column(name = "custom_avatar_url")
+    private String customAvatarUrl;
+
+    @Column(name = "home_borough")
+    private String homeBorough;
+
+    @Column(name = "home_neighborhood")
+    private String homeNeighborhood;
+
     // OAuth2 users don't need passwords
     @Column(nullable = true)
     private String password;
@@ -168,11 +177,39 @@ public class User {
         this.updatedAt = updatedAt;
     }
     
+    public String getCustomAvatarUrl() {
+        return customAvatarUrl;
+    }
+
+    public void setCustomAvatarUrl(String customAvatarUrl) {
+        this.customAvatarUrl = customAvatarUrl;
+    }
+
+    public String getHomeBorough() {
+        return homeBorough;
+    }
+
+    public void setHomeBorough(String homeBorough) {
+        this.homeBorough = homeBorough;
+    }
+
+    public String getHomeNeighborhood() {
+        return homeNeighborhood;
+    }
+
+    public void setHomeNeighborhood(String homeNeighborhood) {
+        this.homeNeighborhood = homeNeighborhood;
+    }
+
+    public String getEffectiveAvatarUrl() {
+        return customAvatarUrl != null ? customAvatarUrl : avatarUrl;
+    }
+
     // Password field kept for database compatibility but not used for OAuth2
     public String getPassword() {
         return password;
     }
-    
+
     public void setPassword(String password) {
         this.password = password;
     }

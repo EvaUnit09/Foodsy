@@ -12,9 +12,26 @@ export interface User {
   lastName?: string;
   displayName: string;
   avatarUrl?: string;
+  customAvatarUrl?: string;
+  effectiveAvatarUrl?: string;
+  homeBorough?: string;
+  homeNeighborhood?: string;
   provider: string;
   emailVerified: boolean;
   createdAt: string;
+}
+
+export interface NeighborhoodDto {
+  id: number;
+  name: string;
+  borough: string;
+}
+
+export interface ProfileUpdateRequest {
+  username?: string;
+  homeBorough?: string;
+  homeNeighborhood?: string;
+  useGoogleAvatar?: boolean;
 }
 
 export interface AuthResponse {
@@ -159,21 +176,77 @@ export class ApiClient {
   /**
    * Authentication API endpoints
    */
+  private static async requestMultipart<T>(
+    endpoint: string,
+    formData: FormData
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const headers: Record<string, string> = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    });
+    if (!response.ok) {
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        errorMessage = await response.text() || errorMessage;
+      }
+      throw new ApiError(response.status, errorMessage);
+    }
+    return response.json();
+  }
+
   static auth = {
-    logout: (): Promise<void> => 
-      ApiClient.request<void>("/auth/logout", { 
-        method: "POST" 
+    logout: (): Promise<void> =>
+      ApiClient.request<void>("/auth/logout", {
+        method: "POST"
       }),
-      
-    me: (): Promise<User> => 
+
+    me: (): Promise<User> =>
       ApiClient.request<User>("/auth/me"),
-      
+
     google: (): string => `${ApiClient.baseURL}/auth/google`,
-    
+
     refreshToken: (): Promise<AuthResponse> =>
       ApiClient.request<AuthResponse>("/auth/refresh", {
         method: "POST"
-      })
+      }),
+
+    profile: {
+      get: (): Promise<User> =>
+        ApiClient.request<User>("/auth/me/profile"),
+
+      update: (data: ProfileUpdateRequest): Promise<User> =>
+        ApiClient.request<User>("/auth/me/profile", {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      uploadAvatar: (file: File): Promise<{ customAvatarUrl: string }> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        return ApiClient.requestMultipart<{ customAvatarUrl: string }>("/auth/me/profile/avatar", formData);
+      },
+
+      deleteAvatar: (): Promise<void> =>
+        ApiClient.request<void>("/auth/me/profile/avatar", {
+          method: "DELETE",
+        }),
+    },
+  };
+
+  static neighborhoods = {
+    getByBorough: (borough: string): Promise<NeighborhoodDto[]> =>
+      ApiClient.request<NeighborhoodDto[]>(`/neighborhoods?borough=${encodeURIComponent(borough)}`),
   };
   
   /**

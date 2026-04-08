@@ -70,12 +70,24 @@ export function AppHeader({ badge }: AppHeaderProps) {
 
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-2 bg-orange-50 px-3 py-1 rounded-full">
-                  <UserIcon className="w-4 h-4 text-orange-600" />
+                <button
+                  onClick={() => router.push("/profile")}
+                  className="flex items-center space-x-2 bg-orange-50 px-3 py-1 rounded-full hover:bg-orange-100 transition-colors cursor-pointer border-none"
+                  style={{ background: undefined }}
+                >
+                  {user.effectiveAvatarUrl || user.customAvatarUrl || user.avatarUrl ? (
+                    <img
+                      src={user.effectiveAvatarUrl || user.customAvatarUrl || user.avatarUrl}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="w-4 h-4 text-orange-600" />
+                  )}
                   <span className="text-sm font-medium text-orange-700">
                     {user.displayName}
                   </span>
-                </div>
+                </button>
                 <Button
                   onClick={signOut}
                   variant="ghost"
