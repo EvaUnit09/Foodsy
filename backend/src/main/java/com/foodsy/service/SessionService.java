@@ -186,7 +186,8 @@ public class SessionService {
         }
 
         if (lat != null && lng != null) {
-            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, 4000.0, Math.max(20, req.getPoolSize()));
+            int effectivePoolSize = session.getPoolSize();
+            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, 4000.0, Math.max(20, effectivePoolSize));
             List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(nearby.places());
             // Filter out clearly low-quality (rating < 3.0) or missing names
             places = places.stream()
@@ -216,7 +217,7 @@ public class SessionService {
 
             // Round-robin sample across buckets to target pool size
             java.util.List<GooglePlacesSearchResponse.Place> diversified = new java.util.ArrayList<>();
-            int target = Math.min(req.getPoolSize(), unique.size());
+            int target = Math.min(effectivePoolSize, unique.size());
             while (diversified.size() < target) {
                 boolean tookAny = false;
                 for (String key : bucketKeys) {
