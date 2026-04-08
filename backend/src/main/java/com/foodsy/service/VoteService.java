@@ -246,7 +246,25 @@ public class VoteService {
 
         List<SessionRestaurant> restaurants = sessionRestaurantRepository.findBySessionId(sessionId);
 
-        for (String providerId : likedProviderIds) {
+        // Deduplicate incoming provider IDs
+        List<String> distinctIds = likedProviderIds.stream().distinct().toList();
+
+        // Compute remaining likes budget (cap against likesPerUser)
+        int maxLikes = session.getLikesPerUser() != null ? session.getLikesPerUser() : Integer.MAX_VALUE;
+        long existingLikeCount = historyRepository.countBySessionIdAndUserIdAndRoundAndVoteType(
+                sessionId, userId, 1, VoteType.LIKE);
+        int budget = (int) Math.max(0, maxLikes - existingLikeCount);
+
+        int applied = 0;
+        for (String providerId : distinctIds) {
+            if (applied >= budget) break;
+
+            // Skip providers the user already voted for
+            if (historyRepository.findBySessionIdAndUserIdAndProviderIdAndRound(
+                    sessionId, userId, providerId, 1).isPresent()) {
+                continue;
+            }
+
             SessionRestaurant sr = restaurants.stream()
                     .filter(r -> r.getProviderId().equals(providerId))
                     .findFirst()
@@ -256,10 +274,8 @@ public class VoteService {
             sr.setLikeCount(sr.getLikeCount() + 1);
             sessionRestaurantRepository.save(sr);
 
-            SessionVoteHistory history = new SessionVoteHistory(
-                    sessionId, userId, providerId, 1, VoteType.LIKE
-            );
-            historyRepository.save(history);
+            historyRepository.save(new SessionVoteHistory(sessionId, userId, providerId, 1, VoteType.LIKE));
+            applied++;
         }
 
         participant.setVotingStatus("SUBMITTED");
