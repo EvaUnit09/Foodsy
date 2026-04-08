@@ -264,6 +264,18 @@ export default function SessionPage() {
     })();
   }, [sessionId, authLoading]);
 
+  // Fallback: if session is already ended on load (or becomes ended) and winner
+  // was never set via WebSocket, derive it from the loaded restaurant list.
+  useEffect(() => {
+    const isEnded =
+      session?.status === "ENDED" ||
+      session?.status === "ended" ||
+      sessionComplete;
+    if (!isEnded || winner || restaurants.length === 0) return;
+    const top = [...restaurants].sort((a, b) => b.likeCount - a.likeCount)[0];
+    if (top) setWinner(top);
+  }, [session?.status, sessionComplete, winner, restaurants]);
+
   // Voting status polling effect with circuit breaker
   const votingPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const votingPollActiveRef = useRef(false);
