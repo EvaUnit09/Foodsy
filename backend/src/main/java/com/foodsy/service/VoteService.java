@@ -10,7 +10,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -20,6 +22,7 @@ public class VoteService {
 
     private final SessionRestaurantRepository sessionRestaurantRepository;
     private final SessionRepository sessionRepository;
+    private final SessionParticipantRepository sessionParticipantRepository;
     private final UserVoteQuotaRepository quotaRepository;
     private final SessionVoteHistoryRepository historyRepository;
     private final SimpMessagingTemplate messagingTemplate;
@@ -28,6 +31,7 @@ public class VoteService {
 
     public VoteService(SessionRestaurantRepository sessionRestaurantRepository,
                       SessionRepository sessionRepository,
+                      SessionParticipantRepository sessionParticipantRepository,
                       UserVoteQuotaRepository quotaRepository,
                       SessionVoteHistoryRepository historyRepository,
                       SimpMessagingTemplate messagingTemplate,
@@ -35,6 +39,7 @@ public class VoteService {
                       RoundService roundService) {
         this.sessionRestaurantRepository = sessionRestaurantRepository;
         this.sessionRepository = sessionRepository;
+        this.sessionParticipantRepository = sessionParticipantRepository;
         this.quotaRepository = quotaRepository;
         this.historyRepository = historyRepository;
         this.messagingTemplate = messagingTemplate;
@@ -213,5 +218,120 @@ public class VoteService {
         historyRepository.deleteAll(history);
         
         logger.debug("Reset complete - removed {} quotas and {} history records for userId: {}, sessionId: {}", userQuotas.size(), history.size(), userId, sessionId);
+    }
+
+    /**
+     * Submit batch votes for an OFFLINE session. LIKE only.
+     */
+    public Map<String, Object> submitOfflineVotes(Long sessionId, String userId, List<String> likedProviderIds) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        if (!"OFFLINE".equals(session.getSessionType())) {
+            throw new RuntimeException("This endpoint is only for offline sessions");
+        }
+        if (!"voting".equals(session.getStatus())) {
+            throw new RuntimeException("Session is not in voting status");
+        }
+        if (session.getVotingDeadline() != null && Instant.now().isAfter(session.getVotingDeadline())) {
+            throw new RuntimeException("Voting deadline has passed");
+        }
+
+        SessionParticipant participant = sessionParticipantRepository.findBySessionIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("You are not a participant in this session"));
+
+        if ("SUBMITTED".equals(participant.getVotingStatus())) {
+            throw new RuntimeException("You have already submitted your votes");
+        }
+
+        List<SessionRestaurant> restaurants = sessionRestaurantRepository.findBySessionId(sessionId);
+
+        // Deduplicate incoming provider IDs
+        List<String> distinctIds = likedProviderIds.stream().distinct().toList();
+
+        // Compute remaining likes budget (cap against likesPerUser)
+        int maxLikes = session.getLikesPerUser() != null ? session.getLikesPerUser() : Integer.MAX_VALUE;
+        long existingLikeCount = historyRepository.countBySessionIdAndUserIdAndRoundAndVoteType(
+                sessionId, userId, 1, VoteType.LIKE);
+        int budget = (int) Math.max(0, maxLikes - existingLikeCount);
+
+        int applied = 0;
+        for (String providerId : distinctIds) {
+            if (applied >= budget) break;
+
+            // Skip providers the user already voted for
+            if (historyRepository.findBySessionIdAndUserIdAndProviderIdAndRound(
+                    sessionId, userId, providerId, 1).isPresent()) {
+                continue;
+            }
+
+            SessionRestaurant sr = restaurants.stream()
+                    .filter(r -> r.getProviderId().equals(providerId))
+                    .findFirst()
+                    .orElse(null);
+            if (sr == null) continue;
+
+            sr.setLikeCount(sr.getLikeCount() + 1);
+            sessionRestaurantRepository.save(sr);
+
+            historyRepository.save(new SessionVoteHistory(sessionId, userId, providerId, 1, VoteType.LIKE));
+            applied++;
+        }
+
+        participant.setVotingStatus("SUBMITTED");
+        sessionParticipantRepository.save(participant);
+
+        // Check if all participants have submitted
+        List<SessionParticipant> allParticipants = sessionParticipantRepository.findBySessionId(sessionId);
+        long submittedCount = allParticipants.stream()
+                .filter(p -> "SUBMITTED".equals(p.getVotingStatus()))
+                .count();
+
+        if (submittedCount == allParticipants.size()) {
+            completeOfflineSession(session);
+        }
+
+        return Map.of(
+                "submitted", true,
+                "submittedCount", submittedCount,
+                "totalParticipants", allParticipants.size()
+        );
+    }
+
+    /**
+     * Force-complete an offline/event session (host action or scheduler).
+     */
+    public void completeOfflineSession(Session session) {
+        session.setStatus("ENDED");
+        sessionRepository.save(session);
+        logger.info("Offline session {} completed", session.getId());
+    }
+
+    /**
+     * Get voting progress for an offline session.
+     */
+    public Map<String, Object> getVotingProgress(Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        List<SessionParticipant> participants = sessionParticipantRepository.findBySessionId(sessionId);
+        long submittedCount = participants.stream()
+                .filter(p -> "SUBMITTED".equals(p.getVotingStatus()))
+                .count();
+
+        List<Map<String, Object>> participantDetails = participants.stream()
+                .map(p -> Map.<String, Object>of(
+                        "userId", p.getUserId(),
+                        "votingStatus", p.getVotingStatus() != null ? p.getVotingStatus() : "PENDING"
+                ))
+                .toList();
+
+        return Map.of(
+                "expectedParticipants", session.getExpectedParticipants() != null ? session.getExpectedParticipants() : 0,
+                "joinedCount", participants.size(),
+                "submittedCount", submittedCount,
+                "votingDeadline", session.getVotingDeadline() != null ? session.getVotingDeadline().toString() : "",
+                "participants", participantDetails
+        );
     }
 }

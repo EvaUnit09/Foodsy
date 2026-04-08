@@ -103,6 +103,29 @@ public class RestaurantController {
         return ResponseEntity.ok(results);
     }
 
+    @GetMapping("/search")
+    public List<RestaurantDto> searchRestaurants(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "5") int limit) {
+        return placesClient.search("New York, NY", q + " restaurant").places().stream()
+                .limit(limit)
+                .map(place -> new RestaurantDto(
+                        place.id(),
+                        place.displayName().text(),
+                        place.formattedAddress(),
+                        place.types().isEmpty() ? "Restaurant" : place.types().getFirst(),
+                        place.priceLevel() != null ? place.priceLevel().name() : null,
+                        place.priceRange(),
+                        place.rating(),
+                        place.userRatingsTotal(),
+                        place.currentOpeningHours(),
+                        place.generativeSummary(),
+                        place.reviewSummary(),
+                        place.websiteUri()
+                ))
+                .toList();
+    }
+
     @GetMapping
     public List<RestaurantDto> search(@RequestParam String near, @RequestParam String query) {
         return placesClient.search(near, query).places().stream()

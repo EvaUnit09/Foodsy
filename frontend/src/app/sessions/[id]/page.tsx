@@ -17,6 +17,12 @@ import { SessionStatusBanners } from "@/components/SessionStatusBanners";
 import { ParticipantsSection } from "@/components/ParticipantsSection";
 import { RestaurantNavigation } from "@/components/RestaurantNavigation";
 import { FinalResultsScreen } from "@/components/FinalResultsScreen";
+import { GroupRecommendationsPanel } from "@/components/GroupRecommendationsPanel";
+import { OfflineVotingPanel } from "@/components/OfflineVotingPanel";
+import { VotingProgressSummary } from "@/components/VotingProgressSummary";
+import { EventRsvpForm } from "@/components/EventRsvpForm";
+import { EventResultsPage } from "@/components/EventResultsPage";
+import { ApiClient, EventRestaurantDto } from "@/api/client";
 import { VoteType } from "@/api/voteApi";
 
 /* -------------------- types & constants ----------------------- */
@@ -129,7 +135,7 @@ export default function SessionPage() {
   const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string; expectedParticipants?: number; votingDeadline?: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -257,6 +263,18 @@ export default function SessionPage() {
       }
     })();
   }, [sessionId, authLoading]);
+
+  // Fallback: if session is already ended on load (or becomes ended) and winner
+  // was never set via WebSocket, derive it from the loaded restaurant list.
+  useEffect(() => {
+    const isEnded =
+      session?.status === "ENDED" ||
+      session?.status === "ended" ||
+      sessionComplete;
+    if (!isEnded || winner || restaurants.length === 0) return;
+    const top = [...restaurants].sort((a, b) => b.likeCount - a.likeCount)[0];
+    if (top) setWinner(top);
+  }, [session?.status, sessionComplete, winner, restaurants]);
 
   // Voting status polling effect with circuit breaker
   const votingPollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -537,6 +555,73 @@ export default function SessionPage() {
     return <FinalResultsScreen winner={winner} sessionId={sessionId} />;
   }
 
+  // Offline session view
+  if (session?.sessionType === "OFFLINE") {
+    const isEnded = session.status === "ENDED" || session.status === "ended";
+    // Check if current user already submitted by checking their participant status
+    // We approximate this: if session is ended, show results; otherwise show voting panel
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+        <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">F</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Offline</span>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+          {session.diningBorough && (
+            <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
+              Eating in: <span className="font-medium text-gray-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
+            </div>
+          )}
+
+          {isEnded && winner ? (
+            <FinalResultsScreen winner={winner} sessionId={sessionId} />
+          ) : isEnded ? (
+            <div className="text-center py-8 text-gray-600">Session completed. Loading results...</div>
+          ) : (
+            <>
+              <OfflineVotingPanel
+                sessionId={String(sessionId)}
+                restaurants={restaurants.map((r) => ({
+                  id: Number(r.id) || 0,
+                  providerId: r.providerId,
+                  name: r.name,
+                  category: r.category || "",
+                  address: r.address || "",
+                  rating: r.rating ?? undefined,
+                  priceLevel: r.priceLevel ?? undefined,
+                  priceRange: r.priceRange ?? undefined,
+                }))}
+                hasSubmitted={false}
+                onSubmitted={() => window.location.reload()}
+                deadline={session.votingDeadline}
+              />
+              <VotingProgressSummary
+                sessionId={String(sessionId)}
+                isHost={isHost}
+                onCompleted={() => window.location.reload()}
+              />
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // Event session view
+  if (session?.sessionType === "EVENT") {
+    const isEnded = session.status === "ENDED" || session.status === "ended";
+    return <EventSessionView sessionId={sessionId} isHost={isHost} isEnded={isEnded} diningBorough={session.diningBorough} diningNeighborhood={session.diningNeighborhood} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       <SessionHeader
@@ -551,6 +636,12 @@ export default function SessionPage() {
       />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {session?.diningBorough && (
+          <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
+            Eating in: <span className="font-medium text-gray-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
+          </div>
+        )}
+
         <SessionStatusBanners
           sessionComplete={sessionComplete}
           winner={winner}
@@ -561,6 +652,10 @@ export default function SessionPage() {
           isHost={isHost}
           likesPerUser={session?.likesPerUser || 0}
         />
+
+        {!sessionStarted && !sessionComplete && (
+          <GroupRecommendationsPanel sessionId={String(sessionId)} />
+        )}
 
         <ParticipantsSection
           participants={participants}
@@ -601,6 +696,70 @@ export default function SessionPage() {
           onPrevious={toPrevRestaurant}
           onNext={toNextRestaurant}
         />
+      </main>
+    </div>
+  );
+}
+
+function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNeighborhood }: {
+  sessionId: number;
+  isHost: boolean;
+  isEnded: boolean;
+  diningBorough?: string;
+  diningNeighborhood?: string;
+}) {
+  const [eventRestaurants, setEventRestaurants] = useState<EventRestaurantDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    ApiClient.eventSessions.getRestaurants(String(sessionId))
+      .then(setEventRestaurants)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [sessionId]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">F</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Foodsy</span>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Event</span>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {diningBorough && (
+          <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
+            Eating in: <span className="font-medium text-gray-900">{diningNeighborhood ? `${diningNeighborhood}, ` : ""}{diningBorough}</span>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+          </div>
+        ) : isEnded ? (
+          <EventResultsPage sessionId={String(sessionId)} />
+        ) : (
+          <>
+            <EventRsvpForm
+              sessionId={String(sessionId)}
+              restaurants={eventRestaurants}
+              onSubmitted={() => window.location.reload()}
+            />
+            <VotingProgressSummary
+              sessionId={String(sessionId)}
+              isHost={isHost}
+              onCompleted={() => window.location.reload()}
+            />
+          </>
+        )}
       </main>
     </div>
   );

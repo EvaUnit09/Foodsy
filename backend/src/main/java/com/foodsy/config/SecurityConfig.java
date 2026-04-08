@@ -52,6 +52,7 @@ public class SecurityConfig {
                     .requestMatchers("/", "/error", "/oauth2/**", "/auth/**", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/actuator/**").permitAll()
                     .requestMatchers("/ws/**", "/ws-sockjs/**").permitAll()
                     // Allow public GET access for restaurant photos and search (binary image proxy etc.)
+                    .requestMatchers(HttpMethod.GET, "/neighborhoods/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/restaurants/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/restaurants/trending/refresh").permitAll()
                     .requestMatchers(HttpMethod.GET, "/homepage/health", "/homepage/trending/stats/**").permitAll()

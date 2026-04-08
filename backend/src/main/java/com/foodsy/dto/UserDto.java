@@ -14,6 +14,10 @@ public record UserDto(
         String lastName,
         String displayName,
         String avatarUrl,
+        String customAvatarUrl,
+        String effectiveAvatarUrl,
+        String homeBorough,
+        String homeNeighborhood,
         @JsonProperty("provider") AuthProvider provider,
         @JsonProperty("emailVerified") boolean emailVerified,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime createdAt

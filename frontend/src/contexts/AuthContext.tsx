@@ -11,6 +11,10 @@ interface User {
   lastName?: string;
   displayName: string;
   avatarUrl?: string;
+  customAvatarUrl?: string;
+  effectiveAvatarUrl?: string;
+  homeBorough?: string;
+  homeNeighborhood?: string;
   provider: string;
   emailVerified: boolean;
   createdAt: string;

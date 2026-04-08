@@ -19,6 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.foodsy.domain.Neighborhood;
+import com.foodsy.repository.NeighborhoodRepository;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -31,22 +34,28 @@ import java.util.Comparator;
 public class SessionService {
     private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
 
+    private static final int DEFAULT_POOL_SIZE = 10;
+    private static final int DEFAULT_ROUND_TIME = 2;
+    private static final int DEFAULT_LIKES_PER_USER = 3;
+
     private final SessionRepository sessionRepository;
     private final SessionRestaurantRepository restaurantRepo;
     private final GooglePlacesClient placesClient;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final IpGeoClient ipGeoClient;
+    private final NeighborhoodRepository neighborhoodRepository;
 
-    
+
     @Value("${session.timeout.max-duration-hours:1}")
     private int maxDurationHours;
 
-    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, GooglePlacesClient placesClient, SessionParticipantRepository sessionParticipantRepository, IpGeoClient ipGeoClient) {
+    public SessionService(SessionRepository sessionRepo, SessionRestaurantRepository restaurantRepo, GooglePlacesClient placesClient, SessionParticipantRepository sessionParticipantRepository, IpGeoClient ipGeoClient, NeighborhoodRepository neighborhoodRepository) {
         this.sessionRepository = sessionRepo;
         this.restaurantRepo = restaurantRepo;
         this.placesClient = placesClient;
         this.sessionParticipantRepository = sessionParticipantRepository;
         this.ipGeoClient = ipGeoClient;
+        this.neighborhoodRepository = neighborhoodRepository;
     }
     public Session createSession(Session session) {
         try {
@@ -61,7 +70,9 @@ public class SessionService {
             }
 
             session.setJoinCode(code);
-            session.setStatus("OPEN");
+            if (session.getStatus() == null || session.getStatus().isEmpty()) {
+                session.setStatus("OPEN");
+            }
             
             // Set session expiration time
             Instant now = Instant.now();
@@ -117,22 +128,54 @@ public class SessionService {
      * Radius default: 4000m. Diversified seeding TBD.
      */
     public Session createSession(SessionRequest req, String creatorId, String clientIp) {
-        if (creatorId == null || req == null || req.getPoolSize() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: creatorId, poolSize");
+        if (creatorId == null || req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required fields: creatorId");
         }
 
         Session session = new Session();
         session.setCreatorId(creatorId);
-        session.setPoolSize(req.getPoolSize());
-        session.setRoundTime(req.getRoundTime());
-        session.setLikesPerUser(req.getLikesPerUser());
-        session.setStatus("OPEN");
+        session.setPoolSize(req.getPoolSize() != null ? req.getPoolSize() : DEFAULT_POOL_SIZE);
+        session.setRoundTime(req.getRoundTime() != null ? req.getRoundTime() : DEFAULT_ROUND_TIME);
+        session.setLikesPerUser(req.getLikesPerUser() != null ? req.getLikesPerUser() : DEFAULT_LIKES_PER_USER);
+        String sessionType = req.getSessionType() != null ? req.getSessionType() : "STANDARD";
+        session.setSessionType(sessionType);
+        session.setDiningBorough(req.getDiningBorough());
+        session.setDiningNeighborhood(req.getDiningNeighborhood());
+
+        // OFFLINE/EVENT sessions require dining location and expected participants
+        if ("OFFLINE".equals(sessionType) || "EVENT".equals(sessionType)) {
+            if (req.getDiningBorough() == null || req.getDiningNeighborhood() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dining location is required for offline/event sessions");
+            }
+            if (req.getExpectedParticipants() == null || req.getExpectedParticipants() < 2) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected participants must be at least 2");
+            }
+            if (req.getVotingDeadline() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Voting deadline is required");
+            }
+            session.setExpectedParticipants(req.getExpectedParticipants());
+            session.setVotingDeadline(Instant.parse(req.getVotingDeadline()));
+            // OFFLINE/EVENT sessions go straight to voting
+            session.setStatus("voting");
+        } else {
+            session.setStatus("OPEN");
+        }
 
         Session saved = createSession(session);
 
-        // Resolve coordinates: provided lat/lng else IP geo fallback
+        // If dining location is specified, resolve coordinates from neighborhood table
         Double lat = req.getLat();
         Double lng = req.getLng();
+        if (lat == null && lng == null && req.getDiningNeighborhood() != null && req.getDiningBorough() != null) {
+            neighborhoodRepository.findByNameIgnoreCaseAndBoroughIgnoreCase(
+                    req.getDiningNeighborhood(), req.getDiningBorough()
+            ).ifPresent(neighborhood -> {
+                req.setLat(neighborhood.getCenterLat());
+                req.setLng(neighborhood.getCenterLng());
+            });
+            lat = req.getLat();
+            lng = req.getLng();
+        }
         if (lat == null || lng == null) {
             ipGeoClient.lookup(clientIp).ifPresent(coords -> {
                 // box into Double
@@ -145,7 +188,8 @@ public class SessionService {
         }
 
         if (lat != null && lng != null) {
-            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, 4000.0, Math.max(20, req.getPoolSize()));
+            int effectivePoolSize = session.getPoolSize();
+            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, 4000.0, Math.max(20, effectivePoolSize));
             List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(nearby.places());
             // Filter out clearly low-quality (rating < 3.0) or missing names
             places = places.stream()
@@ -175,7 +219,7 @@ public class SessionService {
 
             // Round-robin sample across buckets to target pool size
             java.util.List<GooglePlacesSearchResponse.Place> diversified = new java.util.ArrayList<>();
-            int target = Math.min(req.getPoolSize(), unique.size());
+            int target = Math.min(effectivePoolSize, unique.size());
             while (diversified.size() < target) {
                 boolean tookAny = false;
                 for (String key : bucketKeys) {

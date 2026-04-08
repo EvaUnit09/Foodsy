@@ -21,6 +21,9 @@ public class SessionParticipant {
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt = Instant.now();
 
+    @Column(name = "voting_status", length = 20)
+    private String votingStatus = "PENDING"; // PENDING, SUBMITTED
+
     // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -35,4 +38,7 @@ public class SessionParticipant {
 
     public Instant getJoinedAt() { return joinedAt; }
     public void setJoinedAt(Instant joinedAt) { this.joinedAt = joinedAt; }
+
+    public String getVotingStatus() { return votingStatus; }
+    public void setVotingStatus(String votingStatus) { this.votingStatus = votingStatus; }
 }

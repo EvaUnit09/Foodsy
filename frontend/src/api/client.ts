@@ -12,9 +12,26 @@ export interface User {
   lastName?: string;
   displayName: string;
   avatarUrl?: string;
+  customAvatarUrl?: string;
+  effectiveAvatarUrl?: string;
+  homeBorough?: string;
+  homeNeighborhood?: string;
   provider: string;
   emailVerified: boolean;
   createdAt: string;
+}
+
+export interface NeighborhoodDto {
+  id: number;
+  name: string;
+  borough: string;
+}
+
+export interface ProfileUpdateRequest {
+  username?: string;
+  homeBorough?: string;
+  homeNeighborhood?: string;
+  useGoogleAvatar?: boolean;
 }
 
 export interface AuthResponse {
@@ -25,11 +42,16 @@ export interface AuthResponse {
 }
 
 export interface SessionRequest {
-  poolSize: number;
-  roundTime: number;
-  likesPerUser: number;
+  poolSize?: number;
+  roundTime?: number;
+  likesPerUser?: number;
   lat?: number;
   lng?: number;
+  diningBorough?: string;
+  diningNeighborhood?: string;
+  sessionType?: string;
+  expectedParticipants?: number;
+  votingDeadline?: string;
 }
 
 export interface Session {
@@ -40,6 +62,80 @@ export interface Session {
   poolSize: number;
   roundTime: number;
   likesPerUser: number;
+  diningBorough?: string;
+  diningNeighborhood?: string;
+  sessionType?: string;
+}
+
+export interface RecommendedRestaurant {
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  rating: number;
+  priceLevel: string;
+  distanceFromCentroidKm: number;
+}
+
+export interface RecommendationResult {
+  restaurants: RecommendedRestaurant[];
+  participantsWithLocation: number;
+  totalParticipants: number;
+}
+
+export interface VotingProgress {
+  expectedParticipants: number;
+  joinedCount: number;
+  submittedCount: number;
+  votingDeadline: string;
+  participants: { userId: string; votingStatus: string }[];
+}
+
+export interface OfflineVoteResult {
+  submitted: boolean;
+  submittedCount: number;
+  totalParticipants: number;
+}
+
+export interface EventRestaurantDto {
+  id: number;
+  sessionId: number;
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  priceLevel: string;
+  rating: number;
+  displayOrder: number;
+}
+
+export interface EventRsvpDto {
+  id: number;
+  sessionId: number;
+  userId: string;
+  rsvpStatus: "GOING" | "NOT_GOING" | "MAYBE";
+  preferredRestaurantId: string | null;
+  respondedAt: string;
+}
+
+export interface EventSummary {
+  goingCount: number;
+  maybeCount: number;
+  notGoingCount: number;
+  totalResponses: number;
+  restaurantVotes: { providerId: string; name: string; votes: number }[];
+  rsvps: { userId: string; rsvpStatus: string; preferredRestaurantId: string | null; preferredRestaurantName: string | null }[];
+  winnerProviderId: string | null;
+  winnerName: string | null;
+}
+
+export interface RestaurantSearchResult {
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  priceLevel: string | null;
+  rating: number | null;
 }
 
 export interface VoteRequest {
@@ -159,21 +255,77 @@ export class ApiClient {
   /**
    * Authentication API endpoints
    */
+  private static async requestMultipart<T>(
+    endpoint: string,
+    formData: FormData
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const headers: Record<string, string> = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    });
+    if (!response.ok) {
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch {
+        errorMessage = await response.text() || errorMessage;
+      }
+      throw new ApiError(response.status, errorMessage);
+    }
+    return response.json();
+  }
+
   static auth = {
-    logout: (): Promise<void> => 
-      ApiClient.request<void>("/auth/logout", { 
-        method: "POST" 
+    logout: (): Promise<void> =>
+      ApiClient.request<void>("/auth/logout", {
+        method: "POST"
       }),
-      
-    me: (): Promise<User> => 
+
+    me: (): Promise<User> =>
       ApiClient.request<User>("/auth/me"),
-      
+
     google: (): string => `${ApiClient.baseURL}/auth/google`,
-    
+
     refreshToken: (): Promise<AuthResponse> =>
       ApiClient.request<AuthResponse>("/auth/refresh", {
         method: "POST"
-      })
+      }),
+
+    profile: {
+      get: (): Promise<User> =>
+        ApiClient.request<User>("/auth/me/profile"),
+
+      update: (data: ProfileUpdateRequest): Promise<User> =>
+        ApiClient.request<User>("/auth/me/profile", {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      uploadAvatar: (file: File): Promise<{ customAvatarUrl: string }> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        return ApiClient.requestMultipart<{ customAvatarUrl: string }>("/auth/me/profile/avatar", formData);
+      },
+
+      deleteAvatar: (): Promise<void> =>
+        ApiClient.request<void>("/auth/me/profile/avatar", {
+          method: "DELETE",
+        }),
+    },
+  };
+
+  static neighborhoods = {
+    getByBorough: (borough: string): Promise<NeighborhoodDto[]> =>
+      ApiClient.request<NeighborhoodDto[]>(`/neighborhoods?borough=${encodeURIComponent(borough)}`),
   };
   
   /**
@@ -214,7 +366,24 @@ export class ApiClient {
       ApiClient.request<RestaurantDto[]>(`/sessions/${sessionId}/final-rankings`),
       
     getWinner: (sessionId: string): Promise<User> =>
-      ApiClient.request<User>(`/sessions/${sessionId}/winner`)
+      ApiClient.request<User>(`/sessions/${sessionId}/winner`),
+
+    getRecommended: (sessionId: string): Promise<RecommendationResult> =>
+      ApiClient.request<RecommendationResult>(`/sessions/${sessionId}/recommended`),
+
+    submitOfflineVotes: (sessionId: string, likedProviderIds: string[]): Promise<OfflineVoteResult> =>
+      ApiClient.request<OfflineVoteResult>(`/sessions/${sessionId}/submit-votes`, {
+        method: "POST",
+        body: JSON.stringify({ likedProviderIds }),
+      }),
+
+    forceComplete: (sessionId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/complete`, {
+        method: "POST",
+      }),
+
+    getVotingProgress: (sessionId: string): Promise<VotingProgress> =>
+      ApiClient.request<VotingProgress>(`/sessions/${sessionId}/voting-progress`)
   };
   
   /**
@@ -234,6 +403,47 @@ export class ApiClient {
       ApiClient.request<VoteDto[]>(`/votes/session/${sessionId}/user`)
   };
   
+  /**
+   * Event session API endpoints
+   */
+  static eventSessions = {
+    addRestaurant: (sessionId: string, data: { providerId: string; name: string; address: string; category: string; priceLevel: string | null; rating: number | null }): Promise<EventRestaurantDto> =>
+      ApiClient.request<EventRestaurantDto>(`/sessions/${sessionId}/event/restaurants`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    removeRestaurant: (sessionId: string, providerId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/event/restaurants/${providerId}`, {
+        method: "DELETE",
+      }),
+
+    getRestaurants: (sessionId: string): Promise<EventRestaurantDto[]> =>
+      ApiClient.request<EventRestaurantDto[]>(`/sessions/${sessionId}/event/restaurants`),
+
+    submitRsvp: (sessionId: string, rsvpStatus: string, preferredRestaurantId: string | null): Promise<EventRsvpDto> =>
+      ApiClient.request<EventRsvpDto>(`/sessions/${sessionId}/event/rsvp`, {
+        method: "POST",
+        body: JSON.stringify({ rsvpStatus, preferredRestaurantId }),
+      }),
+
+    getSummary: (sessionId: string): Promise<EventSummary> =>
+      ApiClient.request<EventSummary>(`/sessions/${sessionId}/event/summary`),
+
+    complete: (sessionId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/event/complete`, {
+        method: "POST",
+      }),
+  };
+
+  /**
+   * Restaurant search
+   */
+  static restaurants = {
+    search: (query: string, limit: number = 5): Promise<RestaurantSearchResult[]> =>
+      ApiClient.request<RestaurantSearchResult[]>(`/restaurants/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+  };
+
   /**
    * Homepage API endpoints
    */
