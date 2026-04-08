@@ -97,6 +97,47 @@ export interface OfflineVoteResult {
   totalParticipants: number;
 }
 
+export interface EventRestaurantDto {
+  id: number;
+  sessionId: number;
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  priceLevel: string;
+  rating: number;
+  displayOrder: number;
+}
+
+export interface EventRsvpDto {
+  id: number;
+  sessionId: number;
+  userId: string;
+  rsvpStatus: "GOING" | "NOT_GOING" | "MAYBE";
+  preferredRestaurantId: string | null;
+  respondedAt: string;
+}
+
+export interface EventSummary {
+  goingCount: number;
+  maybeCount: number;
+  notGoingCount: number;
+  totalResponses: number;
+  restaurantVotes: { providerId: string; name: string; votes: number }[];
+  rsvps: { userId: string; rsvpStatus: string; preferredRestaurantId: string | null; preferredRestaurantName: string | null }[];
+  winnerProviderId: string | null;
+  winnerName: string | null;
+}
+
+export interface RestaurantSearchResult {
+  providerId: string;
+  name: string;
+  address: string;
+  category: string;
+  priceLevel: string | null;
+  rating: number | null;
+}
+
 export interface VoteRequest {
   sessionId: string;
   restaurantId: string;
@@ -362,6 +403,47 @@ export class ApiClient {
       ApiClient.request<VoteDto[]>(`/votes/session/${sessionId}/user`)
   };
   
+  /**
+   * Event session API endpoints
+   */
+  static eventSessions = {
+    addRestaurant: (sessionId: string, data: { providerId: string; name: string; address: string; category: string; priceLevel: string | null; rating: number | null }): Promise<EventRestaurantDto> =>
+      ApiClient.request<EventRestaurantDto>(`/sessions/${sessionId}/event/restaurants`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+
+    removeRestaurant: (sessionId: string, providerId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/event/restaurants/${providerId}`, {
+        method: "DELETE",
+      }),
+
+    getRestaurants: (sessionId: string): Promise<EventRestaurantDto[]> =>
+      ApiClient.request<EventRestaurantDto[]>(`/sessions/${sessionId}/event/restaurants`),
+
+    submitRsvp: (sessionId: string, rsvpStatus: string, preferredRestaurantId: string | null): Promise<EventRsvpDto> =>
+      ApiClient.request<EventRsvpDto>(`/sessions/${sessionId}/event/rsvp`, {
+        method: "POST",
+        body: JSON.stringify({ rsvpStatus, preferredRestaurantId }),
+      }),
+
+    getSummary: (sessionId: string): Promise<EventSummary> =>
+      ApiClient.request<EventSummary>(`/sessions/${sessionId}/event/summary`),
+
+    complete: (sessionId: string): Promise<void> =>
+      ApiClient.request<void>(`/sessions/${sessionId}/event/complete`, {
+        method: "POST",
+      }),
+  };
+
+  /**
+   * Restaurant search
+   */
+  static restaurants = {
+    search: (query: string, limit: number = 5): Promise<RestaurantSearchResult[]> =>
+      ApiClient.request<RestaurantSearchResult[]>(`/restaurants/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+  };
+
   /**
    * Homepage API endpoints
    */
