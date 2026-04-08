@@ -70,7 +70,9 @@ public class SessionService {
             }
 
             session.setJoinCode(code);
-            session.setStatus("OPEN");
+            if (session.getStatus() == null || session.getStatus().isEmpty()) {
+                session.setStatus("OPEN");
+            }
             
             // Set session expiration time
             Instant now = Instant.now();
