@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, Send, CheckCircle } from "lucide-react";
+import Image from "next/image";
+import { Heart, X, ChevronLeft, ChevronRight, Send, CheckCircle } from "lucide-react";
 import { Button } from "@/components/button";
+import { Card, CardContent } from "@/components/card";
 import { ApiClient } from "@/api/client";
 
 interface OfflineRestaurant {
@@ -14,6 +16,11 @@ interface OfflineRestaurant {
   rating?: number;
   priceLevel?: string;
   priceRange?: string;
+  userRatingCount?: number;
+  currentOpeningHours?: string;
+  generativeSummary?: string;
+  reviewSummary?: string;
+  photos?: string[];
 }
 
 interface OfflineVotingPanelProps {
@@ -24,18 +31,60 @@ interface OfflineVotingPanelProps {
   deadline?: string;
 }
 
-export function OfflineVotingPanel({ sessionId, restaurants, hasSubmitted, onSubmitted, deadline }: OfflineVotingPanelProps) {
+function formatHours(hours: string | null | undefined) {
+  if (!hours) return null;
+  try {
+    const match = hours.match(/weekdayDescriptions=\[(.*?)\]/);
+    if (match) {
+      const days = match[1].split(",").map((s) => s.trim());
+      const jsDay = new Date().getDay();
+      const googleDayIdx = jsDay === 0 ? 6 : jsDay - 1;
+      return days[googleDayIdx] || days[0];
+    }
+  } catch {}
+  return "See details";
+}
+
+function extractSummaryText(summary: string | null | undefined) {
+  if (!summary) return null;
+  const match = summary.match(/text=([^,{}}\]]+)/);
+  return match ? match[1] : summary;
+}
+
+function formatPriceRange(priceRange: string | null | undefined) {
+  if (!priceRange) return null;
+  const startMatch = priceRange.match(/startPrice=\{currencyCode=USD, units=(\d+)\}/);
+  const endMatch = priceRange.match(/endPrice=\{currencyCode=USD, units=(\d+)\}/);
+  if (startMatch && endMatch) return `$${startMatch[1]} - $${endMatch[1]}`;
+  return priceRange;
+}
+
+export function OfflineVotingPanel({
+  sessionId,
+  restaurants,
+  hasSubmitted,
+  onSubmitted,
+  deadline,
+}: OfflineVotingPanelProps) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+
+  const current = restaurants[currentIdx];
+
+  const goTo = (idx: number) => {
+    setCurrentIdx(idx);
+    setCurrentPhotoIdx(0);
+  };
+  const goNext = () => { if (currentIdx < restaurants.length - 1) goTo(currentIdx + 1); };
+  const goPrev = () => { if (currentIdx > 0) goTo(currentIdx - 1); };
 
   const toggleLike = (providerId: string) => {
     setLiked((prev) => {
       const next = new Set(prev);
-      if (next.has(providerId)) {
-        next.delete(providerId);
-      } else {
-        next.add(providerId);
-      }
+      if (next.has(providerId)) next.delete(providerId);
+      else next.add(providerId);
       return next;
     });
   };
@@ -74,45 +123,194 @@ export function OfflineVotingPanel({ sessionId, restaurants, hasSubmitted, onSub
     );
   }
 
+  if (!current) return null;
+
+  const photos = current.photos ?? [];
+  const isLiked = liked.has(current.providerId);
+
   return (
     <div className="space-y-4">
+      {/* Deadline banner */}
       {deadlineDate && (
         <div className="bg-orange-50 rounded-lg px-4 py-2 text-sm text-orange-700 text-center">
-          Vote by: {deadlineDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} at {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+          Vote by:{" "}
+          {deadlineDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} at{" "}
+          {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
         </div>
       )}
 
-      <div className="grid gap-3">
-        {restaurants.map((r) => (
-          <button
-            key={r.providerId}
-            onClick={() => toggleLike(r.providerId)}
-            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left ${
-              liked.has(r.providerId)
-                ? "border-red-400 bg-red-50"
-                : "border-gray-200 bg-white hover:border-gray-300"
-            }`}
-          >
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate">{r.name}</p>
-              <p className="text-xs text-gray-500 truncate">{r.address}</p>
-              <div className="flex items-center space-x-2 mt-1">
-                {r.rating && <span className="text-xs text-gray-600">{r.rating.toFixed(1)}</span>}
-                {r.priceRange && <span className="text-xs text-gray-400">{r.priceRange}</span>}
-                {r.category && <span className="text-xs text-gray-400">{r.category}</span>}
-              </div>
-            </div>
-            <Heart
-              className={`w-6 h-6 ml-3 flex-shrink-0 transition-colors ${
-                liked.has(r.providerId)
-                  ? "text-red-500 fill-red-500"
-                  : "text-gray-300"
-              }`}
-            />
-          </button>
-        ))}
+      {/* Progress */}
+      <div className="flex items-center justify-between text-sm text-gray-500">
+        <span>{currentIdx + 1} of {restaurants.length} restaurants</span>
+        <span className="text-red-500 font-medium">
+          {liked.size} liked
+        </span>
       </div>
 
+      {/* Dating-profile card */}
+      <Card className="shadow-2xl border-0 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+            {/* Info + action buttons */}
+            <div className="p-8 bg-white flex flex-col">
+              <div className="mb-6 p-6 rounded-lg shadow bg-white dark:bg-orange-600">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  {current.name}
+                </h1>
+                <div className="text-gray-600 font-medium mb-1">{current.category}</div>
+                <div className="text-gray-500 mb-2">{current.address}</div>
+
+                <div className="flex flex-wrap gap-4 text-sm text-gray-700 mb-2">
+                  {current.priceRange && (
+                    <span><b>Price:</b> {formatPriceRange(current.priceRange)}</span>
+                  )}
+                  {current.rating && (
+                    <span>
+                      <b>Rating:</b> {current.rating} ★
+                      {current.userRatingCount && (
+                        <span className="ml-1 text-gray-500">({current.userRatingCount} reviews)</span>
+                      )}
+                    </span>
+                  )}
+                  {current.currentOpeningHours && (
+                    <span><b>Hours:</b> {formatHours(current.currentOpeningHours)}</span>
+                  )}
+                </div>
+
+                {current.generativeSummary && (
+                  <div className="mt-2">
+                    <b>Summary:</b>
+                    <div className="text-gray-800">{extractSummaryText(current.generativeSummary)}</div>
+                  </div>
+                )}
+                {current.reviewSummary && (
+                  <div className="mt-2">
+                    <b>Review Summary:</b>
+                    <div className="text-gray-800">{extractSummaryText(current.reviewSummary)}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Pass / Heart buttons */}
+              <div className="flex space-x-4 mt-auto">
+                <Button
+                  onClick={goNext}
+                  disabled={currentIdx === restaurants.length - 1}
+                  variant="outline"
+                  size="lg"
+                  className="flex-1 h-14 border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                >
+                  <X className="w-5 h-5 mr-2" />
+                  Pass
+                </Button>
+                <Button
+                  onClick={() => { toggleLike(current.providerId); if (!isLiked) goNext(); }}
+                  size="lg"
+                  className={`flex-1 h-14 transition-all ${
+                    isLiked
+                      ? "bg-red-500 hover:bg-red-600"
+                      : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 mr-2 ${isLiked ? "fill-white" : ""}`} />
+                  {isLiked ? "Liked!" : "Like"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Photo gallery */}
+            <div className="relative bg-gray-100">
+              {photos.length > 0 ? (
+                <div className="aspect-square relative overflow-hidden">
+                  <Image
+                    src={photos[currentPhotoIdx] ?? "/placeholder.svg"}
+                    alt={`${current.name} photo ${currentPhotoIdx + 1}`}
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                    unoptimized
+                  />
+                  {photos.length > 1 && (
+                    <div className="absolute inset-0 flex items-center justify-between p-4">
+                      <Button
+                        onClick={() => setCurrentPhotoIdx((p) => (p - 1 + photos.length) % photos.length)}
+                        variant="outline"
+                        size="icon"
+                        className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                      >
+                        <ChevronLeft />
+                      </Button>
+                      <Button
+                        onClick={() => setCurrentPhotoIdx((p) => (p + 1) % photos.length)}
+                        variant="outline"
+                        size="icon"
+                        className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                      >
+                        <ChevronRight />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                    {currentPhotoIdx + 1} / {photos.length}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full min-h-[200px]">
+                  <span className="text-gray-400">No photos</span>
+                </div>
+              )}
+
+              {photos.length > 1 && (
+                <div className="p-4 bg-white">
+                  <div className="grid grid-cols-6 gap-2">
+                    {photos.map((url, idx) => (
+                      <button
+                        key={url}
+                        onClick={() => setCurrentPhotoIdx(idx)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          idx === currentPhotoIdx
+                            ? "border-orange-500 shadow-md"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          width={120}
+                          height={120}
+                          className="w-full h-full object-cover"
+                          unoptimized
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card navigation dots */}
+      {restaurants.length > 1 && (
+        <div className="flex justify-center gap-1.5">
+          {restaurants.map((r, idx) => (
+            <button
+              key={r.providerId}
+              onClick={() => goTo(idx)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                idx === currentIdx
+                  ? "bg-orange-500 w-4"
+                  : liked.has(r.providerId)
+                  ? "bg-red-400"
+                  : "bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Submit */}
       <Button
         onClick={handleSubmit}
         disabled={liked.size === 0 || submitting}

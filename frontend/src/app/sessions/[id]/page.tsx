@@ -599,6 +599,11 @@ export default function SessionPage() {
                   rating: r.rating ?? undefined,
                   priceLevel: r.priceLevel ?? undefined,
                   priceRange: r.priceRange ?? undefined,
+                  userRatingCount: r.userRatingCount ?? undefined,
+                  currentOpeningHours: r.currentOpeningHours ?? undefined,
+                  generativeSummary: r.generativeSummary ?? undefined,
+                  reviewSummary: r.reviewSummary ?? undefined,
+                  photos: r.photos,
                 }))}
                 hasSubmitted={false}
                 onSubmitted={() => window.location.reload()}
