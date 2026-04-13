@@ -58,7 +58,7 @@ public class LocationService {
 
         List<double[]> coords = new ArrayList<>();
         for (SessionParticipant participant : participants) {
-            Optional<User> userOpt = userRepository.findByEmail(participant.getUserId());
+            Optional<User> userOpt = userRepository.findByUsername(participant.getUserId());
             if (userOpt.isEmpty()) continue;
             User user = userOpt.get();
             if (user.getHomeNeighborhood() == null || user.getHomeBorough() == null) continue;
@@ -68,8 +68,8 @@ public class LocationService {
             ).ifPresent(n -> coords.add(new double[]{n.getCenterLat(), n.getCenterLng()}));
         }
 
-        if (coords.size() < 2) {
-            return new RecommendationResult(List.of(), coords.size(), totalParticipants);
+        if (coords.isEmpty()) {
+            return new RecommendationResult(List.of(), 0, totalParticipants);
         }
 
         double centroidLat = coords.stream().mapToDouble(c -> c[0]).average().orElse(0);

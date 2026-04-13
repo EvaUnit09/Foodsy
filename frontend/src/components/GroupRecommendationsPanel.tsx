@@ -31,16 +31,16 @@ export function GroupRecommendationsPanel({ sessionId }: GroupRecommendationsPan
   }
 
   if (!result || result.restaurants.length === 0) {
-    if (result && result.participantsWithLocation < 2) {
+    if (result && result.participantsWithLocation === 0) {
       return (
         <div className="bg-orange-50 rounded-2xl p-4 border border-orange-200 mb-4">
           <div className="flex items-center space-x-2 text-orange-700 text-sm">
             <MapPin className="w-4 h-4" />
             <span>
-              {result.participantsWithLocation === 0
-                ? "No participants have set their home location yet."
-                : `Only ${result.participantsWithLocation} of ${result.totalParticipants} participants have a location set.`}
-              {" "}Set your location in your profile for group recommendations.
+              {result.totalParticipants > 1
+                ? `No participants have set their home location yet.`
+                : "Set your home location in your profile to get location-based recommendations."}
+              {" "}
             </span>
           </div>
         </div>
