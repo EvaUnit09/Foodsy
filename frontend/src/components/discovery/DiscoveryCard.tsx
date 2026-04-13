@@ -8,6 +8,7 @@ interface DiscoveryCardProps {
   exitAction: SwipeAction | null;
   isGhost?: boolean;
   ghostDepth?: 1 | 2;
+  actionOverrides?: Partial<Record<SwipeAction, { label: string; color: string }>>;
 }
 
 const EXIT_TRANSFORMS: Record<SwipeAction, string> = {
@@ -44,7 +45,14 @@ export function DiscoveryCard({
   exitAction,
   isGhost = false,
   ghostDepth,
+  actionOverrides,
 }: DiscoveryCardProps) {
+  const resolvedLabels = { ...ACTION_LABELS, ...Object.fromEntries(
+    Object.entries(actionOverrides ?? {}).map(([k, v]) => [k, v.label])
+  ) } as Record<SwipeAction, string>;
+  const resolvedColors = { ...ACTION_COLORS, ...Object.fromEntries(
+    Object.entries(actionOverrides ?? {}).map(([k, v]) => [k, v.color])
+  ) } as Record<SwipeAction, string>;
   const [photoIndex, setPhotoIndex] = useState(0);
 
   // Reset photo carousel when card changes
@@ -317,7 +325,7 @@ export function DiscoveryCard({
               position: "absolute",
               inset: 0,
               zIndex: 10,
-              background: `${ACTION_COLORS[exitAction]}22`,
+              background: `${resolvedColors[exitAction]}22`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -325,7 +333,7 @@ export function DiscoveryCard({
           >
             <div
               style={{
-                background: ACTION_COLORS[exitAction],
+                background: resolvedColors[exitAction],
                 color: "#fff",
                 fontSize: 18,
                 fontWeight: 800,
@@ -333,7 +341,7 @@ export function DiscoveryCard({
                 padding: "12px 24px",
               }}
             >
-              {ACTION_LABELS[exitAction]}
+              {resolvedLabels[exitAction]}
             </div>
           </div>
         )}

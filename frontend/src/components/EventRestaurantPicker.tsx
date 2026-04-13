@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, X, Check } from "lucide-react";
-import { Button } from "@/components/button";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, X } from "lucide-react";
 import { ApiClient } from "@/api/client";
 import { LibraryApi } from "@/api/libraryApi";
 import { DiscoveryApi, DiscoveryRestaurant } from "@/api/discoveryApi";
+import { DiscoveryCard } from "@/components/discovery/DiscoveryCard";
 
 interface PickedRestaurant {
   providerId: string;
@@ -25,89 +25,6 @@ interface EventRestaurantPickerProps {
   onRemoved: (providerId: string) => void;
 }
 
-type Tab = "watchlist" | "nearby";
-
-function BrowseCard({
-  restaurant,
-  isAdded,
-  disabled,
-  onAdd,
-}: {
-  restaurant: DiscoveryRestaurant;
-  isAdded: boolean;
-  disabled: boolean;
-  onAdd: () => void;
-}) {
-  const photo = restaurant.photos?.[0];
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm flex flex-col">
-      {/* Photo */}
-      <div className="relative aspect-[4/3] bg-gray-100">
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt={restaurant.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl">🍽</div>
-        )}
-        {isAdded && (
-          <div className="absolute inset-0 bg-orange-500/20 flex items-center justify-center">
-            <div className="bg-orange-500 rounded-full p-2">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-          </div>
-        )}
-      </div>
-      {/* Info */}
-      <div className="p-3 flex flex-col gap-1 flex-1">
-        <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-1">{restaurant.name}</p>
-        <p className="text-xs text-gray-500 line-clamp-1">{restaurant.category}</p>
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-1">
-            {restaurant.rating != null && (
-              <span className="text-xs font-medium text-gray-700">
-                <span className="text-amber-400">★</span> {restaurant.rating.toFixed(1)}
-              </span>
-            )}
-            {restaurant.priceRange && (
-              <span className="text-xs text-gray-400">{restaurant.priceRange}</span>
-            )}
-          </div>
-          <button
-            onClick={onAdd}
-            disabled={isAdded || disabled}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              isAdded
-                ? "bg-orange-100 text-orange-600 cursor-default"
-                : disabled
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-orange-500 hover:bg-orange-600 text-white"
-            }`}
-          >
-            {isAdded ? (
-              <>
-                <Check className="w-3 h-3" /> Added
-              </>
-            ) : (
-              <>
-                <Plus className="w-3 h-3" /> Add
-              </>
-            )}
-          </button>
-        </div>
-        {restaurant.vibeTags && restaurant.vibeTags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {restaurant.vibeTags.slice(0, 2).map((tag) => (
-              <span key={tag} className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full font-medium">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function EventRestaurantPicker({
   sessionId,
   diningBorough,
@@ -116,77 +33,95 @@ export function EventRestaurantPicker({
   onAdded,
   onRemoved,
 }: EventRestaurantPickerProps) {
-  const [tab, setTab] = useState<Tab>("watchlist");
-  const [watchlist, setWatchlist] = useState<DiscoveryRestaurant[]>([]);
-  const [nearby, setNearby] = useState<DiscoveryRestaurant[]>([]);
-  const [loadingWatchlist, setLoadingWatchlist] = useState(true);
-  const [loadingNearby, setLoadingNearby] = useState(false);
-  const [adding, setAdding] = useState<string | null>(null);
+  const [deck, setDeck] = useState<DiscoveryRestaurant[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [exitAction, setExitAction] = useState<"pass" | "favorite" | null>(null);
+  const [loadingDeck, setLoadingDeck] = useState(true);
+  const [wlIds, setWlIds] = useState<Set<string>>(new Set());
+  const [addError, setAddError] = useState<string | null>(null);
 
   const pickedIds = new Set(picked.map((p) => p.providerId));
 
-  // Load watchlist on mount
+  // Load deck once on mount
   useEffect(() => {
-    LibraryApi.getWatchlist()
-      .then(setWatchlist)
-      .catch(() => setWatchlist([]))
-      .finally(() => setLoadingWatchlist(false));
+    async function loadDeck() {
+      const borough = diningBorough?.toLowerCase() as Parameters<typeof DiscoveryApi.fetchRestaurants>[0] | undefined;
+      const [wl, nr] = await Promise.allSettled([
+        LibraryApi.getWatchlist(),
+        borough
+          ? DiscoveryApi.fetchRestaurants(borough, diningNeighborhood, 30)
+          : Promise.resolve<DiscoveryRestaurant[]>([]),
+      ]);
+      const wlItems = wl.status === "fulfilled" ? wl.value : [];
+      const nrItems = nr.status === "fulfilled" ? nr.value : [];
+      const wlIdSet = new Set(wlItems.map((r) => r.id));
+      const combined = [
+        ...wlItems,
+        ...nrItems.filter((r) => !wlIdSet.has(r.id)),
+      ].filter((r) => !pickedIds.has(r.id));
+      setWlIds(wlIdSet);
+      setDeck(combined);
+      setLoadingDeck(false);
+    }
+    loadDeck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load nearby when tab switches to nearby (lazy)
-  useEffect(() => {
-    if (tab !== "nearby" || nearby.length > 0) return;
-    if (!diningBorough) return;
-    setLoadingNearby(true);
-    const borough = diningBorough.toLowerCase() as Parameters<typeof DiscoveryApi.fetchRestaurants>[0];
-    DiscoveryApi.fetchRestaurants(borough, diningNeighborhood, 20)
-      .then(setNearby)
-      .catch(() => setNearby([]))
-      .finally(() => setLoadingNearby(false));
-  }, [tab, diningBorough, diningNeighborhood, nearby.length]);
+  const triggerAction = useCallback(
+    async (action: "pass" | "favorite") => {
+      if (exitAction !== null || currentIndex >= deck.length) return;
+      setAddError(null);
+      setExitAction(action);
 
-  const handleAdd = async (r: DiscoveryRestaurant) => {
-    if (picked.length >= 6 || pickedIds.has(r.id)) return;
-    setAdding(r.id);
-    try {
-      await ApiClient.eventSessions.addRestaurant(sessionId, {
-        providerId: r.id,
-        name: r.name,
-        address: r.address,
-        category: r.category,
-        priceLevel: r.priceLevel != null ? String(r.priceLevel) : null,
-        rating: r.rating,
-      });
-      onAdded({
-        providerId: r.id,
-        name: r.name,
-        address: r.address,
-        category: r.category,
-        priceLevel: r.priceLevel != null ? String(r.priceLevel) : null,
-        rating: r.rating,
-      });
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to add restaurant");
-    } finally {
-      setAdding(null);
-    }
-  };
+      if (action === "favorite") {
+        const r = deck[currentIndex];
+        try {
+          await ApiClient.eventSessions.addRestaurant(sessionId, {
+            providerId: r.id,
+            name: r.name,
+            address: r.address,
+            category: r.category,
+            priceLevel: r.priceLevel != null ? String(r.priceLevel) : null,
+            rating: r.rating,
+          });
+          onAdded({
+            providerId: r.id,
+            name: r.name,
+            address: r.address,
+            category: r.category,
+            priceLevel: r.priceLevel != null ? String(r.priceLevel) : null,
+            rating: r.rating,
+          });
+        } catch (err) {
+          setAddError(err instanceof Error ? err.message : "Failed to add restaurant");
+        }
+      }
+
+      setTimeout(() => {
+        setCurrentIndex((i) => i + 1);
+        setExitAction(null);
+      }, 360);
+    },
+    [exitAction, currentIndex, deck, sessionId, onAdded]
+  );
 
   const handleRemove = async (providerId: string) => {
     try {
       await ApiClient.eventSessions.removeRestaurant(sessionId, providerId);
       onRemoved(providerId);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to remove restaurant");
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to remove restaurant");
     }
   };
 
-  const browsing = tab === "watchlist" ? watchlist : nearby;
-  const isLoading = tab === "watchlist" ? loadingWatchlist : loadingNearby;
+  const currentRestaurant = deck[currentIndex];
+  const isFromWatchlist = currentRestaurant ? wlIds.has(currentRestaurant.id) : false;
+  const atMax = picked.length >= 6;
+  const busy = exitAction !== null;
 
   return (
-    <div className="space-y-5">
-      {/* Selected restaurants */}
+    <div className="space-y-4">
+      {/* Selected list */}
       {picked.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -195,7 +130,7 @@ export function EventRestaurantPicker({
           {picked.map((r) => (
             <div
               key={r.providerId}
-              className="flex items-center justify-between p-3 bg-orange-50 rounded-xl border border-orange-200"
+              className="flex items-center justify-between px-3 py-2 bg-orange-50 rounded-xl border border-orange-200"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
@@ -203,7 +138,7 @@ export function EventRestaurantPicker({
               </div>
               <button
                 onClick={() => handleRemove(r.providerId)}
-                className="ml-2 text-red-400 hover:text-red-600 transition-colors"
+                className="ml-2 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -216,55 +151,135 @@ export function EventRestaurantPicker({
         <p className="text-xs text-gray-400">Add at least 2 restaurants (max 6).</p>
       )}
 
-      {/* Browse tabs */}
-      <div className="flex gap-2 border-b border-gray-100 pb-1">
-        <button
-          onClick={() => setTab("watchlist")}
-          className={`text-sm font-semibold pb-2 px-1 border-b-2 transition-colors ${
-            tab === "watchlist"
-              ? "border-orange-500 text-orange-600"
-              : "border-transparent text-gray-400 hover:text-gray-600"
-          }`}
-        >
-          Want to Go
-        </button>
-        {diningBorough && (
-          <button
-            onClick={() => setTab("nearby")}
-            className={`text-sm font-semibold pb-2 px-1 border-b-2 transition-colors ${
-              tab === "nearby"
-                ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            Nearby{diningNeighborhood ? ` · ${diningNeighborhood}` : ""}
-          </button>
-        )}
-      </div>
-
-      {/* Cards grid */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500" />
+      {addError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700">
+          {addError}
         </div>
-      ) : browsing.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-6">
-          {tab === "watchlist"
-            ? "Your Want to Go list is empty. Switch to Nearby to browse restaurants."
-            : "No nearby restaurants found."}
+      )}
+
+      {/* Card stack */}
+      {loadingDeck ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+        </div>
+      ) : !currentRestaurant ? (
+        <p className="text-sm text-center text-gray-400 py-12">
+          {deck.length === 0
+            ? "No restaurants to browse for this area."
+            : "You've seen all available restaurants."}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {browsing.map((r) => (
-            <BrowseCard
-              key={r.id}
-              restaurant={r}
-              isAdded={pickedIds.has(r.id)}
-              disabled={(picked.length >= 6 && !pickedIds.has(r.id)) || adding === r.id}
-              onAdd={() => handleAdd(r)}
-            />
-          ))}
-        </div>
+        <>
+          {/* "From your list" badge */}
+          <div className="h-6 flex items-center">
+            {isFromWatchlist && (
+              <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold">
+                ★ From your Want to Go list
+              </span>
+            )}
+          </div>
+
+          {/* Card stack */}
+          <div style={{ position: "relative", height: 460 }}>
+            {[currentIndex + 2, currentIndex + 1, currentIndex].map((idx, pos) => {
+              if (!deck[idx]) return null;
+              const isActive = idx === currentIndex;
+              return (
+                <DiscoveryCard
+                  key={deck[idx].id}
+                  restaurant={deck[idx]}
+                  exitAction={isActive ? exitAction : null}
+                  isGhost={!isActive}
+                  ghostDepth={pos === 0 ? 2 : pos === 1 ? 1 : undefined}
+                  actionOverrides={{
+                    favorite: { label: "+ Added!", color: "#e8531a" },
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Progress */}
+          <p className="text-xs text-center text-gray-400">
+            {currentIndex + 1} of {deck.length}
+          </p>
+
+          {/* Action buttons */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 48,
+              paddingTop: 8,
+            }}
+          >
+            {/* Skip */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <button
+                onClick={() => triggerAction("pass")}
+                disabled={busy}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: busy ? "#f9fafb" : "#f3f4f6",
+                  border: "none",
+                  cursor: busy ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: busy ? 0.45 : 1,
+                  transition: "transform 0.1s, opacity 0.15s",
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.94)")}
+                onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <X style={{ width: 22, height: 22, color: "#6b7280" }} />
+              </button>
+              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+                Skip
+              </span>
+            </div>
+
+            {/* Add to Event */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <button
+                onClick={() => triggerAction("favorite")}
+                disabled={busy || atMax}
+                title={atMax ? "Maximum 6 restaurants selected" : "Add to event"}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: "50%",
+                  background: busy || atMax ? "#fed7aa" : "#e8531a",
+                  border: "none",
+                  cursor: busy || atMax ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: busy || atMax ? 0.45 : 1,
+                  transition: "transform 0.1s, opacity 0.15s",
+                  boxShadow: busy || atMax ? "none" : "0 4px 14px rgba(232,83,26,0.4)",
+                }}
+                onMouseDown={(e) => { if (!busy && !atMax) e.currentTarget.style.transform = "scale(0.94)"; }}
+                onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <Plus style={{ width: 26, height: 26, color: "#fff" }} />
+              </button>
+              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+                Add
+              </span>
+            </div>
+          </div>
+          {atMax && (
+            <p className="text-xs text-center text-orange-500">
+              Maximum 6 restaurants reached. Remove one to add another.
+            </p>
+          )}
+        </>
       )}
     </div>
   );
