@@ -70,6 +70,7 @@ export function OfflineVotingPanel({
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const current = restaurants[currentIdx];
 
@@ -92,11 +93,12 @@ export function OfflineVotingPanel({
   const handleSubmit = async () => {
     if (liked.size === 0) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       await ApiClient.sessions.submitOfflineVotes(sessionId, Array.from(liked));
       onSubmitted();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to submit votes");
+      setSubmitError(error instanceof Error ? error.message : "Failed to submit votes");
     } finally {
       setSubmitting(false);
     }
@@ -307,6 +309,13 @@ export function OfflineVotingPanel({
               }`}
             />
           ))}
+        </div>
+      )}
+
+      {/* Submit error */}
+      {submitError && (
+        <div className="bg-red-50 rounded-xl px-4 py-3 border border-red-200 text-sm text-red-700 text-center">
+          {submitError}
         </div>
       )}
 

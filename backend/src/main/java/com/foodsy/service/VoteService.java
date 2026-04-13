@@ -6,9 +6,11 @@ import com.foodsy.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -230,11 +232,14 @@ public class VoteService {
         if (!"OFFLINE".equals(session.getSessionType())) {
             throw new RuntimeException("This endpoint is only for offline sessions");
         }
+        if ("ENDED".equals(session.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.GONE, "This session has been closed by the host");
+        }
         if (!"voting".equals(session.getStatus())) {
-            throw new RuntimeException("Session is not in voting status");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Session is not accepting votes");
         }
         if (session.getVotingDeadline() != null && Instant.now().isAfter(session.getVotingDeadline())) {
-            throw new RuntimeException("Voting deadline has passed");
+            throw new ResponseStatusException(HttpStatus.GONE, "The voting deadline has passed");
         }
 
         SessionParticipant participant = sessionParticipantRepository.findBySessionIdAndUserId(sessionId, userId)
