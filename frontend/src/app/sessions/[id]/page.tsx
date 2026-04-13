@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useSessionWebSocket } from "@/hooks/useWebSockethook";
 import { useParams, useRouter } from "next/navigation";
 import React, {
@@ -567,10 +568,12 @@ export default function SessionPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">F</span>
+                  </div>
+                  <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                </Link>
                 <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Offline</span>
               </div>
             </div>
@@ -730,10 +733,12 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">F</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Foodsy</span>
+              <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">F</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">Foodsy</span>
+              </Link>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Event</span>
             </div>
           </div>
