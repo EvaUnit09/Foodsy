@@ -52,6 +52,8 @@ export interface SessionRequest {
   sessionType?: string;
   expectedParticipants?: number;
   votingDeadline?: string;
+  eventName?: string;
+  eventDescription?: string;
 }
 
 export interface Session {
@@ -65,6 +67,8 @@ export interface Session {
   diningBorough?: string;
   diningNeighborhood?: string;
   sessionType?: string;
+  eventName?: string;
+  eventDescription?: string;
 }
 
 export interface RecommendedRestaurant {

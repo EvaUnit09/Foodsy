@@ -15,6 +15,8 @@ public class SessionRequest {
     private String sessionType;
     private Integer expectedParticipants;
     private String votingDeadline; // ISO-8601 timestamp
+    private String eventName;
+    private String eventDescription;
 
     public Integer getPoolSize() { return poolSize; }
     public void setPoolSize(Integer poolSize) { this.poolSize = poolSize; }
@@ -45,6 +47,12 @@ public class SessionRequest {
 
     public String getVotingDeadline() { return votingDeadline; }
     public void setVotingDeadline(String votingDeadline) { this.votingDeadline = votingDeadline; }
+
+    public String getEventName() { return eventName; }
+    public void setEventName(String eventName) { this.eventName = eventName; }
+
+    public String getEventDescription() { return eventDescription; }
+    public void setEventDescription(String eventDescription) { this.eventDescription = eventDescription; }
 }
 
 

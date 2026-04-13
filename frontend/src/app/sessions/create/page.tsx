@@ -11,7 +11,7 @@ import { ApiClient, SessionRequest, NeighborhoodDto } from "@/api/client";
 
 const BOROUGHS = ["Manhattan", "Brooklyn", "Queens"];
 
-type SessionType = "STANDARD" | "OFFLINE" | "EVENT";
+type SessionType = "STANDARD" | "OFFLINE";
 
 export default function CreateSessionPage() {
   const [sessionType, setSessionType] = useState<SessionType>("STANDARD");
@@ -67,7 +67,7 @@ export default function CreateSessionPage() {
       diningNeighborhood: diningNeighborhood || undefined,
     };
 
-    if (sessionType === "OFFLINE" || sessionType === "EVENT") {
+    if (sessionType === "OFFLINE") {
       body.expectedParticipants = expectedParticipants;
       body.votingDeadline = votingDeadline ? new Date(votingDeadline).toISOString() : undefined;
     }
@@ -111,7 +111,6 @@ export default function CreateSessionPage() {
   const sessionTypeCards: { type: SessionType; label: string; desc: string; icon: React.ReactNode }[] = [
     { type: "STANDARD", label: "Standard", desc: "Real-time 2-round voting with timer", icon: <Zap className="w-5 h-5" /> },
     { type: "OFFLINE", label: "Offline", desc: "Async voting with a deadline", icon: <Clock className="w-5 h-5" /> },
-    { type: "EVENT", label: "Event", desc: "Host picks restaurants, guests RSVP", icon: <Users className="w-5 h-5" /> },
   ];
 
   return (
@@ -246,7 +245,7 @@ export default function CreateSessionPage() {
                     <label className="flex items-center text-sm font-medium text-gray-700">
                       <MapPin className="w-4 h-4 mr-2 text-orange-600" />
                       Where are you eating?
-                      {(sessionType === "OFFLINE" || sessionType === "EVENT") && (
+                      {sessionType === "OFFLINE" && (
                         <span className="text-red-500 ml-1">*</span>
                       )}
                     </label>
@@ -255,7 +254,7 @@ export default function CreateSessionPage() {
                       <select
                         value={diningBorough}
                         onChange={(e) => { setDiningBorough(e.target.value); setDiningNeighborhood(""); }}
-                        required={sessionType === "OFFLINE" || sessionType === "EVENT"}
+                        required={sessionType === "OFFLINE"}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-300 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white"
                       >
                         <option value="">Select borough</option>
@@ -268,7 +267,7 @@ export default function CreateSessionPage() {
                         value={diningNeighborhood}
                         onChange={(e) => setDiningNeighborhood(e.target.value)}
                         disabled={!diningBorough || neighborhoods.length === 0}
-                        required={sessionType === "OFFLINE" || sessionType === "EVENT"}
+                        required={sessionType === "OFFLINE"}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-300 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white disabled:bg-gray-50 disabled:text-gray-400"
                       >
                         <option value="">Select neighborhood</option>
@@ -277,8 +276,8 @@ export default function CreateSessionPage() {
                     </div>
                   </div>
 
-                  {/* Offline/Event specific fields */}
-                  {(sessionType === "OFFLINE" || sessionType === "EVENT") && (
+                  {/* Offline specific fields */}
+                  {sessionType === "OFFLINE" && (
                     <div className="space-y-4 bg-gray-50 rounded-xl p-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">

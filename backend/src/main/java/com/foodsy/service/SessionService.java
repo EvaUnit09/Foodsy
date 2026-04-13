@@ -161,6 +161,8 @@ public class SessionService {
         } else {
             session.setStatus("OPEN");
         }
+        if (req.getEventName() != null) session.setEventName(req.getEventName());
+        if (req.getEventDescription() != null) session.setEventDescription(req.getEventDescription());
 
         Session saved = createSession(session);
 

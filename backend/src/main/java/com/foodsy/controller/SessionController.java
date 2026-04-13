@@ -85,7 +85,9 @@ public class SessionController {
         String diningNeighborhood,
         String sessionType,
         Integer expectedParticipants,
-        String votingDeadline
+        String votingDeadline,
+        String eventName,
+        String eventDescription
     ) {}
 
     record OfflineVoteSubmission(List<String> likedProviderIds) {}
@@ -192,6 +194,10 @@ public class SessionController {
                 Object votingDeadline = map.get("votingDeadline");
                 if (expectedParticipants instanceof Number) req.setExpectedParticipants(((Number) expectedParticipants).intValue());
                 if (votingDeadline instanceof String) req.setVotingDeadline((String) votingDeadline);
+                Object eventName = map.get("eventName");
+                Object eventDescription = map.get("eventDescription");
+                if (eventName instanceof String) req.setEventName((String) eventName);
+                if (eventDescription instanceof String) req.setEventDescription((String) eventDescription);
             } else {
                 throw new IllegalArgumentException("Invalid payload");
             }
@@ -233,7 +239,9 @@ public class SessionController {
             session.getDiningNeighborhood(),
             session.getSessionType(),
             session.getExpectedParticipants(),
-            session.getVotingDeadline() != null ? session.getVotingDeadline().toString() : null
+            session.getVotingDeadline() != null ? session.getVotingDeadline().toString() : null,
+            session.getEventName(),
+            session.getEventDescription()
         );
     }
 

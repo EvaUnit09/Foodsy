@@ -137,7 +137,7 @@ export default function SessionPage() {
   const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string; expectedParticipants?: number; votingDeadline?: string } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string; expectedParticipants?: number; votingDeadline?: string; eventName?: string; eventDescription?: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -190,7 +190,7 @@ export default function SessionPage() {
     [setLikedRestaurants],
   );
 
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, user } = useAuth();
   const { hasVoted, handleVote, remainingVotes } = useSessionVoting({
     sessionId,
     currentRound,
@@ -483,8 +483,11 @@ export default function SessionPage() {
     return remainingVotes > 0; // Round 1: uses session's likesPerUser limit
   }, [alreadyVoted, currentRound, remainingVotes]);
 
-  // Normalize host check
-  const isHost = Boolean(session?.isHost);
+  // Normalize host check — backend returns isHost only when token is valid;
+  // fall back to comparing auth user against creatorId directly
+  const isHost = Boolean(session?.isHost) ||
+    (user?.username != null &&
+     session?.creatorId?.toLowerCase() === user.username.toLowerCase());
 
   // Handler for host to start session
   const handleStartSession = () => {
@@ -628,7 +631,7 @@ export default function SessionPage() {
   // Event session view
   if (session?.sessionType === "EVENT") {
     const isEnded = session.status === "ENDED" || session.status === "ended";
-    return <EventSessionView sessionId={sessionId} isHost={isHost} isEnded={isEnded} diningBorough={session.diningBorough} diningNeighborhood={session.diningNeighborhood} />;
+    return <EventSessionView sessionId={sessionId} isHost={isHost} isEnded={isEnded} diningBorough={session.diningBorough} diningNeighborhood={session.diningNeighborhood} eventName={session.eventName} eventDescription={session.eventDescription} />;
   }
 
   return (
@@ -710,12 +713,14 @@ export default function SessionPage() {
   );
 }
 
-function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNeighborhood }: {
+function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNeighborhood, eventName, eventDescription }: {
   sessionId: number;
   isHost: boolean;
   isEnded: boolean;
   diningBorough?: string;
   diningNeighborhood?: string;
+  eventName?: string;
+  eventDescription?: string;
 }) {
   const [eventRestaurants, setEventRestaurants] = useState<EventRestaurantDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -745,6 +750,14 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
         </div>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {eventName && (
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{eventName}</h1>
+            {eventDescription && (
+              <p className="text-sm text-gray-500 mt-1">{eventDescription}</p>
+            )}
+          </div>
+        )}
         {diningBorough && (
           <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
             Eating in: <span className="font-medium text-gray-900">{diningNeighborhood ? `${diningNeighborhood}, ` : ""}{diningBorough}</span>

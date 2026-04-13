@@ -59,6 +59,16 @@ export function AppHeader({ badge }: AppHeaderProps) {
                 Discover
               </Button>
             )}
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/events/create")}
+                className="text-purple-700 hover:text-purple-800 hover:bg-purple-50"
+              >
+                Create Event
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

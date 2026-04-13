@@ -34,6 +34,12 @@ public class Session {
     @Column(name = "join_code", unique = true, nullable = false, length = 6)
     private String joinCode;
 
+    @Column(length = 255)
+    private String eventName;
+
+    @Column(columnDefinition = "TEXT")
+    private String eventDescription;
+
     // Getters / Setters
     public String getJoinCode() {
         return joinCode;
@@ -143,4 +149,10 @@ public class Session {
 
     public Instant getVotingDeadline() { return votingDeadline; }
     public void setVotingDeadline(Instant votingDeadline) { this.votingDeadline = votingDeadline; }
+
+    public String getEventName() { return eventName; }
+    public void setEventName(String eventName) { this.eventName = eventName; }
+
+    public String getEventDescription() { return eventDescription; }
+    public void setEventDescription(String eventDescription) { this.eventDescription = eventDescription; }
 }
