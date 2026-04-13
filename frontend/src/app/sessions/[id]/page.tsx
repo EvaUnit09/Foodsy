@@ -780,6 +780,8 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
               </div>
               <EventRestaurantPicker
                 sessionId={String(sessionId)}
+                diningBorough={diningBorough}
+                diningNeighborhood={diningNeighborhood}
                 picked={eventRestaurants.map((r) => ({
                   providerId: r.providerId,
                   name: r.name,
