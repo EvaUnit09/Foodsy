@@ -229,8 +229,8 @@ public class VoteService {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
-        if (!"OFFLINE".equals(session.getSessionType())) {
-            throw new RuntimeException("This endpoint is only for offline sessions");
+        if (!"OFFLINE".equals(session.getSessionType()) && !"EVENT".equals(session.getSessionType())) {
+            throw new RuntimeException("This endpoint is only for offline/event sessions");
         }
         if ("ENDED".equals(session.getStatus())) {
             throw new ResponseStatusException(HttpStatus.GONE, "This session has been closed by the host");

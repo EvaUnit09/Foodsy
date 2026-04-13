@@ -439,6 +439,11 @@ export class ApiClient {
       ApiClient.request<void>(`/sessions/${sessionId}/event/complete`, {
         method: "POST",
       }),
+
+    lock: (sessionId: string): Promise<{ joinCode: string; sessionId: number }> =>
+      ApiClient.request<{ joinCode: string; sessionId: number }>(`/sessions/${sessionId}/event/lock`, {
+        method: "POST",
+      }),
   };
 
   /**

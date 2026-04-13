@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+
+
 @Service
 @Transactional
 public class EventSessionService {
@@ -21,17 +23,20 @@ public class EventSessionService {
     private final EventRsvpRepository rsvpRepo;
     private final SessionParticipantRepository participantRepo;
     private final RestaurantCacheRepository restaurantCacheRepository;
+    private final SessionRestaurantRepository sessionRestaurantRepository;
 
     public EventSessionService(SessionRepository sessionRepository,
                                EventSessionRestaurantRepository eventRestaurantRepo,
                                EventRsvpRepository rsvpRepo,
                                SessionParticipantRepository participantRepo,
-                               RestaurantCacheRepository restaurantCacheRepository) {
+                               RestaurantCacheRepository restaurantCacheRepository,
+                               SessionRestaurantRepository sessionRestaurantRepository) {
         this.sessionRepository = sessionRepository;
         this.eventRestaurantRepo = eventRestaurantRepo;
         this.rsvpRepo = rsvpRepo;
         this.participantRepo = participantRepo;
         this.restaurantCacheRepository = restaurantCacheRepository;
+        this.sessionRestaurantRepository = sessionRestaurantRepository;
     }
 
     public EventSessionRestaurant addRestaurant(Long sessionId, String creatorId, EventSessionRestaurant restaurant) {
@@ -137,6 +142,44 @@ public class EventSessionService {
         }
 
         return rsvp;
+    }
+
+    /**
+     * Host locks in the restaurant list. Copies EventSessionRestaurant rows into
+     * SessionRestaurant (round 1) and transitions the session to "voting".
+     */
+    public String lockRestaurants(Long sessionId, String creatorId) {
+        Session session = getSessionAsCreator(sessionId, creatorId);
+        if (!"EVENT".equals(session.getSessionType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not an event session");
+        }
+        if (!"setup".equals(session.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Restaurants are already locked");
+        }
+
+        List<EventSessionRestaurant> eventRestaurants = eventRestaurantRepo.findBySessionIdOrderByDisplayOrder(sessionId);
+        if (eventRestaurants.size() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least 2 restaurants before locking");
+        }
+
+        // Copy into SessionRestaurant for the offline voting flow
+        for (EventSessionRestaurant er : eventRestaurants) {
+            SessionRestaurant sr = new SessionRestaurant();
+            sr.setSessionId(sessionId);
+            sr.setProviderId(er.getProviderId());
+            sr.setName(er.getName());
+            sr.setAddress(er.getAddress());
+            sr.setCategory(er.getCategory());
+            sr.setPriceLevel(er.getPriceLevel());
+            sr.setRating(er.getRating());
+            sr.setLikeCount(0);
+            sr.setRound(1);
+            sessionRestaurantRepository.save(sr);
+        }
+
+        session.setStatus("voting");
+        sessionRepository.save(session);
+        return session.getJoinCode();
     }
 
     public void completeEvent(Long sessionId, String creatorId) {

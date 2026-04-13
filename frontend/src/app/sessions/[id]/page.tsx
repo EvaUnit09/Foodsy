@@ -24,6 +24,7 @@ import { VotingProgressSummary } from "@/components/VotingProgressSummary";
 import { EventRsvpForm } from "@/components/EventRsvpForm";
 import { EventResultsPage } from "@/components/EventResultsPage";
 import { EventRestaurantPicker } from "@/components/EventRestaurantPicker";
+import { EventDetailsCard } from "@/components/EventDetailsCard";
 import { ApiClient, EventRestaurantDto } from "@/api/client";
 import { VoteType } from "@/api/voteApi";
 
@@ -137,7 +138,7 @@ export default function SessionPage() {
   const sessionId = id ? Number(id) : 0;
 
   // All hooks at the top!
-  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string; expectedParticipants?: number; votingDeadline?: string; eventName?: string; eventDescription?: string } | null>(null);
+  const [session, setSession] = useState<{ creatorId: string; round: number; likesPerUser: number; roundTime?: number; status: string; isHost?: boolean; diningBorough?: string; diningNeighborhood?: string; sessionType?: string; expectedParticipants?: number; votingDeadline?: string; eventName?: string; eventDescription?: string; joinCode?: string } | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurantIdx, setCurrentRestaurantIdx] = useState(0);
   const [participants, setParticipants] = useState<{ userId: string; isHost: boolean }[]>([]);
@@ -631,7 +632,7 @@ export default function SessionPage() {
   // Event session view
   if (session?.sessionType === "EVENT") {
     const isEnded = session.status === "ENDED" || session.status === "ended";
-    return <EventSessionView sessionId={sessionId} isHost={isHost} isEnded={isEnded} diningBorough={session.diningBorough} diningNeighborhood={session.diningNeighborhood} eventName={session.eventName} eventDescription={session.eventDescription} />;
+    return <EventSessionView sessionId={sessionId} isHost={isHost} isEnded={isEnded} status={session.status} diningBorough={session.diningBorough} diningNeighborhood={session.diningNeighborhood} eventName={session.eventName} eventDescription={session.eventDescription} joinCode={session.joinCode} creatorId={session.creatorId} votingDeadline={session.votingDeadline} />;
   }
 
   return (
@@ -713,24 +714,82 @@ export default function SessionPage() {
   );
 }
 
-function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNeighborhood, eventName, eventDescription }: {
+function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, diningNeighborhood, eventName, eventDescription, joinCode, creatorId, votingDeadline }: {
   sessionId: number;
   isHost: boolean;
   isEnded: boolean;
+  status?: string;
   diningBorough?: string;
   diningNeighborhood?: string;
   eventName?: string;
   eventDescription?: string;
+  joinCode?: string;
+  creatorId?: string;
+  votingDeadline?: string;
 }) {
   const [eventRestaurants, setEventRestaurants] = useState<EventRestaurantDto[]>([]);
+  const [sessionRestaurants, setSessionRestaurants] = useState<Array<{
+    id: number; providerId: string; name: string; address: string;
+    category: string; priceLevel?: string; rating?: number; photos?: string[];
+  }>>([]);
   const [loading, setLoading] = useState(true);
+  const [locking, setLocking] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const effectiveStatus = isEnded ? "ENDED" : (status ?? "setup");
 
   useEffect(() => {
-    ApiClient.eventSessions.getRestaurants(String(sessionId))
-      .then(setEventRestaurants)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sessionId]);
+    const load = async () => {
+      try {
+        if (effectiveStatus === "setup") {
+          const data = await ApiClient.eventSessions.getRestaurants(String(sessionId));
+          setEventRestaurants(data);
+        } else if (effectiveStatus === "voting" || effectiveStatus === "ENDED") {
+          const [eventData, progress] = await Promise.allSettled([
+            ApiClient.eventSessions.getRestaurants(String(sessionId)),
+            ApiClient.sessions.getVotingProgress(String(sessionId)),
+          ]);
+          if (eventData.status === "fulfilled") setEventRestaurants(eventData.value);
+
+          const sessionRestData = await ApiClient.sessions.getRestaurants(String(sessionId));
+          setSessionRestaurants(sessionRestData.map((r) => ({
+            id: Number(r.id),
+            providerId: r.providerId,
+            name: r.name,
+            address: r.address,
+            category: "",
+            priceLevel: undefined,
+            rating: undefined,
+          })));
+
+          if (progress.status === "fulfilled") {
+            const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+            if (token) {
+              try {
+                const payload = JSON.parse(atob(token.split(".")[1]));
+                const uid = payload.sub as string;
+                const me = progress.value.participants?.find((p: { userId: string; votingStatus: string }) => p.userId === uid);
+                if (me?.votingStatus === "SUBMITTED") setHasSubmitted(true);
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+      setLoading(false);
+    };
+    load();
+  }, [sessionId, effectiveStatus]);
+
+  const handleLock = async () => {
+    setLocking(true);
+    try {
+      await ApiClient.eventSessions.lock(String(sessionId));
+      window.location.reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to lock restaurants");
+      setLocking(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -750,78 +809,92 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
         </div>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {eventName && (
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{eventName}</h1>
-            {eventDescription && (
-              <p className="text-sm text-gray-500 mt-1">{eventDescription}</p>
-            )}
-          </div>
-        )}
-        {diningBorough && (
-          <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
-            Eating in: <span className="font-medium text-gray-900">{diningNeighborhood ? `${diningNeighborhood}, ` : ""}{diningBorough}</span>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
           </div>
-        ) : isEnded ? (
+        ) : effectiveStatus === "ENDED" ? (
           <EventResultsPage sessionId={String(sessionId)} />
-        ) : isHost ? (
-          <>
-            {/* Host: manage the restaurant list then monitor progress */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Restaurant Options</h2>
-                <p className="text-sm text-gray-500 mt-0.5">Add 2–6 restaurants for your guests to vote on.</p>
+        ) : effectiveStatus === "setup" ? (
+          isHost ? (
+            <>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Pick Restaurants</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Choose 2–6 spots for your guests to vote on.</p>
+                </div>
+                <EventRestaurantPicker
+                  sessionId={String(sessionId)}
+                  diningBorough={diningBorough}
+                  diningNeighborhood={diningNeighborhood}
+                  picked={eventRestaurants.map((r) => ({
+                    providerId: r.providerId,
+                    name: r.name,
+                    address: r.address,
+                    category: r.category,
+                    priceLevel: r.priceLevel ?? null,
+                    rating: r.rating ?? null,
+                  }))}
+                  onAdded={(r) =>
+                    setEventRestaurants((prev) => [
+                      ...prev,
+                      { id: 0, sessionId, providerId: r.providerId, name: r.name, address: r.address,
+                        category: r.category, priceLevel: r.priceLevel ?? "", rating: r.rating ?? 0,
+                        displayOrder: prev.length + 1 },
+                    ])
+                  }
+                  onRemoved={(providerId) =>
+                    setEventRestaurants((prev) => prev.filter((r) => r.providerId !== providerId))
+                  }
+                />
               </div>
-              <EventRestaurantPicker
-                sessionId={String(sessionId)}
-                diningBorough={diningBorough}
-                diningNeighborhood={diningNeighborhood}
-                picked={eventRestaurants.map((r) => ({
-                  providerId: r.providerId,
-                  name: r.name,
-                  address: r.address,
-                  category: r.category,
-                  priceLevel: r.priceLevel ?? null,
-                  rating: r.rating ?? null,
-                }))}
-                onAdded={(r) =>
-                  setEventRestaurants((prev) => [
-                    ...prev,
-                    { id: 0, sessionId, providerId: r.providerId, name: r.name, address: r.address,
-                      category: r.category, priceLevel: r.priceLevel ?? "", rating: r.rating ?? 0,
-                      displayOrder: prev.length + 1 },
-                  ])
-                }
-                onRemoved={(providerId) =>
-                  setEventRestaurants((prev) => prev.filter((r) => r.providerId !== providerId))
-                }
-              />
+              {eventRestaurants.length >= 2 && (
+                <button
+                  onClick={handleLock}
+                  disabled={locking}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-base shadow hover:opacity-90 disabled:opacity-60 transition"
+                >
+                  {locking ? "Sending invites..." : "Done — Send to Guests"}
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-3xl">🎉</span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Event being set up</h2>
+              <p className="text-sm text-gray-500 max-w-xs">The host is still picking restaurants. Check back soon!</p>
             </div>
-            <VotingProgressSummary
-              sessionId={String(sessionId)}
-              isHost={isHost}
-              onCompleted={() => window.location.reload()}
-            />
-          </>
-        ) : (
+          )
+        ) : /* voting */ (
           <>
-            {/* Participant: RSVP + restaurant preference */}
-            <EventRsvpForm
+            <EventDetailsCard
               sessionId={String(sessionId)}
-              restaurants={eventRestaurants}
-              onSubmitted={() => window.location.reload()}
+              eventName={eventName}
+              eventDescription={eventDescription}
+              creatorId={creatorId}
+              diningBorough={diningBorough}
+              diningNeighborhood={diningNeighborhood}
+              votingDeadline={votingDeadline}
+              joinCode={joinCode}
+              isHost={isHost}
             />
-            <VotingProgressSummary
-              sessionId={String(sessionId)}
-              isHost={false}
-              onCompleted={() => window.location.reload()}
-            />
+            {isHost ? (
+              <VotingProgressSummary
+                sessionId={String(sessionId)}
+                isHost={true}
+                onCompleted={() => window.location.reload()}
+              />
+            ) : (
+              <OfflineVotingPanel
+                sessionId={String(sessionId)}
+                restaurants={sessionRestaurants}
+                hasSubmitted={hasSubmitted}
+                onSubmitted={() => setHasSubmitted(true)}
+                deadline={votingDeadline}
+              />
+            )}
           </>
         )}
       </main>

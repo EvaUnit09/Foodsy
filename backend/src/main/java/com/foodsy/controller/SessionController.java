@@ -87,7 +87,8 @@ public class SessionController {
         Integer expectedParticipants,
         String votingDeadline,
         String eventName,
-        String eventDescription
+        String eventDescription,
+        String joinCode
     ) {}
 
     record OfflineVoteSubmission(List<String> likedProviderIds) {}
@@ -241,7 +242,8 @@ public class SessionController {
             session.getExpectedParticipants(),
             session.getVotingDeadline() != null ? session.getVotingDeadline().toString() : null,
             session.getEventName(),
-            session.getEventDescription()
+            session.getEventDescription(),
+            session.getJoinCode()
         );
     }
 

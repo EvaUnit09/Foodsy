@@ -80,6 +80,16 @@ public class EventSessionController {
         return eventService.getEventSummary(sessionId);
     }
 
+    @PostMapping("/lock")
+    public ResponseEntity<Map<String, Object>> lockRestaurants(
+            @PathVariable Long sessionId,
+            Principal principal) {
+        requireAuth(principal);
+        String userId = principal.getName().trim().toLowerCase();
+        String joinCode = eventService.lockRestaurants(sessionId, userId);
+        return ResponseEntity.ok(Map.of("joinCode", joinCode, "sessionId", sessionId));
+    }
+
     @PostMapping("/complete")
     public ResponseEntity<Void> completeEvent(
             @PathVariable Long sessionId,

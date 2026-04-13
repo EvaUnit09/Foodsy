@@ -156,8 +156,13 @@ public class SessionService {
             }
             session.setExpectedParticipants(req.getExpectedParticipants());
             session.setVotingDeadline(Instant.parse(req.getVotingDeadline()));
-            // OFFLINE/EVENT sessions go straight to voting
-            session.setStatus("voting");
+            if ("OFFLINE".equals(sessionType)) {
+                // OFFLINE sessions go straight to voting
+                session.setStatus("voting");
+            } else {
+                // EVENT sessions start in setup until host locks in restaurants
+                session.setStatus("setup");
+            }
         } else {
             session.setStatus("OPEN");
         }
