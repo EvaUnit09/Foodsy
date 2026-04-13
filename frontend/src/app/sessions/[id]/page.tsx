@@ -728,10 +728,6 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
   votingDeadline?: string;
 }) {
   const [eventRestaurants, setEventRestaurants] = useState<EventRestaurantDto[]>([]);
-  const [sessionRestaurants, setSessionRestaurants] = useState<Array<{
-    id: number; providerId: string; name: string; address: string;
-    category: string; priceLevel?: string; rating?: number; photos?: string[];
-  }>>([]);
   const [loading, setLoading] = useState(true);
   const [locking, setLocking] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -741,34 +737,18 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
   useEffect(() => {
     const load = async () => {
       try {
-        if (effectiveStatus === "setup") {
-          const data = await ApiClient.eventSessions.getRestaurants(String(sessionId));
-          setEventRestaurants(data);
-        } else if (effectiveStatus === "voting" || effectiveStatus === "ENDED") {
-          const [eventData, progress] = await Promise.allSettled([
-            ApiClient.eventSessions.getRestaurants(String(sessionId)),
-            ApiClient.sessions.getVotingProgress(String(sessionId)),
-          ]);
-          if (eventData.status === "fulfilled") setEventRestaurants(eventData.value);
+        const data = await ApiClient.eventSessions.getRestaurants(String(sessionId));
+        setEventRestaurants(data);
 
-          const sessionRestData = await ApiClient.sessions.getRestaurants(String(sessionId));
-          setSessionRestaurants(sessionRestData.map((r) => ({
-            id: Number(r.id),
-            providerId: r.providerId,
-            name: r.name,
-            address: r.address,
-            category: "",
-            priceLevel: undefined,
-            rating: undefined,
-          })));
-
-          if (progress.status === "fulfilled") {
+        if (effectiveStatus === "voting" || effectiveStatus === "ENDED") {
+          const progress = await ApiClient.sessions.getVotingProgress(String(sessionId)).catch(() => null);
+          if (progress) {
             const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
             if (token) {
               try {
                 const payload = JSON.parse(atob(token.split(".")[1]));
                 const uid = payload.sub as string;
-                const me = progress.value.participants?.find((p: { userId: string; votingStatus: string }) => p.userId === uid);
+                const me = progress.participants?.find((p: { userId: string; votingStatus: string }) => p.userId === uid);
                 if (me?.votingStatus === "SUBMITTED") setHasSubmitted(true);
               } catch {}
             }
@@ -889,7 +869,16 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
             ) : (
               <OfflineVotingPanel
                 sessionId={String(sessionId)}
-                restaurants={sessionRestaurants}
+                restaurants={eventRestaurants.map((r) => ({
+                  id: r.id,
+                  providerId: r.providerId,
+                  name: r.name,
+                  address: r.address,
+                  category: r.category,
+                  priceLevel: r.priceLevel,
+                  rating: r.rating,
+                  photos: r.photos,
+                }))}
                 hasSubmitted={hasSubmitted}
                 onSubmitted={() => setHasSubmitted(true)}
                 deadline={votingDeadline}

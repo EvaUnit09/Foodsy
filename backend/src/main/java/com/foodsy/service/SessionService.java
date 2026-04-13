@@ -82,32 +82,35 @@ public class SessionService {
             session.setExpiresAt(now.plus(maxDurationHours, ChronoUnit.HOURS));
             
             Session saved = sessionRepository.save(session);
-            
-            // The controller will now pass optional lat/lng via Session fields or a DTO.
-            // For now preserve legacy behavior by using a default search if not provided.
-            GooglePlacesSearchResponse response = placesClient.search("Astoria, NY", "restaurants");
-            List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(response.places());
-            Collections.shuffle(places);
-            long limit = session.getPoolSize();
-            for (int i = 0; i < Math.min(limit, places.size()); i++) {
-                var place = places.get(i);
-                SessionRestaurant sr = new SessionRestaurant();
-                sr.setSessionId(saved.getId());
-                sr.setProviderId(place.id());
-                sr.setName(place.displayName().text());
-                sr.setAddress(place.formattedAddress());
-                sr.setCategory(place.types().isEmpty() ? "Restaurant" : place.types().getFirst());
-                sr.setRound(1);
-                sr.setLikeCount(0);
-                sr.setPriceLevel(place.priceLevel() != null ? place.priceLevel().name() : null);
-                sr.setPriceRange(place.priceRange());
-                sr.setRating(place.rating());
-                sr.setUserRatingCount(place.userRatingsTotal());
-                sr.setCurrentOpeningHours(place.currentOpeningHours());
-                sr.setGenerativeSummary(place.generativeSummary());
-                sr.setReviewSummary(place.reviewSummary());
-                sr.setWebsiteUri(place.websiteUri());
-                restaurantRepo.save(sr);
+
+            // EVENT sessions get their restaurants picked by the host manually — skip auto-seeding
+            if (!"EVENT".equals(session.getSessionType())) {
+                // The controller will now pass optional lat/lng via Session fields or a DTO.
+                // For now preserve legacy behavior by using a default search if not provided.
+                GooglePlacesSearchResponse response = placesClient.search("Astoria, NY", "restaurants");
+                List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(response.places());
+                Collections.shuffle(places);
+                long limit = session.getPoolSize();
+                for (int i = 0; i < Math.min(limit, places.size()); i++) {
+                    var place = places.get(i);
+                    SessionRestaurant sr = new SessionRestaurant();
+                    sr.setSessionId(saved.getId());
+                    sr.setProviderId(place.id());
+                    sr.setName(place.displayName().text());
+                    sr.setAddress(place.formattedAddress());
+                    sr.setCategory(place.types().isEmpty() ? "Restaurant" : place.types().getFirst());
+                    sr.setRound(1);
+                    sr.setLikeCount(0);
+                    sr.setPriceLevel(place.priceLevel() != null ? place.priceLevel().name() : null);
+                    sr.setPriceRange(place.priceRange());
+                    sr.setRating(place.rating());
+                    sr.setUserRatingCount(place.userRatingsTotal());
+                    sr.setCurrentOpeningHours(place.currentOpeningHours());
+                    sr.setGenerativeSummary(place.generativeSummary());
+                    sr.setReviewSummary(place.reviewSummary());
+                    sr.setWebsiteUri(place.websiteUri());
+                    restaurantRepo.save(sr);
+                }
             }
             
             // After saving the session

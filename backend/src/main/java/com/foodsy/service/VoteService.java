@@ -319,7 +319,13 @@ public class VoteService {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
-        List<SessionParticipant> participants = sessionParticipantRepository.findBySessionId(sessionId);
+        // For EVENT sessions, exclude the host — they chose the restaurants and don't vote
+        String creatorId = session.getCreatorId() != null ? session.getCreatorId().trim().toLowerCase() : "";
+        boolean isEvent = "EVENT".equals(session.getSessionType());
+        List<SessionParticipant> participants = sessionParticipantRepository.findBySessionId(sessionId)
+                .stream()
+                .filter(p -> !isEvent || !p.getUserId().trim().toLowerCase().equals(creatorId))
+                .toList();
         long submittedCount = participants.stream()
                 .filter(p -> "SUBMITTED".equals(p.getVotingStatus()))
                 .count();
