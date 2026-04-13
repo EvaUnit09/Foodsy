@@ -107,6 +107,7 @@ export interface EventRestaurantDto {
   priceLevel: string;
   rating: number;
   displayOrder: number;
+  photos?: string[];
 }
 
 export interface EventRsvpDto {

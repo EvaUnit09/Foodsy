@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, HelpCircle, Send } from "lucide-react";
+import { useState } from "react";
+import Image from "next/image";
+import { CheckCircle, XCircle, HelpCircle, Send, Star } from "lucide-react";
 import { Button } from "@/components/button";
 import { ApiClient, EventRestaurantDto } from "@/api/client";
 
@@ -43,10 +44,34 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
     );
   }
 
-  const rsvpOptions: { value: RsvpChoice; label: string; icon: React.ReactNode; color: string; selectedColor: string }[] = [
-    { value: "GOING", label: "Going", icon: <CheckCircle className="w-5 h-5" />, color: "border-gray-200 hover:border-green-300", selectedColor: "border-green-500 bg-green-50" },
-    { value: "MAYBE", label: "Maybe", icon: <HelpCircle className="w-5 h-5" />, color: "border-gray-200 hover:border-yellow-300", selectedColor: "border-yellow-500 bg-yellow-50" },
-    { value: "NOT_GOING", label: "Not Going", icon: <XCircle className="w-5 h-5" />, color: "border-gray-200 hover:border-red-300", selectedColor: "border-red-500 bg-red-50" },
+  const rsvpOptions: {
+    value: RsvpChoice;
+    label: string;
+    icon: React.ReactNode;
+    color: string;
+    selectedColor: string;
+  }[] = [
+    {
+      value: "GOING",
+      label: "Going",
+      icon: <CheckCircle className="w-5 h-5" />,
+      color: "border-gray-200 hover:border-green-300",
+      selectedColor: "border-green-500 bg-green-50",
+    },
+    {
+      value: "MAYBE",
+      label: "Maybe",
+      icon: <HelpCircle className="w-5 h-5" />,
+      color: "border-gray-200 hover:border-yellow-300",
+      selectedColor: "border-yellow-500 bg-yellow-50",
+    },
+    {
+      value: "NOT_GOING",
+      label: "Not Going",
+      icon: <XCircle className="w-5 h-5" />,
+      color: "border-gray-200 hover:border-red-300",
+      selectedColor: "border-red-500 bg-red-50",
+    },
   ];
 
   return (
@@ -59,7 +84,10 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
             <button
               key={opt.value}
               type="button"
-              onClick={() => { setRsvp(opt.value); if (opt.value === "NOT_GOING") setPreferredId(null); }}
+              onClick={() => {
+                setRsvp(opt.value);
+                if (opt.value === "NOT_GOING") setPreferredId(null);
+              }}
               className={`p-3 rounded-xl border-2 text-center transition-all ${
                 rsvp === opt.value ? opt.selectedColor : opt.color
               }`}
@@ -74,29 +102,71 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
       </div>
 
       {/* Restaurant preference (only for Going/Maybe) */}
-      {(rsvp === "GOING" || rsvp === "MAYBE") && (
+      {(rsvp === "GOING" || rsvp === "MAYBE") && restaurants.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Which restaurant do you prefer?</label>
-          <div className="space-y-2">
-            {restaurants.map((r) => (
-              <button
-                key={r.providerId}
-                type="button"
-                onClick={() => setPreferredId(r.providerId)}
-                className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
-                  preferredId === r.providerId
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <p className="font-medium text-gray-900">{r.name}</p>
-                <p className="text-xs text-gray-500">{r.address}</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  {r.rating > 0 && <span className="text-xs text-gray-600">{r.rating.toFixed(1)}</span>}
-                  {r.priceLevel && <span className="text-xs text-gray-400">{r.priceLevel}</span>}
-                </div>
-              </button>
-            ))}
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Which restaurant do you prefer?
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {restaurants.map((r) => {
+              const isSelected = preferredId === r.providerId;
+              const photo = r.photos?.[0];
+              return (
+                <button
+                  key={r.providerId}
+                  type="button"
+                  onClick={() => setPreferredId(isSelected ? null : r.providerId)}
+                  className={`text-left rounded-2xl border-2 overflow-hidden transition-all shadow-sm hover:shadow-md ${
+                    isSelected
+                      ? "border-orange-500 ring-2 ring-orange-200"
+                      : "border-gray-200 hover:border-orange-300"
+                  }`}
+                >
+                  {/* Photo */}
+                  <div className="relative w-full aspect-video bg-gray-100">
+                    {photo ? (
+                      <Image
+                        src={photo}
+                        alt={r.name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 50vw"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <span className="text-gray-400 text-sm">No photo</span>
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 bg-orange-500 text-white rounded-full p-1">
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-3">
+                    <p className="font-semibold text-gray-900 leading-tight">{r.name}</p>
+                    {r.category && (
+                      <p className="text-xs text-orange-600 font-medium mt-0.5">{r.category}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{r.address}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {r.rating > 0 && (
+                        <span className="flex items-center gap-0.5 text-xs text-gray-700">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          {r.rating.toFixed(1)}
+                        </span>
+                      )}
+                      {r.priceLevel && (
+                        <span className="text-xs text-gray-400">{r.priceLevel}</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

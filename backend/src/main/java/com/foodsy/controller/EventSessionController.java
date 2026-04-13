@@ -3,6 +3,7 @@ package com.foodsy.controller;
 import com.foodsy.domain.EventRsvp;
 import com.foodsy.domain.EventSessionRestaurant;
 import com.foodsy.domain.RsvpStatus;
+import com.foodsy.dto.EventRestaurantWithPhotosDto;
 import com.foodsy.service.EventSessionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,8 +59,8 @@ public class EventSessionController {
     }
 
     @GetMapping("/restaurants")
-    public List<EventSessionRestaurant> getRestaurants(@PathVariable Long sessionId) {
-        return eventService.getRestaurants(sessionId);
+    public List<EventRestaurantWithPhotosDto> getRestaurants(@PathVariable Long sessionId) {
+        return eventService.getRestaurantsWithPhotos(sessionId);
     }
 
     @PostMapping("/rsvp")

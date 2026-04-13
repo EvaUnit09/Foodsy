@@ -1,6 +1,7 @@
 package com.foodsy.service;
 
 import com.foodsy.domain.*;
+import com.foodsy.dto.EventRestaurantWithPhotosDto;
 import com.foodsy.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,15 +20,18 @@ public class EventSessionService {
     private final EventSessionRestaurantRepository eventRestaurantRepo;
     private final EventRsvpRepository rsvpRepo;
     private final SessionParticipantRepository participantRepo;
+    private final RestaurantCacheRepository restaurantCacheRepository;
 
     public EventSessionService(SessionRepository sessionRepository,
                                EventSessionRestaurantRepository eventRestaurantRepo,
                                EventRsvpRepository rsvpRepo,
-                               SessionParticipantRepository participantRepo) {
+                               SessionParticipantRepository participantRepo,
+                               RestaurantCacheRepository restaurantCacheRepository) {
         this.sessionRepository = sessionRepository;
         this.eventRestaurantRepo = eventRestaurantRepo;
         this.rsvpRepo = rsvpRepo;
         this.participantRepo = participantRepo;
+        this.restaurantCacheRepository = restaurantCacheRepository;
     }
 
     public EventSessionRestaurant addRestaurant(Long sessionId, String creatorId, EventSessionRestaurant restaurant) {
@@ -57,6 +61,23 @@ public class EventSessionService {
 
     public List<EventSessionRestaurant> getRestaurants(Long sessionId) {
         return eventRestaurantRepo.findBySessionIdOrderByDisplayOrder(sessionId);
+    }
+
+    public List<EventRestaurantWithPhotosDto> getRestaurantsWithPhotos(Long sessionId) {
+        List<EventSessionRestaurant> restaurants = eventRestaurantRepo.findBySessionIdOrderByDisplayOrder(sessionId);
+        if (restaurants.isEmpty()) return List.of();
+
+        List<String> providerIds = restaurants.stream()
+                .map(EventSessionRestaurant::getProviderId)
+                .toList();
+        Map<String, RestaurantCache> cacheByProviderId = restaurantCacheRepository
+                .findByPlaceIdIn(providerIds)
+                .stream()
+                .collect(Collectors.toMap(RestaurantCache::getPlaceId, c -> c));
+
+        return restaurants.stream()
+                .map(r -> EventRestaurantWithPhotosDto.from(r, cacheByProviderId.get(r.getProviderId())))
+                .toList();
     }
 
     public EventRsvp submitRsvp(Long sessionId, String userId, RsvpStatus status, String preferredProviderId) {

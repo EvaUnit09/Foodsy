@@ -23,10 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Forward the request to the AWS backend
     const response = await fetch(`${BACKEND_URL}/votes/${apiPath}`, {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
+      headers,
       body: req.method !== 'GET' && req.body ? JSON.stringify(req.body) : undefined,
     });
 
