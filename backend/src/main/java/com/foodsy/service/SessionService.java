@@ -27,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
@@ -163,23 +164,32 @@ public class SessionService {
 
         Session saved = createSession(session);
 
-        // If dining location is specified, resolve coordinates from neighborhood table
+        // If dining location is specified, resolve coordinates and bbox from neighborhood table
         Double lat = req.getLat();
         Double lng = req.getLng();
+        final double[] bboxHolder = new double[4]; // [latMin, latMax, lngMin, lngMax]
+        boolean hasBbox = false;
         if (lat == null && lng == null && req.getDiningNeighborhood() != null && req.getDiningBorough() != null) {
-            neighborhoodRepository.findByNameIgnoreCaseAndBoroughIgnoreCase(
-                    req.getDiningNeighborhood(), req.getDiningBorough()
-            ).ifPresent(neighborhood -> {
-                req.setLat(neighborhood.getCenterLat());
-                req.setLng(neighborhood.getCenterLng());
-            });
+            Optional<Neighborhood> nbOpt = neighborhoodRepository
+                    .findByNameIgnoreCaseAndBoroughIgnoreCase(req.getDiningNeighborhood(), req.getDiningBorough());
+            if (nbOpt.isPresent()) {
+                Neighborhood nb = nbOpt.get();
+                req.setLat(nb.getCenterLat());
+                req.setLng(nb.getCenterLng());
+                if (nb.getBboxLatMin() != null && nb.getBboxLatMax() != null
+                        && nb.getBboxLngMin() != null && nb.getBboxLngMax() != null) {
+                    bboxHolder[0] = nb.getBboxLatMin();
+                    bboxHolder[1] = nb.getBboxLatMax();
+                    bboxHolder[2] = nb.getBboxLngMin();
+                    bboxHolder[3] = nb.getBboxLngMax();
+                }
+            }
             lat = req.getLat();
             lng = req.getLng();
         }
+        final boolean finalHasBbox = lat != null && bboxHolder[0] != 0;
         if (lat == null || lng == null) {
             ipGeoClient.lookup(clientIp).ifPresent(coords -> {
-                // box into Double
-                // Only set if still null
                 if (req.getLat() == null) req.setLat(coords[0]);
                 if (req.getLng() == null) req.setLng(coords[1]);
             });
@@ -189,12 +199,27 @@ public class SessionService {
 
         if (lat != null && lng != null) {
             int effectivePoolSize = session.getPoolSize();
-            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, 4000.0, Math.max(20, effectivePoolSize));
+            // Use a tighter radius for neighborhood-specific sessions so Google doesn't
+            // rank cross-river (e.g. Manhattan) restaurants above local ones.
+            double radiusMeters = finalHasBbox ? 2000.0 : 4000.0;
+            GooglePlacesSearchResponse nearby = placesClient.searchNearby(lat, lng, radiusMeters, Math.max(20, effectivePoolSize));
             List<GooglePlacesSearchResponse.Place> places = new ArrayList<>(nearby.places());
             // Filter out clearly low-quality (rating < 3.0) or missing names
             places = places.stream()
                     .filter(p -> p != null && p.name() != null && (p.rating() == null || p.rating() >= 3.0))
                     .toList();
+            // When a neighborhood bbox is available, drop any restaurant that falls outside it
+            if (finalHasBbox) {
+                places = places.stream()
+                        .filter(p -> {
+                            if (p.location() == null) return true; // no coords → keep and let later steps decide
+                            double pLat = p.location().latitude();
+                            double pLng = p.location().longitude();
+                            return pLat >= bboxHolder[0] && pLat <= bboxHolder[1]
+                                    && pLng >= bboxHolder[2] && pLng <= bboxHolder[3];
+                        })
+                        .toList();
+            }
 
             // Dedupe by providerId
             java.util.LinkedHashMap<String, GooglePlacesSearchResponse.Place> byId = new java.util.LinkedHashMap<>();
