@@ -305,8 +305,8 @@ export class ApiClient {
       get: (): Promise<User> =>
         ApiClient.request<User>("/auth/me/profile"),
 
-      update: (data: ProfileUpdateRequest): Promise<User> =>
-        ApiClient.request<User>("/auth/me/profile", {
+      update: (data: ProfileUpdateRequest): Promise<User | { user: User; accessToken: string }> =>
+        ApiClient.request<User | { user: User; accessToken: string }>("/auth/me/profile", {
           method: "PATCH",
           body: JSON.stringify(data),
         }),

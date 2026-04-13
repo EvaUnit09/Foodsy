@@ -48,11 +48,16 @@ export default function ProfilePage() {
     setSaving(true);
     setMessage(null);
     try {
-      await ApiClient.auth.profile.update({
+      const result = await ApiClient.auth.profile.update({
         username: username.trim(),
         homeBorough: homeBorough || undefined,
         homeNeighborhood: homeNeighborhood || undefined,
       });
+      // When the username changed the backend issues a new access token so the
+      // existing JWT (which embeds the old username) doesn't break subsequent calls.
+      if (result && "accessToken" in result) {
+        localStorage.setItem("accessToken", result.accessToken);
+      }
       await checkAuthStatus();
       setMessage({ type: "success", text: "Profile updated" });
     } catch (err) {

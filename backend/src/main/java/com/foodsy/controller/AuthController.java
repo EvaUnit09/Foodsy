@@ -202,7 +202,8 @@ public class AuthController {
     }
 
     @PatchMapping("/me/profile")
-    public ResponseEntity<?> updateProfile(Principal principal, @RequestBody ProfileUpdateRequest request) {
+    public ResponseEntity<?> updateProfile(Principal principal, @RequestBody ProfileUpdateRequest request,
+                                           HttpServletResponse response) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -211,6 +212,7 @@ public class AuthController {
             return ResponseEntity.notFound().build();
         }
         User user = userOpt.get();
+        boolean usernameChanged = false;
 
         // Update username if provided
         if (request.username() != null) {
@@ -221,8 +223,11 @@ public class AuthController {
             if (userRepository.existsByUsernameAndIdNot(newUsername, user.getId())) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Username is already taken"));
             }
-            user.setUsername(newUsername);
-            user.setDisplayName(newUsername);
+            if (!newUsername.equals(user.getUsername())) {
+                user.setUsername(newUsername);
+                user.setDisplayName(newUsername);
+                usernameChanged = true;
+            }
         }
 
         // Update location if provided
@@ -248,7 +253,19 @@ public class AuthController {
         }
 
         userRepository.save(user);
-        return ResponseEntity.ok(UserMapper.toDto(user));
+        UserDto userDto = UserMapper.toDto(user);
+
+        // When the username changes the existing JWT (which embeds the username as its subject)
+        // becomes stale — any subsequent /auth/me or /auth/refresh call will fail to find the user.
+        // Issue fresh tokens so the client can continue the session without interruption.
+        if (usernameChanged) {
+            String newAccessToken = jwtService.generateAccessToken(user.getUsername(), user.getEmail());
+            String newRefreshToken = jwtService.generateRefreshToken(user.getUsername());
+            cookieUtil.setRefreshTokenCookie(response, newRefreshToken);
+            return ResponseEntity.ok(Map.of("user", userDto, "accessToken", newAccessToken));
+        }
+
+        return ResponseEntity.ok(userDto);
     }
 
     @PostMapping("/me/profile/avatar")
