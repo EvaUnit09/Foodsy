@@ -22,6 +22,7 @@ import { OfflineVotingPanel } from "@/components/OfflineVotingPanel";
 import { VotingProgressSummary } from "@/components/VotingProgressSummary";
 import { EventRsvpForm } from "@/components/EventRsvpForm";
 import { EventResultsPage } from "@/components/EventResultsPage";
+import { EventRestaurantPicker } from "@/components/EventRestaurantPicker";
 import { ApiClient, EventRestaurantDto } from "@/api/client";
 import { VoteType } from "@/api/voteApi";
 
@@ -751,8 +752,46 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
           </div>
         ) : isEnded ? (
           <EventResultsPage sessionId={String(sessionId)} />
+        ) : isHost ? (
+          <>
+            {/* Host: manage the restaurant list then monitor progress */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Restaurant Options</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Add 2–6 restaurants for your guests to vote on.</p>
+              </div>
+              <EventRestaurantPicker
+                sessionId={String(sessionId)}
+                picked={eventRestaurants.map((r) => ({
+                  providerId: r.providerId,
+                  name: r.name,
+                  address: r.address,
+                  category: r.category,
+                  priceLevel: r.priceLevel ?? null,
+                  rating: r.rating ?? null,
+                }))}
+                onAdded={(r) =>
+                  setEventRestaurants((prev) => [
+                    ...prev,
+                    { id: 0, sessionId, providerId: r.providerId, name: r.name, address: r.address,
+                      category: r.category, priceLevel: r.priceLevel ?? "", rating: r.rating ?? 0,
+                      displayOrder: prev.length + 1 },
+                  ])
+                }
+                onRemoved={(providerId) =>
+                  setEventRestaurants((prev) => prev.filter((r) => r.providerId !== providerId))
+                }
+              />
+            </div>
+            <VotingProgressSummary
+              sessionId={String(sessionId)}
+              isHost={isHost}
+              onCompleted={() => window.location.reload()}
+            />
+          </>
         ) : (
           <>
+            {/* Participant: RSVP + restaurant preference */}
             <EventRsvpForm
               sessionId={String(sessionId)}
               restaurants={eventRestaurants}
@@ -760,7 +799,7 @@ function EventSessionView({ sessionId, isHost, isEnded, diningBorough, diningNei
             />
             <VotingProgressSummary
               sessionId={String(sessionId)}
-              isHost={isHost}
+              isHost={false}
               onCompleted={() => window.location.reload()}
             />
           </>
