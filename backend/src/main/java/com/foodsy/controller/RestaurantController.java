@@ -7,6 +7,7 @@ import com.foodsy.domain.Session;
 import com.foodsy.dto.RestaurantDto;
 import com.foodsy.dto.RestaurantSummaryDto;
 import com.foodsy.service.RestaurantCacheService;
+import com.foodsy.service.S3PhotoUploadJob;
 import com.foodsy.service.SessionService;
 import com.foodsy.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,17 +38,20 @@ public class RestaurantController {
     private final SessionService sessionService;
     private final RestaurantCacheService restaurantCacheService;
     private final UserService userService;
+    private final S3PhotoUploadJob s3PhotoUploadJob;
 
     @Value("${admin.secret:}")
     private String adminSecret;
 
     public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService,
                                 RestaurantCacheService restaurantCacheService,
-                                UserService userService) {
+                                UserService userService,
+                                S3PhotoUploadJob s3PhotoUploadJob) {
         this.placesClient = placesClient;
         this.sessionService = sessionService;
         this.restaurantCacheService = restaurantCacheService;
         this.userService = userService;
+        this.s3PhotoUploadJob = s3PhotoUploadJob;
     }
     private static final java.util.Set<String> SUPPORTED_BOROUGHS =
             java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
@@ -74,6 +78,17 @@ public class RestaurantController {
             }
         }
         return ResponseEntity.ok(java.util.Map.of("refreshed", refreshed, "failed", failed));
+    }
+
+    @PostMapping("/photos/sync")
+    public ResponseEntity<java.util.Map<String, Object>> syncPhotos(HttpServletRequest request) {
+        String providedSecret = request.getHeader("X-Admin-Secret");
+        if (adminSecret == null || adminSecret.isBlank() ||
+                !adminSecret.equals(providedSecret)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        s3PhotoUploadJob.uploadPendingPhotos();
+        return ResponseEntity.ok(java.util.Map.of("status", "sync complete"));
     }
 
     private static final java.util.List<String> DISCOVERY_BOROUGHS =
