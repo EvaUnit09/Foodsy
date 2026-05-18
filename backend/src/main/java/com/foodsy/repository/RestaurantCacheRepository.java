@@ -226,6 +226,15 @@ public interface RestaurantCacheRepository extends JpaRepository<RestaurantCache
     List<Object[]> getTrendingStats(@Param("borough") String borough, @Param("now") Instant now);
     
     /**
+     * Wipe all cached S3 photo URLs so the next sync re-uploads every restaurant.
+     * Use when bulk uploads produced bad objects (e.g. wrong content type).
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM restaurant_cache_photo_urls", nativeQuery = true)
+    void clearAllPhotoUrls();
+
+    /**
      * Clear trending data for expired calculations
      */
     @Modifying

@@ -54,14 +54,19 @@ public class S3PhotoService {
         String s3Key = "restaurants/" + placeId + "/" + photoId + ".jpg";
         String publicUrl = photoBaseUrl + "/" + s3Key;
 
-        // Idempotency check — skip if already uploaded
+        // Idempotency check — skip if already uploaded with correct content type
         try {
-            s3Client.headObject(HeadObjectRequest.builder()
+            var head = s3Client.headObject(HeadObjectRequest.builder()
                     .bucket(bucketName)
                     .key(s3Key)
                     .build());
-            log.debug("S3 photo already exists, skipping: {}", s3Key);
-            return Optional.of(publicUrl);
+            String existingContentType = head.contentType();
+            if (existingContentType != null && existingContentType.startsWith("image/")) {
+                log.debug("S3 photo already exists, skipping: {}", s3Key);
+                return Optional.of(publicUrl);
+            }
+            // Object exists but has wrong content type (e.g. JSON from skipHttpRedirect) — re-upload
+            log.info("S3 photo has wrong content type '{}', re-uploading: {}", existingContentType, s3Key);
         } catch (NoSuchKeyException ignored) {
             // Not yet uploaded — proceed
         } catch (Exception e) {
@@ -71,7 +76,7 @@ public class S3PhotoService {
 
         // Download from Google Places API
         String googleUrl = "https://places.googleapis.com/v1/places/" + placeId
-                + "/photos/" + photoId + "/media?maxHeightPx=800&maxWidthPx=800&skipHttpRedirect=true";
+                + "/photos/" + photoId + "/media?maxHeightPx=800&maxWidthPx=800";
         byte[] photoBytes;
         String contentType;
         try {

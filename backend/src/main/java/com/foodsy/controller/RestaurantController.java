@@ -39,6 +39,7 @@ public class RestaurantController {
     private final RestaurantCacheService restaurantCacheService;
     private final UserService userService;
     private final S3PhotoUploadJob s3PhotoUploadJob;
+    private final com.foodsy.repository.RestaurantCacheRepository cacheRepository;
 
     @Value("${admin.secret:}")
     private String adminSecret;
@@ -46,12 +47,14 @@ public class RestaurantController {
     public RestaurantController(GooglePlacesClient placesClient, SessionService sessionService,
                                 RestaurantCacheService restaurantCacheService,
                                 UserService userService,
-                                S3PhotoUploadJob s3PhotoUploadJob) {
+                                S3PhotoUploadJob s3PhotoUploadJob,
+                                com.foodsy.repository.RestaurantCacheRepository cacheRepository) {
         this.placesClient = placesClient;
         this.sessionService = sessionService;
         this.restaurantCacheService = restaurantCacheService;
         this.userService = userService;
         this.s3PhotoUploadJob = s3PhotoUploadJob;
+        this.cacheRepository = cacheRepository;
     }
     private static final java.util.Set<String> SUPPORTED_BOROUGHS =
             java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
@@ -81,14 +84,19 @@ public class RestaurantController {
     }
 
     @PostMapping("/photos/sync")
-    public ResponseEntity<java.util.Map<String, Object>> syncPhotos(HttpServletRequest request) {
+    public ResponseEntity<java.util.Map<String, Object>> syncPhotos(
+            HttpServletRequest request,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean force) {
         String providedSecret = request.getHeader("X-Admin-Secret");
         if (adminSecret == null || adminSecret.isBlank() ||
                 !adminSecret.equals(providedSecret)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        if (force) {
+            cacheRepository.clearAllPhotoUrls();
+        }
         s3PhotoUploadJob.uploadPendingPhotos();
-        return ResponseEntity.ok(java.util.Map.of("status", "sync complete"));
+        return ResponseEntity.ok(java.util.Map.of("status", "sync complete", "force", force));
     }
 
     private static final java.util.List<String> DISCOVERY_BOROUGHS =
