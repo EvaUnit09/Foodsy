@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class S3PhotoUploadJob {
@@ -61,7 +62,7 @@ public class S3PhotoUploadJob {
                 // Persist fresh resource names so the proxy endpoint also heals
                 List<String> freshRefs = freshPhotoIds.stream()
                         .map(id -> "places/" + placeId + "/photos/" + id)
-                        .toList();
+                        .collect(Collectors.toCollection(ArrayList::new));
                 restaurant.setPhotoReferences(freshRefs);
             } else {
                 // Fall back to stored references if Places API returns nothing
@@ -114,7 +115,7 @@ public class S3PhotoUploadJob {
         return photoReferences.stream()
                 .map(this::extractPhotoId)
                 .filter(id -> id != null)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private String extractPhotoId(String photoReference) {
