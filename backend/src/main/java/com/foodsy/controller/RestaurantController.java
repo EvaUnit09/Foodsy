@@ -95,8 +95,8 @@ public class RestaurantController {
         if (force) {
             cacheRepository.clearAllPhotoUrls();
         }
-        s3PhotoUploadJob.uploadPendingPhotos();
-        return ResponseEntity.ok(java.util.Map.of("status", "sync complete", "force", force));
+        java.util.concurrent.CompletableFuture.runAsync(s3PhotoUploadJob::uploadPendingPhotos);
+        return ResponseEntity.accepted().body(java.util.Map.of("status", "sync started", "force", force));
     }
 
     private static final java.util.List<String> DISCOVERY_BOROUGHS =
