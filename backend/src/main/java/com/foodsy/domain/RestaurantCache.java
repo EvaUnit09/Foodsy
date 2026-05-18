@@ -45,7 +45,7 @@ public class RestaurantCache {
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
     
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "restaurant_cache_photos", joinColumns = @JoinColumn(name = "restaurant_cache_id"))
     @Column(name = "photo_reference", columnDefinition = "TEXT")
     private List<String> photoReferences;
