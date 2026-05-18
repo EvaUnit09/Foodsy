@@ -471,8 +471,12 @@ public class SessionController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the host can close this session");
         }
         sessionService.endSession(id, "closed by host");
-        messagingTemplate.convertAndSend("/topic/session/" + id,
-            new SessionEventsController.SessionEvent("sessionClosed", Map.of("sessionId", id)));
+        try {
+            messagingTemplate.convertAndSend("/topic/session/" + id,
+                new SessionEventsController.SessionEvent("sessionClosed", Map.of("sessionId", id)));
+        } catch (Exception e) {
+            logger.warn("Failed to broadcast sessionClosed event for session {}: {}", id, e.getMessage());
+        }
         return ResponseEntity.noContent().build();
     }
 
