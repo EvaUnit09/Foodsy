@@ -110,7 +110,6 @@ public class S3PhotoService {
                             .key(s3Key)
                             .contentType(contentType)
                             .cacheControl("public, max-age=31536000, immutable")
-                            .acl(software.amazon.awssdk.services.s3.model.ObjectCannedACL.PUBLIC_READ)
                             .build(),
                     RequestBody.fromBytes(photoBytes));
             log.debug("Uploaded photo to S3: {}", s3Key);
