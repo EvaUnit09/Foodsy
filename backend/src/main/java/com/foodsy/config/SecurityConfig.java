@@ -55,6 +55,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/neighborhoods/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/restaurants/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/restaurants/trending/refresh").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/restaurants/photos/sync").permitAll()
                     .requestMatchers(HttpMethod.GET, "/homepage/health", "/homepage/trending/stats/**").permitAll()
                     .anyRequest().authenticated())
             .formLogin(AbstractHttpConfigurer::disable)
