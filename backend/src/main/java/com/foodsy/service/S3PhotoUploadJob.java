@@ -1,5 +1,6 @@
 package com.foodsy.service;
 
+import com.foodsy.client.GooglePlacesClient;
 import com.foodsy.domain.RestaurantCache;
 import com.foodsy.repository.RestaurantCacheRepository;
 import org.slf4j.Logger;
@@ -20,15 +21,19 @@ public class S3PhotoUploadJob {
 
     private final RestaurantCacheRepository cacheRepository;
     private final S3PhotoService s3PhotoService;
+    private final GooglePlacesClient placesClient;
 
-    public S3PhotoUploadJob(RestaurantCacheRepository cacheRepository, S3PhotoService s3PhotoService) {
+    public S3PhotoUploadJob(RestaurantCacheRepository cacheRepository,
+                            S3PhotoService s3PhotoService,
+                            GooglePlacesClient placesClient) {
         this.cacheRepository = cacheRepository;
         this.s3PhotoService = s3PhotoService;
+        this.placesClient = placesClient;
     }
 
     /**
      * Runs at 3:30 AM daily, after the 3:00 AM trending refresh.
-     * Uploads restaurant photos to S3 and stores the resulting URLs in the cache.
+     * Refreshes photo references from Places API (stale refs cause 400s) then uploads to S3.
      */
     @Scheduled(cron = "0 30 3 * * *")
     public void uploadPendingPhotos() {
@@ -46,22 +51,31 @@ public class S3PhotoUploadJob {
                 continue;
             }
 
-            List<String> photoRefs = restaurant.getPhotoReferences();
-            if (photoRefs == null || photoRefs.isEmpty()) {
+            String placeId = restaurant.getPlaceId();
+
+            // Re-fetch fresh photo IDs from Places API — stored refs expire and return INVALID_ARGUMENT
+            List<String> freshPhotoIds = placesClient.fetchPhotoUrls(placeId, MAX_PHOTOS_PER_RESTAURANT);
+            boolean refreshedFromApi = !freshPhotoIds.isEmpty();
+
+            if (refreshedFromApi) {
+                // Persist fresh resource names so the proxy endpoint also heals
+                List<String> freshRefs = freshPhotoIds.stream()
+                        .map(id -> "places/" + placeId + "/photos/" + id)
+                        .toList();
+                restaurant.setPhotoReferences(freshRefs);
+            } else {
+                // Fall back to stored references if Places API returns nothing
+                freshPhotoIds = storedPhotoIds(restaurant.getPhotoReferences());
+            }
+
+            if (freshPhotoIds.isEmpty()) {
                 skipped++;
                 continue;
             }
 
             List<String> newUrls = new ArrayList<>();
-            String placeId = restaurant.getPlaceId();
-
-            for (int i = 0; i < Math.min(photoRefs.size(), MAX_PHOTOS_PER_RESTAURANT); i++) {
-                String ref = photoRefs.get(i);
-                String photoId = extractPhotoId(ref);
-                if (photoId == null) {
-                    failed++;
-                    continue;
-                }
+            for (int i = 0; i < freshPhotoIds.size(); i++) {
+                String photoId = freshPhotoIds.get(i);
 
                 Optional<String> url = s3PhotoService.uploadPhoto(placeId, photoId);
                 if (url.isPresent()) {
@@ -71,7 +85,7 @@ public class S3PhotoUploadJob {
                     failed++;
                 }
 
-                if (i < Math.min(photoRefs.size(), MAX_PHOTOS_PER_RESTAURANT) - 1) {
+                if (i < freshPhotoIds.size() - 1) {
                     try {
                         Thread.sleep(THROTTLE_DELAY_MS);
                     } catch (InterruptedException e) {
@@ -85,6 +99,9 @@ public class S3PhotoUploadJob {
             if (!newUrls.isEmpty()) {
                 restaurant.setPhotoUrls(newUrls);
                 cacheRepository.save(restaurant);
+            } else if (refreshedFromApi) {
+                // Save refreshed photo references even if S3 upload failed
+                cacheRepository.save(restaurant);
             }
         }
 
@@ -92,16 +109,22 @@ public class S3PhotoUploadJob {
                 uploaded, skipped, failed);
     }
 
+    private List<String> storedPhotoIds(List<String> photoReferences) {
+        if (photoReferences == null) return List.of();
+        return photoReferences.stream()
+                .map(this::extractPhotoId)
+                .filter(id -> id != null)
+                .toList();
+    }
+
     private String extractPhotoId(String photoReference) {
         if (photoReference == null) return null;
-        // Format: "places/{placeId}/photos/{photoId}"
         if (photoReference.startsWith("places/") && photoReference.contains("/photos/")) {
             String[] parts = photoReference.split("/photos/");
             if (parts.length > 1 && !parts[1].isEmpty()) {
                 return parts[1];
             }
         }
-        // Fall back to using the reference as-is if it doesn't match expected format
         return photoReference.isEmpty() ? null : photoReference;
     }
 }
