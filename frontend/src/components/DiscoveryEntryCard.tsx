@@ -45,7 +45,7 @@ export function DiscoveryEntryCard() {
         <button
           onClick={() => router.push("/discover")}
           style={{
-            background: "#e8531a",
+            background: "#1c1917",
             color: "#fff",
             fontWeight: 700,
             fontSize: 13,
@@ -54,14 +54,14 @@ export function DiscoveryEntryCard() {
             padding: "9px 18px",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
         >
           Start Discovering
         </button>
       </div>
 
-      {/* Static progress ring placeholder */}
+      {/* Progress ring */}
       <div style={{ flexShrink: 0 }}>
         <svg width={72} height={72} viewBox="0 0 72 72">
           <circle
@@ -69,7 +69,7 @@ export function DiscoveryEntryCard() {
             cy={36}
             r={30}
             fill="none"
-            stroke="#f0f0f0"
+            stroke="#e7e5e4"
             strokeWidth={6}
           />
           <circle
@@ -77,7 +77,7 @@ export function DiscoveryEntryCard() {
             cy={36}
             r={30}
             fill="none"
-            stroke="#e8531a"
+            stroke="#1c1917"
             strokeWidth={6}
             strokeDasharray={`${(seenCount / DAILY_CAP) * 2 * Math.PI * 30} ${2 * Math.PI * 30}`}
             strokeLinecap="round"

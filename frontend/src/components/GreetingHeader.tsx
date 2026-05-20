@@ -24,7 +24,7 @@ export function GreetingHeader({ firstName, onStartSession, onJoinSession }: Gre
         alignItems: "center",
         justifyContent: "space-between",
         padding: "40px 32px 24px",
-        background: "#fdf6f0",
+        background: "#fafaf9",
       }}
     >
       <div>
@@ -48,7 +48,7 @@ export function GreetingHeader({ firstName, onStartSession, onJoinSession }: Gre
         <button
           onClick={onStartSession}
           style={{
-            background: "#e8531a",
+            background: "#1c1917",
             color: "#fff",
             fontWeight: 700,
             fontSize: 14,
@@ -56,10 +56,10 @@ export function GreetingHeader({ firstName, onStartSession, onJoinSession }: Gre
             borderRadius: 10,
             padding: "10px 20px",
             cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(232,83,26,0.30)",
+            boxShadow: "0 4px 14px rgba(28,25,23,0.25)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
         >
           + Start a Session
         </button>
@@ -68,7 +68,7 @@ export function GreetingHeader({ firstName, onStartSession, onJoinSession }: Gre
           style={{
             background: "none",
             border: "none",
-            color: "#e8531a",
+            color: "#1c1917",
             fontWeight: 600,
             fontSize: 14,
             cursor: "pointer",

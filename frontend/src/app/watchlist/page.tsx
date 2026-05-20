@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bookmark } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
 import { DiscoveryRestaurant } from "@/api/discoveryApi";
@@ -38,7 +38,7 @@ export default function WatchlistPage() {
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fdf6f0" }}>
+    <div style={{ minHeight: "100vh", background: "#fafaf9" }}>
       <AppHeader badge="Want to Try" />
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "24px 20px" }}>
@@ -108,7 +108,7 @@ export default function WatchlistPage() {
             <button
               onClick={() => router.push("/discover")}
               style={{
-                background: "#e8531a",
+                background: "#1c1917",
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 14,
@@ -117,8 +117,8 @@ export default function WatchlistPage() {
                 padding: "11px 24px",
                 cursor: "pointer",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
             >
               Start Discovering
             </button>
@@ -190,10 +190,10 @@ function WatchlistCard({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "#f5f0ff",
+                background: "#f5f5f4",
               }}
             >
-              <span style={{ fontSize: 32 }}>🔖</span>
+              <Bookmark style={{ width: 32, height: 32, color: "#a8a29e" }} />
             </div>
           )}
         </div>

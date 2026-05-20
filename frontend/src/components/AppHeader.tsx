@@ -17,7 +17,7 @@ export function AppHeader({ badge }: AppHeaderProps) {
   const resolvedBadge = badge ?? (isAuthenticated ? "Dashboard" : "NY");
 
   return (
-    <header className="bg-[#fdf6f0] border-b border-[rgba(0,0,0,0.06)] sticky top-0 z-50">
+    <header className="bg-white border-b border-stone-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo + badge */}
@@ -27,7 +27,7 @@ export function AppHeader({ badge }: AppHeaderProps) {
               style={{ background: "none", border: "none", cursor: "pointer" }}
               onClick={() => router.push("/")}
             >
-              <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">F</span>
               </div>
               <span
@@ -64,7 +64,7 @@ export function AppHeader({ badge }: AppHeaderProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/events/create")}
-                className="text-purple-700 hover:text-purple-800 hover:bg-purple-50"
+                className="text-stone-600 hover:text-stone-900 hover:bg-stone-50"
               >
                 Create Event
               </Button>
@@ -82,7 +82,7 @@ export function AppHeader({ badge }: AppHeaderProps) {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => router.push("/profile")}
-                  className="flex items-center space-x-2 bg-orange-50 px-3 py-1 rounded-full hover:bg-orange-100 transition-colors cursor-pointer border-none"
+                  className="flex items-center space-x-2 bg-stone-50 px-3 py-1 rounded-full hover:bg-stone-100 transition-colors cursor-pointer border-none"
                   style={{ background: undefined }}
                 >
                   {user.effectiveAvatarUrl || user.customAvatarUrl || user.avatarUrl ? (
@@ -92,9 +92,9 @@ export function AppHeader({ badge }: AppHeaderProps) {
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
-                    <UserIcon className="w-4 h-4 text-orange-600" />
+                    <UserIcon className="w-4 h-4 text-stone-600" />
                   )}
-                  <span className="text-sm font-medium text-orange-700">
+                  <span className="text-sm font-medium text-stone-900">
                     {user.displayName}
                   </span>
                 </button>
@@ -112,18 +112,18 @@ export function AppHeader({ badge }: AppHeaderProps) {
               <button
                 className="text-white font-bold cursor-pointer"
                 style={{
-                  background: "#e8531a",
+                  background: "#1c1917",
                   borderRadius: 10,
                   padding: "8px 20px",
                   fontSize: 14,
                   border: "none",
-                  boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+                  boxShadow: "0 4px 14px rgba(28,25,23,0.25)",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#c94010")
+                  (e.currentTarget.style.background = "#292524")
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#e8531a")
+                  (e.currentTarget.style.background = "#1c1917")
                 }
                 onClick={() =>
                   (window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`)

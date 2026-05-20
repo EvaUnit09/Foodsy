@@ -25,7 +25,7 @@ export function ActiveSessionBanner({
     <div
       style={{
         background: "#fff",
-        borderLeft: "4px solid #e8531a",
+        borderLeft: "4px solid #1c1917",
         borderRadius: 12,
         boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
         padding: "16px 20px",
@@ -44,7 +44,7 @@ export function ActiveSessionBanner({
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: "#e8531a",
+            background: "#1c1917",
             flexShrink: 0,
           }}
         />
@@ -92,7 +92,7 @@ export function ActiveSessionBanner({
         <button
           onClick={() => router.push(`/sessions/${sessionId}`)}
           style={{
-            background: "#e8531a",
+            background: "#1c1917",
             color: "#fff",
             fontWeight: 700,
             fontSize: 13,
@@ -102,8 +102,8 @@ export function ActiveSessionBanner({
             cursor: "pointer",
             whiteSpace: "nowrap",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
         >
           Rejoin Session
         </button>

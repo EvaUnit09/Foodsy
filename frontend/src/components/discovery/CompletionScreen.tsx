@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CheckCircle2, Flame } from "lucide-react";
 import { DAILY_CAP } from "@/api/discoveryApi";
 
 interface CompletionScreenProps {
@@ -35,7 +36,7 @@ export function CompletionScreen({
       style={{
         position: "fixed",
         inset: 0,
-        background: "#fdf6f0",
+        background: "#fafaf9",
         zIndex: 30,
         display: "flex",
         flexDirection: "column",
@@ -46,7 +47,9 @@ export function CompletionScreen({
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: 48 }}>🎉</div>
+      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#f5f5f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CheckCircle2 style={{ width: 28, height: 28, color: "#57534e" }} />
+      </div>
 
       <div>
         <h2
@@ -117,7 +120,7 @@ export function CompletionScreen({
       {streak > 0 && (
         <div
           style={{
-            background: "#fff3ee",
+            background: "#f5f5f4",
             borderRadius: 16,
             padding: "16px 24px",
             width: "100%",
@@ -128,11 +131,14 @@ export function CompletionScreen({
             style={{
               fontSize: 18,
               fontWeight: 800,
-              color: "#e8531a",
+              color: "#1c1917",
               marginBottom: 4,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
             }}
           >
-            🔥 {streak}-day streak
+            <Flame style={{ width: 18, height: 18 }} /> {streak}-day streak
           </div>
           <div style={{ fontSize: 12, color: "#888" }}>
             Keep discovering daily
@@ -155,10 +161,10 @@ export function CompletionScreen({
             flex: 1,
             padding: "13px 0",
             background: "transparent",
-            color: "#e8531a",
+            color: "#1c1917",
             fontWeight: 700,
             fontSize: 14,
-            border: "2px solid #e8531a",
+            border: "2px solid #1c1917",
             borderRadius: 12,
             cursor: "pointer",
           }}
@@ -170,7 +176,7 @@ export function CompletionScreen({
           style={{
             flex: 1,
             padding: "13px 0",
-            background: "#e8531a",
+            background: "#1c1917",
             color: "#fff",
             fontWeight: 700,
             fontSize: 14,

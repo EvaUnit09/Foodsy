@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Heart, Star } from "lucide-react";
+import { Heart, Star, UtensilsCrossed } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -101,8 +101,8 @@ export function TrendingCarousel({ onSignUpPrompt, userBorough }: TrendingCarous
                 padding: "8px 16px",
                 fontSize: 14,
                 fontWeight: activeBorough === key ? 600 : 400,
-                color: activeBorough === key ? "#e8531a" : "#666",
-                borderBottom: activeBorough === key ? "2px solid #e8531a" : "2px solid transparent",
+                color: activeBorough === key ? "#1c1917" : "#666",
+                borderBottom: activeBorough === key ? "2px solid #1c1917" : "2px solid transparent",
                 marginBottom: -1,
                 cursor: "pointer",
                 transition: "color 0.15s",
@@ -122,7 +122,7 @@ export function TrendingCarousel({ onSignUpPrompt, userBorough }: TrendingCarous
             ))}
           </div>
         ) : restaurants.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8">No trending restaurants available yet.</p>
+          <p className="text-stone-400 text-sm py-8">No trending restaurants available yet.</p>
         ) : (
           <Carousel
             key={activeBorough}
@@ -168,7 +168,7 @@ function TrendingCard({
         cursor: restaurant.websiteUri ? "pointer" : "default",
       }}
     >
-      <div className="relative bg-gray-100 overflow-hidden" style={{ height: 130 }}>
+      <div className="relative bg-stone-100 overflow-hidden" style={{ height: 130 }}>
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -178,8 +178,8 @@ function TrendingCard({
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-[#fff3ee]">
-            <span className="text-3xl">🍽</span>
+          <div className="w-full h-full flex items-center justify-center bg-stone-100">
+            <UtensilsCrossed className="w-7 h-7 text-stone-400" />
           </div>
         )}
         <button
@@ -224,12 +224,12 @@ function TrendingCard({
 
 function SkeletonCard() {
   return (
-    <div className="flex-shrink-0 w-56 rounded-lg overflow-hidden border border-gray-100 animate-pulse">
-      <div className="h-36 bg-gray-200" />
+    <div className="flex-shrink-0 w-56 rounded-lg overflow-hidden border border-stone-100 animate-pulse">
+      <div className="h-36 bg-stone-200" />
       <div className="p-3 space-y-2">
-        <div className="h-3.5 bg-gray-200 rounded w-4/5" />
-        <div className="h-3 bg-gray-200 rounded w-3/5" />
-        <div className="h-3 bg-gray-200 rounded w-2/5" />
+        <div className="h-3.5 bg-stone-200 rounded w-4/5" />
+        <div className="h-3 bg-stone-200 rounded w-3/5" />
+        <div className="h-3 bg-stone-200 rounded w-2/5" />
       </div>
     </div>
   );

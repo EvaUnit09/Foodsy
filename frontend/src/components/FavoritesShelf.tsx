@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Star } from "lucide-react";
+import { Star, UtensilsCrossed } from "lucide-react";
 import { DiscoveryRestaurant } from "@/api/discoveryApi";
 import { LibraryApi } from "@/api/libraryApi";
 
@@ -59,7 +59,7 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
         {favorites.length > 0 && (
           <a
             href="/favorites"
-            style={{ fontSize: 13, color: "#e8531a", fontWeight: 600, textDecoration: "none" }}
+            style={{ fontSize: 13, color: "#1c1917", fontWeight: 600, textDecoration: "none" }}
           >
             See All
           </a>
@@ -109,7 +109,7 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
           <button
             onClick={onStartDiscovery}
             style={{
-              background: "#e8531a",
+              background: "#1c1917",
               color: "#fff",
               fontWeight: 700,
               fontSize: 13,
@@ -118,8 +118,8 @@ export function FavoritesShelf({ onStartDiscovery }: FavoritesShelfProps) {
               padding: "9px 18px",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
           >
             Start Discovering
           </button>
@@ -196,10 +196,10 @@ function FavoriteCard({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "#fff3ee",
+                background: "#f5f5f4",
               }}
             >
-              <span style={{ fontSize: 32 }}>🍽</span>
+              <UtensilsCrossed style={{ width: 28, height: 28, color: "#a8a29e" }} />
             </div>
           )}
         </div>

@@ -144,7 +144,7 @@ export default function DiscoverPage() {
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fdf6f0" }}>
+    <div style={{ minHeight: "100vh", background: "#fafaf9" }}>
       <AppHeader badge="Discover" />
       <div
         style={{
@@ -215,7 +215,7 @@ export default function DiscoverPage() {
               maxWidth: 420,
               height: "clamp(350px, calc(100vh - 320px), 520px)",
               borderRadius: 20,
-              background: "#f5ede8",
+              background: "#f5f5f4",
               animation: "pulse 1.5s ease-in-out infinite",
             }}
           >
@@ -235,14 +235,18 @@ export default function DiscoverPage() {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 40 }}>😕</div>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#f5f5f4", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#78716c" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx={12} cy={12} r={10} /><path d="M16 16s-1.5-2-4-2-4 2-4 2" /><line x1={9} y1={9} x2={9.01} y2={9} /><line x1={15} y1={9} x2={15.01} y2={9} />
+              </svg>
+            </div>
             <p style={{ fontSize: 15, color: "#555", margin: 0 }}>
               Couldn&apos;t load restaurants right now.
             </p>
             <button
               onClick={() => setRetryKey((k) => k + 1)}
               style={{
-                background: "#e8531a",
+                background: "#1c1917",
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 14,

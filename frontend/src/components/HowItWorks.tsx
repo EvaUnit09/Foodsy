@@ -36,7 +36,7 @@ export function HowItWorks({ onStartSession }: { onStartSession: () => void }) {
           >
             {/* Step number watermark */}
             <span
-              className="absolute top-4 right-4 font-black text-[#e8531a] select-none leading-none"
+              className="absolute top-4 right-4 font-black text-stone-900 select-none leading-none"
               style={{ fontSize: 40, opacity: 0.06 }}
               aria-hidden="true"
             >
@@ -44,9 +44,9 @@ export function HowItWorks({ onStartSession }: { onStartSession: () => void }) {
             </span>
             <div
               className="flex items-center justify-center mb-4"
-              style={{ width: 40, height: 40, background: "#fff3ee", borderRadius: 10 }}
+              style={{ width: 40, height: 40, background: "#f5f5f4", borderRadius: 10 }}
             >
-              <Icon className="w-5 h-5 text-[#e8531a]" />
+              <Icon className="w-5 h-5 text-stone-600" />
             </div>
             <h3 className="font-bold text-[#1a1a1a] mb-2" style={{ fontSize: 16 }}>{title}</h3>
             <p className="text-[#777777] m-0" style={{ fontSize: 13, lineHeight: 1.6 }}>{desc}</p>
@@ -58,15 +58,15 @@ export function HowItWorks({ onStartSession }: { onStartSession: () => void }) {
         <button
           className="text-white font-bold cursor-pointer"
           style={{
-            background: "#e8531a",
+            background: "#1c1917",
             borderRadius: 10,
             padding: "14px 32px",
             fontSize: 15,
             border: "none",
-            boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+            boxShadow: "0 4px 14px rgba(28,25,23,0.25)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
           onClick={onStartSession}
         >
           Start a Session

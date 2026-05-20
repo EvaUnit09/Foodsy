@@ -36,10 +36,10 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
 
   if (submitted) {
     return (
-      <div className="bg-green-50 rounded-2xl p-6 border border-green-200 text-center">
-        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-        <h3 className="text-lg font-semibold text-green-800">RSVP Submitted!</h3>
-        <p className="text-sm text-green-600 mt-1">Check back later to see the final result.</p>
+      <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-200 text-center">
+        <CheckCircle className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+        <h3 className="text-lg font-semibold text-emerald-800">RSVP Submitted!</h3>
+        <p className="text-sm text-emerald-600 mt-1">Check back later to see the final result.</p>
       </div>
     );
   }
@@ -55,21 +55,21 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
       value: "GOING",
       label: "Going",
       icon: <CheckCircle className="w-5 h-5" />,
-      color: "border-gray-200 hover:border-green-300",
+      color: "border-stone-200 hover:border-green-300",
       selectedColor: "border-green-500 bg-green-50",
     },
     {
       value: "MAYBE",
       label: "Maybe",
       icon: <HelpCircle className="w-5 h-5" />,
-      color: "border-gray-200 hover:border-yellow-300",
+      color: "border-stone-200 hover:border-yellow-300",
       selectedColor: "border-yellow-500 bg-yellow-50",
     },
     {
       value: "NOT_GOING",
       label: "Not Going",
       icon: <XCircle className="w-5 h-5" />,
-      color: "border-gray-200 hover:border-red-300",
+      color: "border-stone-200 hover:border-red-300",
       selectedColor: "border-red-500 bg-red-50",
     },
   ];
@@ -78,7 +78,7 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
     <div className="space-y-6">
       {/* RSVP buttons */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">Are you going?</label>
+        <label className="block text-sm font-medium text-stone-700 mb-3">Are you going?</label>
         <div className="grid grid-cols-3 gap-2">
           {rsvpOptions.map((opt) => (
             <button
@@ -104,7 +104,7 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
       {/* Restaurant preference (only for Going/Maybe) */}
       {(rsvp === "GOING" || rsvp === "MAYBE") && restaurants.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-stone-700 mb-3">
             Which restaurant do you prefer?
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -118,12 +118,12 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
                   onClick={() => setPreferredId(isSelected ? null : r.providerId)}
                   className={`text-left rounded-2xl border-2 overflow-hidden transition-all shadow-sm hover:shadow-md ${
                     isSelected
-                      ? "border-orange-500 ring-2 ring-orange-200"
-                      : "border-gray-200 hover:border-orange-300"
+                      ? "border-stone-900 ring-2 ring-stone-200"
+                      : "border-stone-200 hover:border-stone-400"
                   }`}
                 >
                   {/* Photo */}
-                  <div className="relative w-full aspect-video bg-gray-100">
+                  <div className="relative w-full aspect-video bg-stone-100">
                     {photo ? (
                       <Image
                         src={photo}
@@ -135,11 +135,11 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <span className="text-gray-400 text-sm">No photo</span>
+                        <span className="text-stone-400 text-sm">No photo</span>
                       </div>
                     )}
                     {isSelected && (
-                      <div className="absolute top-2 right-2 bg-orange-500 text-white rounded-full p-1">
+                      <div className="absolute top-2 right-2 bg-stone-900 text-white rounded-full p-1">
                         <CheckCircle className="w-4 h-4" />
                       </div>
                     )}
@@ -147,20 +147,20 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
 
                   {/* Info */}
                   <div className="p-3">
-                    <p className="font-semibold text-gray-900 leading-tight">{r.name}</p>
+                    <p className="font-semibold text-stone-900 leading-tight">{r.name}</p>
                     {r.category && (
-                      <p className="text-xs text-orange-600 font-medium mt-0.5">{r.category}</p>
+                      <p className="text-xs text-stone-500 font-medium mt-0.5">{r.category}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{r.address}</p>
+                    <p className="text-xs text-stone-500 mt-0.5 line-clamp-1">{r.address}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       {r.rating > 0 && (
-                        <span className="flex items-center gap-0.5 text-xs text-gray-700">
+                        <span className="flex items-center gap-0.5 text-xs text-stone-700">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                           {r.rating.toFixed(1)}
                         </span>
                       )}
                       {r.priceLevel && (
-                        <span className="text-xs text-gray-400">{r.priceLevel}</span>
+                        <span className="text-xs text-stone-400">{r.priceLevel}</span>
                       )}
                     </div>
                   </div>
@@ -174,7 +174,7 @@ export function EventRsvpForm({ sessionId, restaurants, onSubmitted }: EventRsvp
       <Button
         onClick={handleSubmit}
         disabled={!rsvp || submitting}
-        className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
+        className="w-full h-12 bg-stone-900 hover:bg-stone-800 disabled:opacity-50"
       >
         <Send className="w-4 h-4 mr-2" />
         {submitting ? "Submitting..." : "Submit RSVP"}

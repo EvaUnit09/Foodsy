@@ -1,5 +1,6 @@
 "use client";
 
+import { Flame } from "lucide-react";
 import { Borough } from "@/api/discoveryApi";
 
 interface DiscoveryHeaderProps {
@@ -27,7 +28,7 @@ export function DiscoveryHeader({
         alignItems: "center",
         justifyContent: "space-between",
         padding: "16px 20px",
-        background: "#fdf6f0",
+        background: "#fafaf9",
         borderBottom: "1px solid rgba(0,0,0,0.06)",
       }}
     >
@@ -37,7 +38,7 @@ export function DiscoveryHeader({
           style={{
             width: 32,
             height: 32,
-            background: "#e8531a",
+            background: "#1c1917",
             borderRadius: 8,
             display: "flex",
             alignItems: "center",
@@ -45,7 +46,7 @@ export function DiscoveryHeader({
             flexShrink: 0,
           }}
         >
-          <span style={{ color: "#fff", fontSize: 16 }}>🍽</span>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>F</span>
         </div>
         <div>
           <div
@@ -70,22 +71,22 @@ export function DiscoveryHeader({
         {streak > 0 && (
           <span
             style={{
-              background: "#fff3ee",
+              background: "#f5f5f4",
               borderRadius: 20,
               padding: "5px 10px",
               fontSize: 13,
-              color: "#e8531a",
+              color: "#1c1917",
               fontWeight: 700,
             }}
           >
-            🔥 {streak}
+            <Flame style={{ width: 13, height: 13 }} /> {streak}
           </span>
         )}
         <button
           onClick={onAreaPickerOpen}
           aria-label="Change area"
           style={{
-            background: "#f5ede8",
+            background: "#f5f5f4",
             border: "none",
             borderRadius: 20,
             padding: "5px 10px",
@@ -106,7 +107,7 @@ export function DiscoveryHeader({
               cy={22}
               r={18}
               fill="none"
-              stroke="#f0e8e0"
+              stroke="#e7e5e4"
               strokeWidth={4}
             />
             <circle
@@ -114,7 +115,7 @@ export function DiscoveryHeader({
               cy={22}
               r={18}
               fill="none"
-              stroke="#e8531a"
+              stroke="#1c1917"
               strokeWidth={4}
               strokeDasharray={`${filled} ${circumference}`}
               strokeLinecap="round"

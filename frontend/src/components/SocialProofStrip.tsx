@@ -13,7 +13,7 @@ export function SocialProofStrip() {
         {stats.map((s, i) => (
           <div key={i} className="text-center">
             <div
-              className="font-extrabold text-[#e8531a]"
+              className="font-extrabold text-stone-900"
               style={{ fontSize: 40, letterSpacing: "-0.5px" }}
             >
               {s.value}

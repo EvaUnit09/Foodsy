@@ -70,7 +70,7 @@ function CircleButton({
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          color: bg === "#f3f4f6" ? "#9ca3af" : bg,
+          color: bg === "#f5f5f4" ? "#a8a29e" : bg,
         }}
       >
         {label}
@@ -100,15 +100,15 @@ export function ActionButtons({
         <CircleButton
           onClick={onPass}
           size={52}
-          bg="#f3f4f6"
+          bg="#f5f5f4"
           label="Pass"
-          ringColor="#9ca3af"
+          ringColor="#a8a29e"
           disabled={disabled}
         >
           <svg aria-hidden="true" width={20} height={20} viewBox="0 0 20 20" fill="none">
             <path
               d="M5 5l10 10M15 5L5 15"
-              stroke="#9ca3af"
+              stroke="#a8a29e"
               strokeWidth={2}
               strokeLinecap="round"
             />
@@ -118,9 +118,9 @@ export function ActionButtons({
         <CircleButton
           onClick={onWatchlist}
           size={64}
-          bg="#3b82f6"
+          bg="#1c1917"
           label="Wanna Go"
-          ringColor="#3b82f6"
+          ringColor="#1c1917"
           disabled={disabled}
         >
           <MapPin size={24} fill="white" color="white" />
@@ -129,9 +129,9 @@ export function ActionButtons({
         <CircleButton
           onClick={onFavorite}
           size={52}
-          bg="#e8531a"
+          bg="#1c1917"
           label="Been Here"
-          ringColor="#e8531a"
+          ringColor="#1c1917"
           disabled={disabled}
         >
           <Heart size={20} fill="white" color="white" />

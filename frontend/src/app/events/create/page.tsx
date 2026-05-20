@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Users, Clock, UserIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Users, Clock, UserIcon, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiClient, NeighborhoodDto } from "@/api/client";
@@ -77,18 +77,18 @@ export default function CreateEventPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="bg-gradient-to-br from-orange-500 to-red-500 px-4 py-16 text-center text-white">
+      <div className="bg-stone-900 px-4 py-16 text-center text-white">
         <div className="mb-4">
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-white/80 hover:text-white text-sm transition-colors"
+            className="inline-flex items-center space-x-2 text-white/70 hover:text-white text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
           </Link>
         </div>
-        <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl">🍽</span>
+        <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <UtensilsCrossed className="w-7 h-7 text-white/80" />
         </div>
         <h1 className="text-4xl font-bold mb-2">Plan your group dinner</h1>
         <p className="text-white/80 text-lg max-w-md mx-auto">
@@ -105,7 +105,7 @@ export default function CreateEventPage() {
               onClick={() =>
                 (window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`)
               }
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+              className="bg-stone-900 hover:bg-stone-800 text-white"
             >
               Sign In with Google
             </Button>
@@ -120,14 +120,14 @@ export default function CreateEventPage() {
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
                 required
-                className="w-full text-2xl font-semibold px-0 py-2 border-0 border-b-2 border-gray-200 focus:border-orange-500 outline-none placeholder:text-gray-300 text-gray-900 bg-transparent"
+                className="w-full text-2xl font-semibold px-0 py-2 border-0 border-b-2 border-stone-200 focus:border-stone-400 outline-none placeholder:text-stone-300 text-stone-900 bg-transparent"
               />
             </div>
 
             {/* Hosted by */}
             {user && (
               <div className="flex items-center space-x-3 py-2">
-                <span className="text-sm text-gray-500 font-medium">Hosted by</span>
+                <span className="text-sm text-stone-500 font-medium">Hosted by</span>
                 <div className="flex items-center space-x-2">
                   {user.effectiveAvatarUrl || user.customAvatarUrl || user.avatarUrl ? (
                     <img
@@ -136,11 +136,11 @@ export default function CreateEventPage() {
                       className="w-7 h-7 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center">
-                      <UserIcon className="w-4 h-4 text-orange-600" />
+                    <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center">
+                      <UserIcon className="w-4 h-4 text-stone-600" />
                     </div>
                   )}
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-stone-900">
                     {user.displayName || user.username}
                   </span>
                 </div>
@@ -149,8 +149,8 @@ export default function CreateEventPage() {
 
             {/* Eating in */}
             <div className="space-y-3">
-              <label className="flex items-center text-sm font-semibold text-gray-700">
-                <MapPin className="w-4 h-4 mr-2 text-orange-500" />
+              <label className="flex items-center text-sm font-semibold text-stone-700">
+                <MapPin className="w-4 h-4 mr-2 text-stone-500" />
                 Eating in
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -161,7 +161,7 @@ export default function CreateEventPage() {
                     setDiningNeighborhood("");
                   }}
                   required
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white"
+                  className="px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-300 outline-none text-gray-900 bg-white"
                 >
                   <option value="">Borough</option>
                   {BOROUGHS.map((b) => (
@@ -175,7 +175,7 @@ export default function CreateEventPage() {
                   onChange={(e) => setDiningNeighborhood(e.target.value)}
                   disabled={!diningBorough || neighborhoods.length === 0}
                   required
-                  className="px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                  className="px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-300 outline-none text-gray-900 bg-white disabled:bg-gray-50 disabled:text-stone-400"
                 >
                   <option value="">Neighborhood</option>
                   {neighborhoods.map((n) => (
@@ -189,8 +189,8 @@ export default function CreateEventPage() {
 
             {/* Expected guests */}
             <div className="space-y-2">
-              <label className="flex items-center text-sm font-semibold text-gray-700">
-                <Users className="w-4 h-4 mr-2 text-orange-500" />
+              <label className="flex items-center text-sm font-semibold text-stone-700">
+                <Users className="w-4 h-4 mr-2 text-stone-500" />
                 Expected guests
               </label>
               <input
@@ -200,14 +200,14 @@ export default function CreateEventPage() {
                 value={expectedParticipants}
                 onChange={(e) => setExpectedParticipants(Number(e.target.value))}
                 required
-                className="w-28 px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white text-center text-lg font-semibold"
+                className="w-28 px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-300 outline-none text-gray-900 bg-white text-center text-lg font-semibold"
               />
             </div>
 
             {/* RSVP deadline */}
             <div className="space-y-2">
-              <label className="flex items-center text-sm font-semibold text-gray-700">
-                <Clock className="w-4 h-4 mr-2 text-orange-500" />
+              <label className="flex items-center text-sm font-semibold text-stone-700">
+                <Clock className="w-4 h-4 mr-2 text-stone-500" />
                 RSVP deadline
               </label>
               <input
@@ -216,21 +216,21 @@ export default function CreateEventPage() {
                 onChange={(e) => setVotingDeadline(e.target.value)}
                 required
                 min={new Date().toISOString().slice(0, 16)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-300 outline-none text-gray-900 bg-white"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Details <span className="text-gray-400 font-normal">(optional)</span>
+              <label className="block text-sm font-semibold text-stone-700">
+                Details <span className="text-stone-400 font-normal">(optional)</span>
               </label>
               <textarea
                 placeholder="Add details for your guests..."
                 value={eventDescription}
                 onChange={(e) => setEventDescription(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-300 outline-none text-gray-900 bg-white resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-300 outline-none text-gray-900 bg-white resize-none"
               />
             </div>
 
@@ -243,7 +243,7 @@ export default function CreateEventPage() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-2xl"
+              className="w-full h-14 text-base font-semibold bg-stone-900 hover:bg-stone-800 rounded-2xl"
             >
               {submitting ? "Creating event..." : "Create Event"}
             </Button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { UtensilsCrossed } from "lucide-react";
 import { DiscoveryRestaurant, SwipeAction } from "@/api/discoveryApi";
 
 interface DiscoveryCardProps {
@@ -18,15 +19,15 @@ const EXIT_TRANSFORMS: Record<SwipeAction, string> = {
 };
 
 const ACTION_COLORS: Record<SwipeAction, string> = {
-  pass: "#6b7280",
-  favorite: "#e8531a",
-  watchlist: "#3b82f6",
+  pass: "#78716c",
+  favorite: "#1c1917",
+  watchlist: "#1c1917",
 };
 
 const ACTION_LABELS: Record<SwipeAction, string> = {
-  pass: "✕ Passed",
-  favorite: "✓ Been Here!",
-  watchlist: "📍 Wanna Go!",
+  pass: "Passed",
+  favorite: "Been Here!",
+  watchlist: "Wanna Go!",
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -109,7 +110,7 @@ export function DiscoveryCard({
           position: "relative",
           height: "60%",
           overflow: "hidden",
-          background: "#f0ece8",
+          background: "#f5f5f4",
           flexShrink: 0,
         }}
       >
@@ -149,10 +150,10 @@ export function DiscoveryCard({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#f5ede8",
+              background: "#f5f5f4",
             }}
           >
-            <span style={{ fontSize: 48 }}>🍽</span>
+            <UtensilsCrossed style={{ width: 40, height: 40, color: "#a8a29e" }} />
           </div>
         )}
 
@@ -406,8 +407,8 @@ export function DiscoveryCard({
                 key={tag}
                 style={{
                   fontSize: 11,
-                  background: "#f5ede8",
-                  color: "#e8531a",
+                  background: "#f5f5f4",
+                  color: "#44403c",
                   borderRadius: 20,
                   padding: "3px 8px",
                   whiteSpace: "nowrap",

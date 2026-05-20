@@ -96,10 +96,10 @@ export default function ProfilePage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#fdf6f0]">
+      <div className="min-h-screen bg-stone-50">
         <AppHeader badge="Profile" />
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#e8531a]" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-stone-700" />
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ export default function ProfilePage() {
   const hasCustomAvatar = !!user.customAvatarUrl;
 
   return (
-    <div className="min-h-screen bg-[#fdf6f0]">
+    <div className="min-h-screen bg-stone-50">
       <AppHeader badge="Profile" />
 
       <div className="max-w-lg mx-auto px-4 py-8">
@@ -131,11 +131,11 @@ export default function ProfilePage() {
         <div className="bg-white rounded-2xl p-6 mb-6 border border-[rgba(0,0,0,0.06)]">
           <div className="flex items-center space-x-6">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-stone-100">
                 {effectiveAvatar ? (
                   <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center text-stone-400">
                     <UserIcon className="w-10 h-10" />
                   </div>
                 )}
@@ -143,7 +143,7 @@ export default function ProfilePage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#e8531a] rounded-full flex items-center justify-center text-white hover:bg-[#c94010] transition-colors"
+                className="absolute -bottom-1 -right-1 w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center text-white hover:bg-stone-800 transition-colors"
               >
                 <Camera className="w-4 h-4" />
               </button>
@@ -161,7 +161,7 @@ export default function ProfilePage() {
               {hasCustomAvatar && (
                 <button
                   onClick={handleRevertAvatar}
-                  className="text-sm text-[#e8531a] hover:underline mt-1"
+                  className="text-sm text-stone-600 hover:underline mt-1"
                 >
                   Use Google photo
                 </button>
@@ -172,7 +172,7 @@ export default function ProfilePage() {
 
         {/* Username Section */}
         <div className="bg-white rounded-2xl p-6 mb-6 border border-[rgba(0,0,0,0.06)]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-stone-700 mb-2">
             <UserIcon className="w-4 h-4 inline mr-1" />
             Username
           </label>
@@ -180,7 +180,7 @@ export default function ProfilePage() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#e8531a] focus:ring-1 focus:ring-[#e8531a] outline-none text-[#1a1a1a]"
+            className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none text-stone-900"
             minLength={3}
           />
           {username.length > 0 && username.length < 3 && (
@@ -190,26 +190,26 @@ export default function ProfilePage() {
 
         {/* Email Section */}
         <div className="bg-white rounded-2xl p-6 mb-6 border border-[rgba(0,0,0,0.06)]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-          <p className="text-[#1a1a1a] px-4 py-3 bg-gray-50 rounded-xl">{user.email}</p>
+          <label className="block text-sm font-medium text-stone-700 mb-2">Email</label>
+          <p className="text-stone-900 px-4 py-3 bg-stone-50 rounded-xl">{user.email}</p>
         </div>
 
         {/* Location Section */}
         <div className="bg-white rounded-2xl p-6 mb-6 border border-[rgba(0,0,0,0.06)]">
-          <label className="block text-sm font-medium text-gray-700 mb-4">
+          <label className="block text-sm font-medium text-stone-700 mb-4">
             <MapPin className="w-4 h-4 inline mr-1" />
             Home Location
           </label>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Borough</label>
+              <label className="block text-xs text-stone-500 mb-1">Borough</label>
               <select
                 value={homeBorough}
                 onChange={(e) => {
                   setHomeBorough(e.target.value);
                   setHomeNeighborhood("");
                 }}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#e8531a] focus:ring-1 focus:ring-[#e8531a] outline-none text-[#1a1a1a] bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none text-stone-900 bg-white"
               >
                 <option value="">Select borough</option>
                 {BOROUGHS.map((b) => (
@@ -218,12 +218,12 @@ export default function ProfilePage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Neighborhood</label>
+              <label className="block text-xs text-stone-500 mb-1">Neighborhood</label>
               <select
                 value={homeNeighborhood}
                 onChange={(e) => setHomeNeighborhood(e.target.value)}
                 disabled={!homeBorough || neighborhoods.length === 0}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#e8531a] focus:ring-1 focus:ring-[#e8531a] outline-none text-[#1a1a1a] bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none text-stone-900 bg-white disabled:bg-stone-50 disabled:text-stone-400"
               >
                 <option value="">Select neighborhood</option>
                 {neighborhoods.map((n) => (
@@ -238,7 +238,7 @@ export default function ProfilePage() {
         <button
           onClick={handleSave}
           disabled={saving || username.length < 3}
-          className="w-full py-4 bg-[#e8531a] text-white font-semibold rounded-xl hover:bg-[#c94010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          className="w-full py-4 bg-stone-900 text-white font-semibold rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
         >
           {saving ? (
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />

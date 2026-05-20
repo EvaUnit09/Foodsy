@@ -81,7 +81,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdf6f0] flex flex-col">
+    <div className="min-h-screen bg-stone-50 flex flex-col">
       <AppHeader />
 
       <main className="flex-1">
@@ -119,7 +119,7 @@ const Index = () => {
               }}
             >
               Never Ask
-              <span className="text-[#e8531a]">
+              <span className="text-stone-900">
                 {" "}&#34;Where Should We Eat?&#34;{" "}
               </span>
               Again
@@ -132,15 +132,15 @@ const Index = () => {
             <button
               className="text-white font-bold cursor-pointer"
               style={{
-                background: "#e8531a",
+                background: "#1c1917",
                 borderRadius: 10,
                 padding: "14px 28px",
                 fontSize: 15,
                 border: "none",
-                boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+                boxShadow: "0 4px 14px rgba(28,25,23,0.25)",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
               onClick={() => setShowSignUpPrompt(true)}
             >
               + Get Started Free
@@ -170,25 +170,25 @@ const Index = () => {
             className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-12 h-12 bg-stone-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <Heart className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Save Your Favorites</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-xl font-bold text-stone-900 mb-2">Save Your Favorites</h3>
+            <p className="text-stone-600 mb-6">
               Sign up to save favorites and use them in your group voting sessions.
             </p>
             <button
               className="w-full text-white font-bold cursor-pointer mb-3"
               style={{
-                background: "#e8531a",
+                background: "#1c1917",
                 borderRadius: 10,
                 padding: "14px 28px",
                 fontSize: 15,
                 border: "none",
-                boxShadow: "0 4px 14px rgba(232,83,26,0.35)",
+                boxShadow: "0 4px 14px rgba(28,25,23,0.25)",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#c94010")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#e8531a")}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#292524")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#1c1917")}
               onClick={() => {
                 window.location.href = `https://apifoodsy-backend.com/oauth2/authorization/google`;
               }}
@@ -196,7 +196,7 @@ const Index = () => {
               Sign Up with Google
             </button>
             <button
-              className="text-sm text-gray-400 hover:text-gray-600"
+              className="text-sm text-stone-400 hover:text-stone-600"
               onClick={() => setShowSignUpPrompt(false)}
             >
               Maybe later
@@ -207,15 +207,15 @@ const Index = () => {
 
       </main>
 
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-stone-900 text-white py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-[#e8531a] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-stone-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">F</span>
             </div>
             <span className="text-xl font-bold" style={{ fontFamily: "'Georgia', serif" }}>Foodsy</span>
           </div>
-          <p className="text-gray-400">
+          <p className="text-stone-400">
             Stop the dinner debate. Start enjoying great meals together.
           </p>
         </div>

@@ -6,10 +6,10 @@ export function FinalCTA({ onSignUp }: { onSignUp: () => void }) {
       <div
         className="max-w-5xl mx-auto text-center"
         style={{
-          background: "linear-gradient(135deg, #e8531a 0%, #c94010 100%)",
+          background: "#1c1917",
           borderRadius: 20,
           padding: "48px 40px",
-          boxShadow: "0 12px 40px rgba(232,83,26,0.25)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
         }}
       >
         <h2
@@ -28,7 +28,7 @@ export function FinalCTA({ onSignUp }: { onSignUp: () => void }) {
           className="font-bold cursor-pointer"
           style={{
             background: "#fff",
-            color: "#e8531a",
+            color: "#1c1917",
             border: "none",
             borderRadius: 10,
             padding: "14px 32px",
