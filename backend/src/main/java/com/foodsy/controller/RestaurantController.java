@@ -40,6 +40,7 @@ public class RestaurantController {
     private final UserService userService;
     private final S3PhotoUploadJob s3PhotoUploadJob;
     private final com.foodsy.repository.RestaurantCacheRepository cacheRepository;
+    private final com.foodsy.service.PlacesApiCallTracker tracker;
 
     @Value("${admin.secret:}")
     private String adminSecret;
@@ -48,13 +49,15 @@ public class RestaurantController {
                                 RestaurantCacheService restaurantCacheService,
                                 UserService userService,
                                 S3PhotoUploadJob s3PhotoUploadJob,
-                                com.foodsy.repository.RestaurantCacheRepository cacheRepository) {
+                                com.foodsy.repository.RestaurantCacheRepository cacheRepository,
+                                com.foodsy.service.PlacesApiCallTracker tracker) {
         this.placesClient = placesClient;
         this.sessionService = sessionService;
         this.restaurantCacheService = restaurantCacheService;
         this.userService = userService;
         this.s3PhotoUploadJob = s3PhotoUploadJob;
         this.cacheRepository = cacheRepository;
+        this.tracker = tracker;
     }
     private static final java.util.Set<String> SUPPORTED_BOROUGHS =
             java.util.Set.of("manhattan", "queens", "brooklyn", "bronx", "staten island");
@@ -215,6 +218,9 @@ public class RestaurantController {
                 !PHOTO_ID_PATTERN.matcher(photoId).matches()) {
             return ResponseEntity.badRequest().build();
         }
+        logger.info("PLACES_API type=photo_media placeId={} photoId={} caller=proxyPhoto", placeId, photoId);
+        tracker.incrementProxyHits();
+        tracker.incrementPhotoMediaCalls();
         try {
             // API key goes in header, not query string, to avoid leaking it in server logs (#2)
             String url = String.format(

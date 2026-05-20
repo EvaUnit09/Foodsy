@@ -18,9 +18,12 @@ public class GooglePlacesClient {
 
     private final RestClient restClient;
     private final String apiKey;
+    private final com.foodsy.service.PlacesApiCallTracker tracker;
 
-    public GooglePlacesClient(@Value("${google.places.api.key}") String apiKey) {
+    public GooglePlacesClient(@Value("${google.places.api.key}") String apiKey,
+                              com.foodsy.service.PlacesApiCallTracker tracker) {
         this.apiKey = apiKey;
+        this.tracker = tracker;
         this.restClient = RestClient.builder()
                 .baseUrl("https://places.googleapis.com/v1")
                 .defaultHeader("X-Goog-Api-Key", apiKey)
@@ -262,6 +265,8 @@ public class GooglePlacesClient {
     }
 
     public List<String> fetchPhotoUrls(String placeId, int limit) {
+        logger.info("PLACES_API type=photo_details placeId={}", placeId);
+        tracker.incrementPhotoDetailsCalls();
         try {
             // Create a separate RestClient for place details with correct field mask
             RestClient placeDetailsClient = RestClient.builder()

@@ -29,12 +29,16 @@ public class S3PhotoService {
     @Value("${google.places.api.key}")
     private String googleApiKey;
 
+    private final PlacesApiCallTracker tracker;
+
     public S3PhotoService(
             @Value("${aws.s3.bucket-name}") String bucketName,
             @Value("${aws.s3.region}") String region,
-            @Value("${aws.s3.photo-base-url}") String photoBaseUrl) {
+            @Value("${aws.s3.photo-base-url}") String photoBaseUrl,
+            PlacesApiCallTracker tracker) {
         this.bucketName = bucketName;
         this.photoBaseUrl = photoBaseUrl;
+        this.tracker = tracker;
         this.restTemplate = new RestTemplate();
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
@@ -75,6 +79,9 @@ public class S3PhotoService {
         }
 
         // Download from Google Places API
+        log.info("PLACES_API type=photo_media placeId={} photoId={} caller=S3Sync", placeId, photoId);
+        tracker.incrementS3SyncMediaCalls();
+        tracker.incrementPhotoMediaCalls();
         String googleUrl = "https://places.googleapis.com/v1/places/" + placeId
                 + "/photos/" + photoId + "/media?maxHeightPx=800&maxWidthPx=800";
         byte[] photoBytes;

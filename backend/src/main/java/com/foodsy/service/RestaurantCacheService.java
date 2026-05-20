@@ -101,6 +101,9 @@ public class RestaurantCacheService {
     @Autowired
     private GooglePlacesClient placesClient;
 
+    @Autowired
+    private PlacesApiCallTracker placesApiCallTracker;
+
     /**
      * Get restaurants for a specific borough, using cache when possible
      */
@@ -497,7 +500,8 @@ public class RestaurantCacheService {
             needingRefresh.size(),
             dailyApiCalls.get(),
             nearbySearchCalls.get(),
-            placeDetailsCalls.get()
+            placeDetailsCalls.get(),
+            placesApiCallTracker.getSnapshot()
         );
     }
 
@@ -520,6 +524,7 @@ public class RestaurantCacheService {
         dailyApiCalls.set(0);
         nearbySearchCalls.set(0);
         placeDetailsCalls.set(0);
+        placesApiCallTracker.reset();
 
         int deleted = dailyFeedRepository.deleteOlderThan(LocalDate.now().minusDays(7));
         logger.info("Deleted {} stale user_daily_feed rows", deleted);
@@ -1055,7 +1060,8 @@ public class RestaurantCacheService {
         int restaurantsNeedingRefresh,
         int dailyApiCalls,
         int nearbySearchCalls,
-        int placeDetailsCalls
+        int placeDetailsCalls,
+        java.util.Map<String, Integer> photoApiCalls
     ) {}
     
     public record TrendingStats(

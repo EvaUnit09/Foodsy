@@ -41,6 +41,11 @@ public class S3PhotoUploadJob {
         log.info("S3 photo upload job starting");
         List<RestaurantCache> restaurants = cacheRepository.findAll();
 
+        long needsSync = restaurants.stream()
+                .filter(r -> r.getPhotoUrls() == null || r.getPhotoUrls().size() < MAX_PHOTOS_PER_RESTAURANT)
+                .count();
+        log.info("S3_SYNC_START total={} needsSync={} willSkip={}", restaurants.size(), needsSync, restaurants.size() - needsSync);
+
         int uploaded = 0;
         int skipped = 0;
         int failed = 0;
@@ -106,8 +111,10 @@ public class S3PhotoUploadJob {
             }
         }
 
-        log.info("S3 photo upload job complete — uploaded: {}, skipped: {}, failed: {}",
-                uploaded, skipped, failed);
+        double estimatedCostUsd = needsSync * 0.005 + uploaded * 0.007;
+        log.info("S3_SYNC_COMPLETE uploaded={} skipped={} failed={} placeDetailsCalls={} photoMediaCalls={} estimatedCostUSD={}",
+                uploaded, skipped, failed, needsSync, uploaded,
+                String.format("%.4f", estimatedCostUsd));
     }
 
     private List<String> storedPhotoIds(List<String> photoReferences) {
