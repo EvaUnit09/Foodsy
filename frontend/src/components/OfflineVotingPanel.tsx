@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart, X, ChevronLeft, ChevronRight, Send, CheckCircle } from "lucide-react";
+import { Heart, X, ChevronLeft, ChevronRight, Send, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/button";
-import { Card, CardContent } from "@/components/card";
 import { ApiClient } from "@/api/client";
 
 interface OfflineRestaurant {
@@ -55,7 +54,7 @@ function formatPriceRange(priceRange: string | null | undefined) {
   if (!priceRange) return null;
   const startMatch = priceRange.match(/startPrice=\{currencyCode=USD, units=(\d+)\}/);
   const endMatch = priceRange.match(/endPrice=\{currencyCode=USD, units=(\d+)\}/);
-  if (startMatch && endMatch) return `$${startMatch[1]} - $${endMatch[1]}`;
+  if (startMatch && endMatch) return `$${startMatch[1]} – $${endMatch[1]}`;
   return priceRange;
 }
 
@@ -106,10 +105,12 @@ export function OfflineVotingPanel({
 
   if (hasSubmitted) {
     return (
-      <div className="bg-green-50 rounded-2xl p-6 border border-green-200 text-center">
-        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-        <h3 className="text-lg font-semibold text-green-800">Votes Submitted!</h3>
-        <p className="text-sm text-green-600 mt-1">Check back later to see the results.</p>
+      <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+        <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+        </div>
+        <h3 className="text-base font-semibold text-stone-900">Votes submitted</h3>
+        <p className="text-sm text-stone-400 mt-1">Check back later to see the results.</p>
       </div>
     );
   }
@@ -119,8 +120,8 @@ export function OfflineVotingPanel({
 
   if (isPastDeadline) {
     return (
-      <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 text-center">
-        <p className="text-gray-600">The voting deadline has passed.</p>
+      <div className="bg-white rounded-xl border border-stone-200 p-6 text-center">
+        <p className="text-sm text-stone-500">The voting deadline has passed.</p>
       </div>
     );
   }
@@ -132,97 +133,107 @@ export function OfflineVotingPanel({
 
   return (
     <div className="space-y-4">
-      {/* Deadline banner */}
       {deadlineDate && (
-        <div className="bg-orange-50 rounded-lg px-4 py-2 text-sm text-orange-700 text-center">
-          Vote by:{" "}
-          {deadlineDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} at{" "}
-          {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 rounded-xl border border-stone-100 text-sm text-stone-500">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Vote by{" "}
+            {deadlineDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })} at{" "}
+            {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+          </span>
         </div>
       )}
 
-      {/* Progress */}
-      <div className="flex items-center justify-between text-sm text-gray-500">
-        <span>{currentIdx + 1} of {restaurants.length} restaurants</span>
-        <span className="text-red-500 font-medium">
-          {liked.size} liked
-        </span>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-stone-500">{currentIdx + 1} of {restaurants.length}</span>
+        <span className="text-stone-700 font-medium tabular-nums">{liked.size} liked</span>
       </div>
 
-      {/* Dating-profile card */}
-      <Card className="shadow-2xl border-0 overflow-hidden">
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-            {/* Info + action buttons */}
-            <div className="p-8 bg-white flex flex-col">
-              <div className="mb-6 p-6 rounded-lg shadow bg-white dark:bg-orange-600">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                  {current.name}
-                </h1>
-                <div className="text-gray-600 font-medium mb-1">{current.category}</div>
-                <div className="text-gray-500 mb-2">{current.address}</div>
+      {/* Card */}
+      <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2">
+          <div className="p-6 flex flex-col gap-5">
+            <div className="bg-stone-50 rounded-xl border border-stone-100 p-5 space-y-3">
+              <div>
+                <h1 className="text-xl font-semibold text-stone-900 leading-snug">{current.name}</h1>
+                <p className="text-sm text-stone-500 mt-0.5">{current.category}</p>
+                <p className="text-sm text-stone-400 mt-0.5">{current.address}</p>
+              </div>
 
-                <div className="flex flex-wrap gap-4 text-sm text-gray-700 mb-2">
-                  {current.priceRange && (
-                    <span><b>Price:</b> {formatPriceRange(current.priceRange)}</span>
-                  )}
-                  {current.rating && (
-                    <span>
-                      <b>Rating:</b> {current.rating} ★
-                      {current.userRatingCount && (
-                        <span className="ml-1 text-gray-500">({current.userRatingCount} reviews)</span>
-                      )}
-                    </span>
-                  )}
-                  {current.currentOpeningHours && (
-                    <span><b>Hours:</b> {formatHours(current.currentOpeningHours)}</span>
-                  )}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
+                {current.priceRange && (
+                  <span><span className="text-stone-400">Price</span> {formatPriceRange(current.priceRange)}</span>
+                )}
+                {current.rating && (
+                  <span>
+                    <span className="text-stone-400">Rating</span> {current.rating}
+                    {current.userRatingCount && (
+                      <span className="text-stone-400 ml-1">({current.userRatingCount})</span>
+                    )}
+                  </span>
+                )}
+                {current.currentOpeningHours && (
+                  <span><span className="text-stone-400">Hours</span> {formatHours(current.currentOpeningHours)}</span>
+                )}
+              </div>
+
+              {current.generativeSummary && (
+                <div className="pt-2 border-t border-stone-100">
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">About</p>
+                  <p className="text-sm text-stone-600 leading-relaxed">{extractSummaryText(current.generativeSummary)}</p>
                 </div>
-
-                {current.generativeSummary && (
-                  <div className="mt-2">
-                    <b>Summary:</b>
-                    <div className="text-gray-800">{extractSummaryText(current.generativeSummary)}</div>
-                  </div>
-                )}
-                {current.reviewSummary && (
-                  <div className="mt-2">
-                    <b>Review Summary:</b>
-                    <div className="text-gray-800">{extractSummaryText(current.reviewSummary)}</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Pass / Heart buttons */}
-              <div className="flex space-x-4 mt-auto">
-                <Button
-                  onClick={goNext}
-                  disabled={currentIdx === restaurants.length - 1}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1 h-14 border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                >
-                  <X className="w-5 h-5 mr-2" />
-                  Pass
-                </Button>
-                <Button
-                  onClick={() => { toggleLike(current.providerId); if (!isLiked) goNext(); }}
-                  size="lg"
-                  className={`flex-1 h-14 transition-all ${
-                    isLiked
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                  }`}
-                >
-                  <Heart className={`w-5 h-5 mr-2 ${isLiked ? "fill-white" : ""}`} />
-                  {isLiked ? "Liked!" : "Like"}
-                </Button>
-              </div>
+              )}
+              {current.reviewSummary && (
+                <div className="pt-2 border-t border-stone-100">
+                  <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Reviews</p>
+                  <p className="text-sm text-stone-600 leading-relaxed">{extractSummaryText(current.reviewSummary)}</p>
+                </div>
+              )}
             </div>
 
-            {/* Photo gallery */}
-            <div className="relative bg-gray-100">
-              {photos.length > 0 ? (
+            <div className="flex gap-3 mt-auto">
+              <Button
+                onClick={goPrev}
+                disabled={currentIdx === 0}
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => { toggleLike(current.providerId); if (!isLiked) goNext(); }}
+                size="lg"
+                className="flex-1 h-12 bg-stone-900 hover:bg-stone-800 text-white"
+              >
+                <Heart className={`w-4 h-4 mr-2 ${isLiked ? "fill-white" : ""}`} />
+                {isLiked ? "Liked" : "Like"}
+              </Button>
+              <Button
+                onClick={goNext}
+                disabled={currentIdx === restaurants.length - 1}
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <Button
+              onClick={goNext}
+              variant="outline"
+              disabled={currentIdx === restaurants.length - 1}
+              className="w-full border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-30"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Pass
+            </Button>
+          </div>
+
+          <div className="bg-stone-100">
+            {photos.length > 0 ? (
+              <>
                 <div className="aspect-square relative overflow-hidden">
                   <Image
                     src={photos[currentPhotoIdx] ?? "/placeholder.svg"}
@@ -233,100 +244,95 @@ export function OfflineVotingPanel({
                     unoptimized
                   />
                   {photos.length > 1 && (
-                    <div className="absolute inset-0 flex items-center justify-between p-4">
+                    <div className="absolute inset-0 flex items-center justify-between p-3">
                       <Button
                         onClick={() => setCurrentPhotoIdx((p) => (p - 1 + photos.length) % photos.length)}
                         variant="outline"
                         size="icon"
-                        className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                        className="bg-white/80 hover:bg-white border-0 shadow-sm w-8 h-8"
                       >
-                        <ChevronLeft />
+                        <ChevronLeft className="w-4 h-4" />
                       </Button>
                       <Button
                         onClick={() => setCurrentPhotoIdx((p) => (p + 1) % photos.length)}
                         variant="outline"
                         size="icon"
-                        className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                        className="bg-white/80 hover:bg-white border-0 shadow-sm w-8 h-8"
                       >
-                        <ChevronRight />
+                        <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
                   )}
-                  <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                  <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2.5 py-0.5 rounded-full text-xs tabular-nums">
                     {currentPhotoIdx + 1} / {photos.length}
                   </div>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[200px]">
-                  <span className="text-gray-400">No photos</span>
-                </div>
-              )}
 
-              {photos.length > 1 && (
-                <div className="p-4 bg-white">
-                  <div className="grid grid-cols-6 gap-2">
-                    {photos.map((url, idx) => (
-                      <button
-                        key={url}
-                        onClick={() => setCurrentPhotoIdx(idx)}
-                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                          idx === currentPhotoIdx
-                            ? "border-orange-500 shadow-md"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <Image
-                          src={url}
-                          alt={`Thumbnail ${idx + 1}`}
-                          width={120}
-                          height={120}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      </button>
-                    ))}
+                {photos.length > 1 && (
+                  <div className="p-3 bg-white">
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {photos.map((url, idx) => (
+                        <button
+                          key={url}
+                          onClick={() => setCurrentPhotoIdx(idx)}
+                          className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            idx === currentPhotoIdx ? "border-stone-900" : "border-transparent hover:border-stone-300"
+                          }`}
+                        >
+                          <Image
+                            src={url}
+                            alt={`Thumbnail ${idx + 1}`}
+                            width={120}
+                            height={120}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full min-h-[200px]">
+                <span className="text-sm text-stone-400">No photos</span>
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Card navigation dots */}
       {restaurants.length > 1 && (
         <div className="flex justify-center gap-1.5">
           {restaurants.map((r, idx) => (
             <button
               key={r.providerId}
               onClick={() => goTo(idx)}
-              className={`w-2 h-2 rounded-full transition-all ${
+              className={`h-1.5 rounded-full transition-all ${
                 idx === currentIdx
-                  ? "bg-orange-500 w-4"
+                  ? "bg-stone-900 w-4"
                   : liked.has(r.providerId)
-                  ? "bg-red-400"
-                  : "bg-gray-300"
+                  ? "bg-stone-400 w-1.5"
+                  : "bg-stone-200 w-1.5"
               }`}
             />
           ))}
         </div>
       )}
 
-      {/* Submit error */}
       {submitError && (
-        <div className="bg-red-50 rounded-xl px-4 py-3 border border-red-200 text-sm text-red-700 text-center">
+        <div className="bg-white rounded-xl px-4 py-3 border border-stone-200 text-sm text-stone-700 text-center">
           {submitError}
         </div>
       )}
 
-      {/* Submit */}
       <Button
         onClick={handleSubmit}
         disabled={liked.size === 0 || submitting}
-        className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
+        className="w-full h-11 bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-40"
       >
         <Send className="w-4 h-4 mr-2" />
-        {submitting ? "Submitting..." : `Submit My Votes (${liked.size} liked)`}
+        {submitting ? "Submitting…" : `Submit votes (${liked.size} liked)`}
       </Button>
     </div>
   );

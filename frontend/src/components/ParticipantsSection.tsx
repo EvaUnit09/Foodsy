@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/button";
 import { Progress } from "@/components/progress";
+import { Crown } from "lucide-react";
 import { Restaurant } from "./RestaurantCard";
 
 interface Participant {
@@ -36,8 +37,6 @@ interface ParticipantsSectionProps {
 export function ParticipantsSection({
   participants,
   likeProgressPct,
-  // likedRestaurants,
-  // restaurants,
   votingStatus,
   isHost,
   sessionStarted,
@@ -48,57 +47,48 @@ export function ParticipantsSection({
   onCompleteRound2,
 }: ParticipantsSectionProps) {
   return (
-    <section className="flex items-center justify-between">
-      {/* Participants */}
-      <div className="flex items-center space-x-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Participants
-        </h2>
-        <ul>
-          {participants.map((p) => (
-            <li key={p.userId}>
-              {p.userId}
-              {p.isHost && (
-                <span className="ml-2 text-orange-600 font-semibold">(Host)</span>
-              )}
-            </li>
-          ))}
-        </ul>
+    <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-white border border-stone-200 rounded-xl">
+      {/* Participants list */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-stone-400 uppercase tracking-wide mr-1">In session</span>
+        {participants.map((p) => (
+          <div
+            key={p.userId}
+            className="flex items-center gap-1 px-2.5 py-1 bg-stone-50 rounded-lg border border-stone-100"
+          >
+            {p.isHost && <Crown className="w-3 h-3 text-amber-600" />}
+            <span className="text-xs font-medium text-stone-700">{p.userId}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Progress and Host Control Buttons */}
-      <div className="flex items-center space-x-4">
-        <span className="text-sm text-gray-600">Voting Progress</span>
-        <div className="flex items-center space-x-2">
-          <Progress value={likeProgressPct} className="w-28" />
-          <span className="text-sm font-medium text-gray-900">
-            {votingStatus.totalVotesCast}/{votingStatus.totalPossibleVotes}
+      {/* Progress + host controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <Progress value={likeProgressPct} className="w-24 h-1.5" />
+          <span className="text-xs tabular-nums text-stone-500 whitespace-nowrap">
+            {votingStatus.totalVotesCast}/{votingStatus.totalPossibleVotes} votes
           </span>
         </div>
-        
-        {/* Host Control Buttons */}
-        {isHost && (
-          <>
-            {/* Complete Round 1 Button */}
-            {sessionStarted && currentRound === 1 && !roundTransitioning && (
-              <Button
-                onClick={onCompleteRound1}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
-              >
-                Complete Round 1
-              </Button>
-            )}
 
-            {/* Complete Round 2 Button */}
-            {sessionStarted && currentRound === 2 && !roundTransitioning && !sessionComplete && (
-              <Button
-                onClick={onCompleteRound2}
-                className="bg-gradient-to-r from-purple-500 to-green-500 text-white"
-              >
-                Finish Voting
-              </Button>
-            )}
-          </>
+        {isHost && sessionStarted && !roundTransitioning && !sessionComplete && (
+          currentRound === 1 ? (
+            <Button
+              onClick={onCompleteRound1}
+              size="sm"
+              className="bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs px-3 h-8 whitespace-nowrap"
+            >
+              End Round 1
+            </Button>
+          ) : (
+            <Button
+              onClick={onCompleteRound2}
+              size="sm"
+              className="bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs px-3 h-8 whitespace-nowrap"
+            >
+              Finish Voting
+            </Button>
+          )
         )}
       </div>
     </section>

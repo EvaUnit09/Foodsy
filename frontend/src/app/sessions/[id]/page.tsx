@@ -26,6 +26,7 @@ import { EventResultsPage } from "@/components/EventResultsPage";
 import { EventRestaurantPicker } from "@/components/EventRestaurantPicker";
 import { EventDetailsCard } from "@/components/EventDetailsCard";
 import { ApiClient, EventRestaurantDto } from "@/api/client";
+import { Clock } from "lucide-react";
 import { VoteType } from "@/api/voteApi";
 
 /* -------------------- types & constants ----------------------- */
@@ -544,12 +545,12 @@ export default function SessionPage() {
   /* --------------------------- UI ------------------------------- */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-          <div className="text-xl font-semibold text-gray-700">Loading session...</div>
-          <div className="text-sm text-gray-500">
-            {!sessionId ? "Invalid session ID" : "Connecting to session and loading restaurants"}
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 rounded-full border border-stone-300 border-t-stone-700 animate-spin mx-auto" />
+          <div className="text-base font-medium text-stone-700">Loading session</div>
+          <div className="text-sm text-stone-400">
+            {!sessionId ? "Invalid session ID" : "Connecting and loading restaurants"}
           </div>
         </div>
       </div>
@@ -567,26 +568,26 @@ export default function SessionPage() {
     // Check if current user already submitted by checking their participant status
     // We approximate this: if session is ended, show results; otherwise show voting panel
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-        <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+      <div className="min-h-screen bg-stone-50">
+        <header className="bg-white border-b border-stone-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-2">
-                <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">F</span>
+            <div className="flex items-center justify-between h-14">
+              <div className="flex items-center gap-3">
+                <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <div className="w-7 h-7 bg-stone-900 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">F</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                  <span className="text-base font-semibold text-stone-900">Foodsy</span>
                 </Link>
-                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Offline</span>
+                <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">Offline</span>
               </div>
             </div>
           </div>
         </header>
         <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
           {session.diningBorough && (
-            <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
-              Eating in: <span className="font-medium text-gray-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
+            <div className="text-sm text-stone-500 bg-white rounded-lg px-4 py-2 border border-stone-100 inline-block">
+              Eating in: <span className="font-medium text-stone-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
             </div>
           )}
 
@@ -636,7 +637,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="min-h-screen bg-stone-50">
       <SessionHeader
         sessionId={sessionId}
         currentRound={currentRound}
@@ -650,8 +651,8 @@ export default function SessionPage() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {session?.diningBorough && (
-          <div className="text-sm text-gray-600 bg-white rounded-lg px-4 py-2 border border-gray-100 inline-block">
-            Eating in: <span className="font-medium text-gray-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
+          <div className="text-sm text-stone-500 bg-white rounded-lg px-4 py-2 border border-stone-100 inline-block">
+            Eating in: <span className="font-medium text-stone-900">{session.diningNeighborhood ? `${session.diningNeighborhood}, ` : ""}{session.diningBorough}</span>
           </div>
         )}
 
@@ -772,18 +773,18 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2">
-              <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">F</span>
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div className="w-7 h-7 bg-stone-900 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">F</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Foodsy</span>
+                <span className="text-base font-semibold text-stone-900">Foodsy</span>
               </Link>
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Event</span>
+              <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">Event</span>
             </div>
           </div>
         </div>
@@ -791,17 +792,17 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+            <div className="w-6 h-6 rounded-full border border-stone-300 border-t-stone-700 animate-spin" />
           </div>
         ) : effectiveStatus === "ENDED" ? (
           <EventResultsPage sessionId={String(sessionId)} />
         ) : effectiveStatus === "setup" ? (
           isHost ? (
             <>
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+              <div className="bg-white rounded-xl p-6 border border-stone-200 space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Pick Restaurants</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Choose 2–6 spots for your guests to vote on.</p>
+                  <h2 className="text-lg font-semibold text-stone-900">Pick restaurants</h2>
+                  <p className="text-sm text-stone-500 mt-0.5">Choose 2–6 spots for your guests to vote on.</p>
                 </div>
                 <EventRestaurantPicker
                   sessionId={String(sessionId)}
@@ -832,19 +833,19 @@ function EventSessionView({ sessionId, isHost, isEnded, status, diningBorough, d
                 <button
                   onClick={handleLock}
                   disabled={locking}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold text-base shadow hover:opacity-90 disabled:opacity-60 transition"
+                  className="w-full py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-medium text-sm disabled:opacity-50 transition"
                 >
-                  {locking ? "Sending invites..." : "Done — Send to Guests"}
+                  {locking ? "Sending invites…" : "Done — send to guests"}
                 </button>
               )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-3xl">🎉</span>
+              <div className="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center">
+                <Clock className="w-5 h-5 text-stone-500" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Event being set up</h2>
-              <p className="text-sm text-gray-500 max-w-xs">The host is still picking restaurants. Check back soon!</p>
+              <h2 className="text-lg font-semibold text-stone-900">Event being set up</h2>
+              <p className="text-sm text-stone-400 max-w-xs">The host is still picking restaurants. Check back soon!</p>
             </div>
           )
         ) : /* voting */ (

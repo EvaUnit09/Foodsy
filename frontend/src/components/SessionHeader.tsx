@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Clock, User } from "lucide-react";
+import { ArrowLeft, Clock, LogIn } from "lucide-react";
 import { Button } from "@/components/button";
 
 interface SessionHeaderProps {
@@ -15,90 +15,93 @@ interface SessionHeaderProps {
   onStartSession: () => void;
 }
 
-export function SessionHeader({ sessionId, currentRound, timeLeft, sessionStarted, timerReceived, isHost, startPressed, onStartSession }: SessionHeaderProps) {
+export function SessionHeader({
+  sessionId,
+  currentRound,
+  timeLeft,
+  sessionStarted,
+  timerReceived,
+  isHost,
+  startPressed,
+  onStartSession,
+}: SessionHeaderProps) {
+  const isTimesUp = timerReceived && timeLeft.minutes === 0 && timeLeft.seconds === 0;
+  const isWarning = timerReceived && timeLeft.minutes === 0 && timeLeft.seconds <= 30 && !isTimesUp;
+
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-orange-100">
+    <header className="bg-white border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left: back link + brand */}
-          <div className="flex items-center space-x-4">
+
+          {/* Left: exit + brand */}
+          <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-colors"
+              className="flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors text-sm"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Exit Session</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Exit</span>
             </Link>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">F</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 bg-stone-900 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-xs tracking-tight">F</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">
-                Foodsy
-              </span>
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                NY
+              <span className="text-base font-semibold text-stone-900 tracking-tight">Foodsy</span>
+            </div>
+          </div>
+
+          {/* Center: session + round */}
+          <div className="hidden sm:flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Session</span>
+              <span className="text-sm font-mono font-semibold text-stone-900">#{sessionId}</span>
+            </div>
+            <div className="w-px h-4 bg-stone-200" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-stone-400 uppercase tracking-wide">Round</span>
+              <span className="text-sm font-semibold text-stone-900">
+                {currentRound}/2{currentRound === 2 && " · Final"}
               </span>
             </div>
           </div>
 
-          {/* Right: session info, timer, profile */}
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Session:</span>
-                <span className="text-sm font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                  #{sessionId}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Round:</span>
-                <span className={`text-sm font-bold px-2 py-1 rounded ${
-                  currentRound === 1 ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                }`}>
-                  {currentRound}/2
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
-              <Clock className="w-4 h-4 text-red-600" />
+          {/* Right: timer + start */}
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+              isTimesUp ? "bg-red-50" : isWarning ? "bg-amber-50" : "bg-stone-50"
+            }`}>
+              <Clock className={`w-3.5 h-3.5 ${
+                isTimesUp ? "text-red-600" : isWarning ? "text-amber-600" : "text-stone-400"
+              }`} />
               {!sessionStarted ? (
                 isHost && !startPressed ? (
                   <Button
                     onClick={onStartSession}
                     size="sm"
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white h-7 px-3 text-sm"
+                    className="bg-stone-900 hover:bg-stone-800 text-white h-6 px-3 text-xs rounded-md"
                   >
                     Start
                   </Button>
                 ) : (
-                  <span className="text-lg font-semibold text-gray-500">
-                    Waiting...
-                  </span>
+                  <span className="text-sm text-stone-400">Waiting</span>
                 )
-              ) : timerReceived && timeLeft.minutes === 0 && timeLeft.seconds === 0 ? (
-                <span className="text-lg font-bold text-red-600 animate-pulse">
-                  TIME&apos;S UP!
-                </span>
+              ) : isTimesUp ? (
+                <span className="text-sm font-semibold text-red-600 animate-pulse">Time&apos;s up</span>
               ) : timerReceived ? (
-                <span className="text-lg font-mono text-red-600">
-                  {String(timeLeft.minutes).padStart(2, "0")}:
-                  {String(timeLeft.seconds).padStart(2, "0")}
+                <span className={`text-sm font-mono font-semibold ${isWarning ? "text-amber-600" : "text-stone-700"}`}>
+                  {String(timeLeft.minutes).padStart(2, "0")}:{String(timeLeft.seconds).padStart(2, "0")}
                 </span>
               ) : (
-                <span className="text-lg font-semibold text-gray-500">
-                  --:--
-                </span>
+                <span className="text-sm font-mono text-stone-300">--:--</span>
               )}
             </div>
 
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Profile
+            <Button variant="ghost" size="sm" className="text-stone-500 hover:text-stone-900 hidden sm:flex">
+              <LogIn className="w-4 h-4" />
             </Button>
           </div>
+
         </div>
       </div>
     </header>

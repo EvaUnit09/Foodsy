@@ -1,5 +1,6 @@
 "use client";
 
+import { Trophy, Loader2, CheckCircle2, Info, Hourglass } from "lucide-react";
 import { Restaurant } from "./RestaurantCard";
 
 interface VotingStatus {
@@ -30,59 +31,73 @@ export function SessionStatusBanners({
   likesPerUser,
 }: SessionStatusBannersProps) {
   return (
-    <>
-      {/* Session Complete Banner */}
+    <div className="space-y-3">
+      {/* Winner */}
       {sessionComplete && winner && (
-        <div className="mb-6 p-6 bg-gradient-to-r from-green-100 to-blue-100 border border-green-300 rounded-lg text-center shadow-lg">
-          <div className="text-2xl font-bold text-green-800 mb-2">🎉 We Have a Winner! 🎉</div>
-          <div className="text-lg text-green-700">
-            <strong>{winner.name}</strong> - {winner.address}
-          </div>
-          <div className="text-sm text-green-600 mt-1">
-            Final votes: {winner.voteCount || winner.likeCount || 0}
+        <div className="flex items-center gap-3 p-4 bg-white border border-stone-200 rounded-xl shadow-sm">
+          <Trophy className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-stone-900">
+              {winner.name} wins
+            </p>
+            <p className="text-xs text-stone-500">
+              {winner.voteCount || winner.likeCount || 0} votes · {winner.address}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Round Transition Banner */}
+      {/* Round transition */}
       {roundTransitioning && !sessionComplete && (
-        <div className="mb-6 p-4 bg-purple-100 border border-purple-300 text-purple-900 rounded-lg text-center text-lg font-semibold shadow animate-pulse">
-          🔄 Transitioning to Round {currentRound === 1 ? 2 : 'Complete'}...
+        <div className="flex items-center gap-3 p-4 bg-white border border-stone-200 rounded-xl">
+          <Loader2 className="w-4 h-4 text-stone-400 animate-spin shrink-0" />
+          <p className="text-sm text-stone-600">
+            Moving to {currentRound === 1 ? "Round 2" : "results"}…
+          </p>
         </div>
       )}
 
-      {/* All Votes In banner */}
+      {/* All votes in — host prompt */}
       {sessionStarted && !sessionComplete && !roundTransitioning && votingStatus.allVotesIn && isHost && (
-        <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-900 rounded-lg text-center text-lg font-semibold shadow animate-pulse">
-          🎉 All Votes Are In! ({votingStatus.participantsWithNoVotesLeft}/{votingStatus.totalParticipants} participants done)
-          <br />
-          <span className="text-sm font-normal">Ready to proceed to {currentRound === 1 ? 'Round 2' : 'Results'}?</span>
-        </div>
-      )}
-
-      {/* Round-specific banners */}
-      {sessionStarted && !sessionComplete && !roundTransitioning && !votingStatus.allVotesIn && (
-        <div className={`mb-6 p-4 rounded-lg text-center text-lg font-semibold shadow ${
-          currentRound === 1 
-            ? 'bg-blue-100 border border-blue-300 text-blue-900'
-            : 'bg-purple-100 border border-purple-300 text-purple-900'
-        }`}>
-          {currentRound === 1 
-            ? `Round 1: Vote for your favorites! (${likesPerUser} likes per person)`
-            : 'Round 2: Final vote! Choose your top pick (1 vote only)'
-          }
-          <div className="text-sm font-normal mt-1">
-            {votingStatus.participantsWithNoVotesLeft}/{votingStatus.totalParticipants} participants have finished voting
+        <div className="flex items-center gap-3 p-4 bg-stone-50 border border-stone-200 rounded-xl">
+          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-stone-900">All votes are in</p>
+            <p className="text-xs text-stone-500">
+              {votingStatus.participantsWithNoVotesLeft}/{votingStatus.totalParticipants} participants done ·{" "}
+              Ready to move to {currentRound === 1 ? "Round 2" : "results"}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Waiting for host message for non-hosts */}
-      {!sessionStarted && !isHost && (
-        <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 text-yellow-900 rounded-lg text-center text-lg font-semibold shadow">
-          Waiting for host to start the session...
+      {/* Round instructions */}
+      {sessionStarted && !sessionComplete && !roundTransitioning && !votingStatus.allVotesIn && (
+        <div className="flex items-center gap-3 p-4 bg-white border border-stone-200 rounded-xl">
+          <Info className="w-4 h-4 text-stone-400 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-stone-900">
+              {currentRound === 1
+                ? "Round 1 — vote for your favorites"
+                : "Round 2 — your final pick"}
+            </p>
+            <p className="text-xs text-stone-500">
+              {currentRound === 1
+                ? `${likesPerUser} like${likesPerUser !== 1 ? "s" : ""} per person`
+                : "1 vote only"}{" "}
+              · {votingStatus.participantsWithNoVotesLeft}/{votingStatus.totalParticipants} done
+            </p>
+          </div>
         </div>
       )}
-    </>
+
+      {/* Non-host waiting */}
+      {!sessionStarted && !sessionComplete && !isHost && (
+        <div className="flex items-center gap-3 p-4 bg-white border border-stone-200 rounded-xl">
+          <Hourglass className="w-4 h-4 text-stone-400 shrink-0" />
+          <p className="text-sm text-stone-600">Waiting for the host to start</p>
+        </div>
+      )}
+    </div>
   );
 }

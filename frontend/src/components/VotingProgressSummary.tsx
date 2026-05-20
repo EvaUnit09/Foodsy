@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, CheckCircle, Clock } from "lucide-react";
+import { Users, CheckCircle2, Clock } from "lucide-react";
 import { ApiClient, VotingProgress } from "@/api/client";
 import { Button } from "@/components/button";
 
@@ -37,59 +37,75 @@ export function VotingProgressSummary({ sessionId, isHost, onCompleted }: Voting
 
   if (!progress) return null;
 
+  const pct = progress.joinedCount > 0
+    ? Math.round((progress.submittedCount / progress.joinedCount) * 100)
+    : 0;
+
   const deadlineDate = progress.votingDeadline ? new Date(progress.votingDeadline) : null;
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-[rgba(0,0,0,0.06)]">
-      <div className="flex items-center space-x-2 mb-3">
-        <Users className="w-4 h-4 text-orange-600" />
-        <h3 className="text-sm font-semibold text-gray-900">Voting Progress</h3>
+    <div className="bg-white rounded-xl border border-stone-200">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-stone-100">
+        <Users className="w-3.5 h-3.5 text-stone-500" />
+        <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">Voting progress</span>
       </div>
 
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-2xl font-bold text-gray-900">
-          {progress.submittedCount} / {progress.joinedCount}
-        </span>
-        <span className="text-sm text-gray-500">have voted</span>
-      </div>
-
-      <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-        <div
-          className="bg-orange-500 rounded-full h-2 transition-all"
-          style={{ width: `${progress.joinedCount > 0 ? (progress.submittedCount / progress.joinedCount) * 100 : 0}%` }}
-        />
-      </div>
-
-      {deadlineDate && (
-        <div className="flex items-center space-x-1 text-xs text-gray-500 mb-3">
-          <Clock className="w-3 h-3" />
-          <span>Deadline: {deadlineDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} at {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        {progress.participants.map((p) => (
-          <div key={p.userId} className="flex items-center justify-between py-1">
-            <span className="text-sm text-gray-700 truncate">{p.userId}</span>
-            {p.votingStatus === "SUBMITTED" ? (
-              <CheckCircle className="w-4 h-4 text-green-500" />
-            ) : (
-              <span className="text-xs text-gray-400">waiting</span>
-            )}
+      <div className="px-5 py-4 space-y-4">
+        {/* Count + bar */}
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <span className="text-2xl font-semibold text-stone-900 tabular-nums">
+              {progress.submittedCount}
+              <span className="text-base font-normal text-stone-400"> / {progress.joinedCount}</span>
+            </span>
+            <span className="text-xs text-stone-400">{pct}%</span>
           </div>
-        ))}
-      </div>
+          <div className="w-full bg-stone-100 rounded-full h-1.5">
+            <div
+              className="bg-stone-900 rounded-full h-1.5 transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
 
-      {isHost && (
-        <Button
-          onClick={handleForceComplete}
-          disabled={completing}
-          className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white"
-          size="sm"
-        >
-          {completing ? "Completing..." : "Complete Session Now"}
-        </Button>
-      )}
+        {/* Deadline */}
+        {deadlineDate && (
+          <div className="flex items-center gap-1.5 text-xs text-stone-400">
+            <Clock className="w-3 h-3" />
+            <span>
+              Deadline:{" "}
+              {deadlineDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}{" "}
+              at {deadlineDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+            </span>
+          </div>
+        )}
+
+        {/* Participant list */}
+        <div className="space-y-1.5">
+          {progress.participants.map((p) => (
+            <div key={p.userId} className="flex items-center justify-between">
+              <span className="text-sm text-stone-600 truncate">{p.userId}</span>
+              {p.votingStatus === "SUBMITTED" ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+              ) : (
+                <span className="text-xs text-stone-300">pending</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Host action */}
+        {isHost && (
+          <Button
+            onClick={handleForceComplete}
+            disabled={completing}
+            size="sm"
+            className="w-full bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs"
+          >
+            {completing ? "Completing…" : "Complete Session Now"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

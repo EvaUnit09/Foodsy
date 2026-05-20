@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Link2 } from "lucide-react";
+import { Copy, Check, Link2, Crown, MapPin, Clock } from "lucide-react";
 
 interface EventDetailsCardProps {
   sessionId: string;
@@ -64,68 +64,66 @@ export function EventDetailsCard({
   const location = [diningNeighborhood, diningBorough].filter(Boolean).join(", ");
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-600 to-indigo-600 px-6 py-8 text-white">
-        <h1 className="text-2xl font-bold leading-tight">
+      <div className="px-6 py-6 border-b border-stone-100">
+        <h1 className="text-xl font-semibold text-stone-900 leading-snug">
           {eventName || "Food Event"}
         </h1>
         {eventDescription && (
-          <p className="mt-2 text-purple-100 text-sm leading-relaxed">
-            {eventDescription}
-          </p>
+          <p className="mt-1.5 text-sm text-stone-500 leading-relaxed">{eventDescription}</p>
         )}
       </div>
 
       <div className="px-6 py-5 space-y-5">
-        {/* Details row */}
-        <div className="space-y-2 text-sm">
+        {/* Details */}
+        <div className="space-y-2.5">
           {creatorId && (
-            <div className="flex items-center gap-2 text-gray-700">
-              <span className="text-base">👑</span>
-              <span>Hosted by <span className="font-semibold">@{creatorId}</span></span>
+            <div className="flex items-center gap-2.5 text-sm text-stone-600">
+              <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Hosted by <span className="font-medium text-stone-900">@{creatorId}</span></span>
             </div>
           )}
           {location && (
-            <div className="flex items-center gap-2 text-gray-700">
-              <span className="text-base">📍</span>
-              <span>Eating in <span className="font-semibold">{location}</span></span>
+            <div className="flex items-center gap-2.5 text-sm text-stone-600">
+              <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+              <span>Eating in <span className="font-medium text-stone-900">{location}</span></span>
             </div>
           )}
           {deadline && (
-            <div className="flex items-center gap-2 text-gray-700">
-              <span className="text-base">⏰</span>
-              <span>Vote by <span className="font-semibold">{deadline}</span></span>
+            <div className="flex items-center gap-2.5 text-sm text-stone-600">
+              <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+              <span>Vote by <span className="font-medium text-stone-900">{deadline}</span></span>
             </div>
           )}
         </div>
 
-        <hr className="border-gray-100" />
+        <div className="border-t border-stone-100" />
 
         {/* Share section */}
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Share</p>
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Share</p>
           {joinCode && (
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-200">
-                <span className="text-xs text-gray-400 block leading-none mb-0.5">Join Code</span>
-                <span className="text-lg font-bold tracking-widest text-gray-900">{joinCode}</span>
+              <div className="flex-1 bg-stone-50 rounded-xl px-4 py-2.5 border border-stone-100">
+                <span className="text-xs text-stone-400 block leading-none mb-0.5">Join Code</span>
+                <span className="text-lg font-bold tracking-widest text-stone-900 font-mono">{joinCode}</span>
               </div>
               <button
                 onClick={copyCode}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 transition"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-sm font-medium text-stone-700 transition-colors"
               >
-                {codeCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                {codeCopied ? "Copied!" : "Copy"}
+                {codeCopied ? <Check className="w-4 h-4 text-emerald-700" /> : <Copy className="w-4 h-4" />}
+                {codeCopied ? "Copied" : "Copy"}
               </button>
             </div>
           )}
           <button
             onClick={copyLink}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm font-medium text-gray-700 transition"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-sm font-medium text-stone-600 transition-colors"
           >
-            {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4" />}
-            {linkCopied ? "Link copied!" : "Copy invite link"}
+            {linkCopied ? <Check className="w-4 h-4 text-emerald-700" /> : <Link2 className="w-4 h-4" />}
+            {linkCopied ? "Link copied" : "Copy invite link"}
           </button>
         </div>
       </div>

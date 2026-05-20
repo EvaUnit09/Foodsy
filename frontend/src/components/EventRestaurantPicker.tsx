@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, BookmarkCheck } from "lucide-react";
 import { ApiClient } from "@/api/client";
 import { LibraryApi } from "@/api/libraryApi";
 import { DiscoveryApi, DiscoveryRestaurant } from "@/api/discoveryApi";
@@ -42,7 +42,6 @@ export function EventRestaurantPicker({
 
   const pickedIds = new Set(picked.map((p) => p.providerId));
 
-  // Load deck once on mount
   useEffect(() => {
     async function loadDeck() {
       const borough = diningBorough?.toLowerCase() as Parameters<typeof DiscoveryApi.fetchRestaurants>[0] | undefined;
@@ -121,24 +120,23 @@ export function EventRestaurantPicker({
 
   return (
     <div className="space-y-4">
-      {/* Selected list */}
       {picked.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">
             Selected ({picked.length}/6)
           </p>
           {picked.map((r) => (
             <div
               key={r.providerId}
-              className="flex items-center justify-between px-3 py-2 bg-orange-50 rounded-xl border border-orange-200"
+              className="flex items-center justify-between px-3 py-2.5 bg-stone-50 rounded-xl border border-stone-200"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
-                <p className="text-xs text-gray-500 truncate">{r.address}</p>
+                <p className="text-sm font-medium text-stone-900 truncate">{r.name}</p>
+                <p className="text-xs text-stone-400 truncate">{r.address}</p>
               </div>
               <button
                 onClick={() => handleRemove(r.providerId)}
-                className="ml-2 text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                className="ml-2 text-stone-400 hover:text-stone-700 transition-colors flex-shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -148,38 +146,36 @@ export function EventRestaurantPicker({
       )}
 
       {picked.length < 2 && (
-        <p className="text-xs text-gray-400">Add at least 2 restaurants (max 6).</p>
+        <p className="text-xs text-stone-400">Add at least 2 restaurants (max 6).</p>
       )}
 
       {addError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700">
+        <div className="bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-700">
           {addError}
         </div>
       )}
 
-      {/* Card stack */}
       {loadingDeck ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+          <div className="w-6 h-6 rounded-full border border-stone-300 border-t-stone-700 animate-spin" />
         </div>
       ) : !currentRestaurant ? (
-        <p className="text-sm text-center text-gray-400 py-12">
+        <p className="text-sm text-center text-stone-400 py-12">
           {deck.length === 0
             ? "No restaurants to browse for this area."
             : "You've seen all available restaurants."}
         </p>
       ) : (
         <>
-          {/* "From your list" badge */}
           <div className="h-6 flex items-center">
             {isFromWatchlist && (
-              <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold">
-                ★ From your Want to Go list
+              <span className="flex items-center gap-1.5 text-xs bg-stone-100 text-stone-600 px-3 py-1 rounded-full font-semibold">
+                <BookmarkCheck className="w-3 h-3" />
+                From your Want to Go list
               </span>
             )}
           </div>
 
-          {/* Card stack */}
           <div style={{ position: "relative", height: 460 }}>
             {[currentIndex + 2, currentIndex + 1, currentIndex].map((idx, pos) => {
               if (!deck[idx]) return null;
@@ -192,19 +188,17 @@ export function EventRestaurantPicker({
                   isGhost={!isActive}
                   ghostDepth={pos === 0 ? 2 : pos === 1 ? 1 : undefined}
                   actionOverrides={{
-                    favorite: { label: "+ Added!", color: "#e8531a" },
+                    favorite: { label: "+ Added!", color: "#1c1917" },
                   }}
                 />
               );
             })}
           </div>
 
-          {/* Progress */}
-          <p className="text-xs text-center text-gray-400">
+          <p className="text-xs text-center text-stone-400">
             {currentIndex + 1} of {deck.length}
           </p>
 
-          {/* Action buttons */}
           <div
             style={{
               display: "flex",
@@ -214,7 +208,6 @@ export function EventRestaurantPicker({
               paddingTop: 8,
             }}
           >
-            {/* Skip */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <button
                 onClick={() => triggerAction("pass")}
@@ -223,7 +216,7 @@ export function EventRestaurantPicker({
                   width: 52,
                   height: 52,
                   borderRadius: "50%",
-                  background: busy ? "#f9fafb" : "#f3f4f6",
+                  background: busy ? "#f5f5f4" : "#e7e5e4",
                   border: "none",
                   cursor: busy ? "not-allowed" : "pointer",
                   display: "flex",
@@ -236,14 +229,13 @@ export function EventRestaurantPicker({
                 onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
               >
-                <X style={{ width: 22, height: 22, color: "#6b7280" }} />
+                <X style={{ width: 22, height: 22, color: "#78716c" }} />
               </button>
-              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+              <span style={{ fontSize: 11, color: "#a8a29e", fontWeight: 700, textTransform: "uppercase" }}>
                 Skip
               </span>
             </div>
 
-            {/* Add to Event */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <button
                 onClick={() => triggerAction("favorite")}
@@ -253,7 +245,7 @@ export function EventRestaurantPicker({
                   width: 64,
                   height: 64,
                   borderRadius: "50%",
-                  background: busy || atMax ? "#fed7aa" : "#e8531a",
+                  background: busy || atMax ? "#a8a29e" : "#1c1917",
                   border: "none",
                   cursor: busy || atMax ? "not-allowed" : "pointer",
                   display: "flex",
@@ -261,7 +253,7 @@ export function EventRestaurantPicker({
                   justifyContent: "center",
                   opacity: busy || atMax ? 0.45 : 1,
                   transition: "transform 0.1s, opacity 0.15s",
-                  boxShadow: busy || atMax ? "none" : "0 4px 14px rgba(232,83,26,0.4)",
+                  boxShadow: busy || atMax ? "none" : "0 4px 14px rgba(28,25,23,0.3)",
                 }}
                 onMouseDown={(e) => { if (!busy && !atMax) e.currentTarget.style.transform = "scale(0.94)"; }}
                 onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -269,13 +261,14 @@ export function EventRestaurantPicker({
               >
                 <Plus style={{ width: 26, height: 26, color: "#fff" }} />
               </button>
-              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>
+              <span style={{ fontSize: 11, color: "#a8a29e", fontWeight: 700, textTransform: "uppercase" }}>
                 Add
               </span>
             </div>
           </div>
+
           {atMax && (
-            <p className="text-xs text-center text-orange-500">
+            <p className="text-xs text-center text-stone-500">
               Maximum 6 restaurants reached. Remove one to add another.
             </p>
           )}

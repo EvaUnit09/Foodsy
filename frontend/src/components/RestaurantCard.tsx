@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/button";
-import { Card, CardContent } from "@/components/card";
 import { VoteType } from "@/api/voteApi";
 import { useState, useEffect } from "react";
 
@@ -14,9 +13,9 @@ export interface Restaurant {
   category: string;
   address: string;
   likeCount: number;
-  voteCount?: number; // For winner data from backend
-  round1Votes?: number; // Votes from round 1
-  round2Votes?: number; // Votes from round 2
+  voteCount?: number;
+  round1Votes?: number;
+  round2Votes?: number;
   round: number;
   photos?: string[];
   priceLevel?: string | null;
@@ -66,7 +65,7 @@ function formatPriceRange(priceRange: string | null | undefined) {
   const startMatch = priceRange.match(/startPrice=\{currencyCode=USD, units=(\d+)\}/);
   const endMatch = priceRange.match(/endPrice=\{currencyCode=USD, units=(\d+)\}/);
   if (startMatch && endMatch) {
-    return `$${startMatch[1]} - $${endMatch[1]}`;
+    return `$${startMatch[1]} – $${endMatch[1]}`;
   }
   return priceRange;
 }
@@ -91,122 +90,107 @@ export function RestaurantCard({
 
   const nextPhoto = () =>
     setCurrentPhotoIdx((p) => (p + 1) % (restaurant.photos?.length || 1));
-  
+
   const prevPhoto = () =>
     setCurrentPhotoIdx(
       (p) => (p - 1 + (restaurant.photos?.length || 1)) % (restaurant.photos?.length || 1)
     );
 
+  const votingDisabled = !sessionStarted || sessionComplete || roundTransitioning;
+
   return (
-    <Card className="shadow-2xl border-0 overflow-hidden">
-      <CardContent className="p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-          {/* Restaurant info + vote buttons */}
-          <div className="p-8 bg-white flex flex-col">
-            <div className="mb-6 p-6 rounded-lg shadow bg-white dark:bg-orange-600">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                {restaurant.name}
-              </h1>
-              <div className="text-white-600 font-2xl text-bold mb-1">
-                {restaurant.category}
-              </div>
-              <div className="text-white-600 dark:text-gray-300 mb-2">
-                {restaurant.address}
-              </div>
+    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2">
+        {/* Info + vote buttons */}
+        <div className="p-6 flex flex-col gap-5">
+          <div className="bg-stone-50 rounded-xl border border-stone-100 p-5 space-y-3">
+            <div>
+              <h1 className="text-xl font-semibold text-stone-900 leading-snug">{restaurant.name}</h1>
+              <p className="text-sm text-stone-500 mt-0.5">{restaurant.category}</p>
+              <p className="text-sm text-stone-400 mt-0.5">{restaurant.address}</p>
+            </div>
 
-              <div className="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-200 mb-2">
-                {restaurant.priceRange && (
-                  <span>
-                    <b>Price:</b> {formatPriceRange(restaurant.priceRange)}
-                  </span>
-                )}
-                {restaurant.rating && (
-                  <span>
-                    <b>Rating:</b> {restaurant.rating} ★
-                    {restaurant.userRatingCount && (
-                      <span className="ml-1 text-gray-500">
-                        ({restaurant.userRatingCount} reviews)
-                      </span>
-                    )}
-                  </span>
-                )}
-                {restaurant.currentOpeningHours && (
-                  <span className="text-white-600 font-large text-bold mb-1">
-                    <b>Hours:</b> {formatHours(restaurant.currentOpeningHours)}
-                  </span>
-                )}
-              </div>
-
-              {restaurant.generativeSummary && (
-                <div className="mt-2">
-                  <b>Summary:</b>
-                  <div className="text-gray-800 dark:text-gray-100">
-                    {extractSummaryText(restaurant.generativeSummary)}
-                  </div>
-                </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-600">
+              {restaurant.priceRange && (
+                <span><span className="text-stone-400">Price</span> {formatPriceRange(restaurant.priceRange)}</span>
               )}
-
-              {restaurant.reviewSummary && (
-                <div className="mt-2">
-                  <b>Review Summary:</b>
-                  <div className="text-gray-800 dark:text-gray-100">
-                    {extractSummaryText(restaurant.reviewSummary)}
-                  </div>
-                </div>
+              {restaurant.rating && (
+                <span>
+                  <span className="text-stone-400">Rating</span> {restaurant.rating}
+                  {restaurant.userRatingCount && (
+                    <span className="text-stone-400 ml-1">({restaurant.userRatingCount})</span>
+                  )}
+                </span>
+              )}
+              {restaurant.currentOpeningHours && (
+                <span><span className="text-stone-400">Hours</span> {formatHours(restaurant.currentOpeningHours)}</span>
               )}
             </div>
 
-            {/* Vote buttons */}
-            <div className="flex space-x-4 mt-auto">
-              <Button
-                onClick={() => onVote("dislike")}
-                disabled={hasVoted || !sessionStarted || sessionComplete || roundTransitioning}
-                variant="outline"
-                size="lg"
-                className="flex-1 h-14 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-              >
-                <ThumbsDown className="w-5 h-5 mr-2" />
-                Pass
-              </Button>
-              <Button
-                onClick={() => onVote("like")}
-                disabled={!canLike || !sessionStarted || sessionComplete || roundTransitioning}
-                size="lg"
-                className="flex-1 h-14 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                <ThumbsUp className="w-5 h-5 mr-2" />
-                Like
-              </Button>
-            </div>
-
-            {/* Vote status messages */}
-            {hasVoted && (
-              <div className="mt-6 p-4 bg-green-50 rounded-lg">
-                <p className="text-green-800 text-center font-medium">
-                  Vote recorded!
+            {restaurant.generativeSummary && (
+              <div className="pt-2 border-t border-stone-100">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">About</p>
+                <p className="text-sm text-stone-600 leading-relaxed">
+                  {extractSummaryText(restaurant.generativeSummary)}
                 </p>
               </div>
             )}
-            {!hasVoted && sessionStarted && !sessionComplete && !roundTransitioning && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <p className="text-blue-800 text-center font-medium">
-                  {currentRound === 1 
-                    ? `Votes remaining: ${remainingVotes}/${likesPerUser}`
-                    : `Final vote remaining: ${remainingVotes}/1`
-                  }
+
+            {restaurant.reviewSummary && (
+              <div className="pt-2 border-t border-stone-100">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Reviews</p>
+                <p className="text-sm text-stone-600 leading-relaxed">
+                  {extractSummaryText(restaurant.reviewSummary)}
                 </p>
-                {remainingVotes === 0 && (
-                  <p className="text-red-600 text-center text-sm mt-1">
-                    You&apos;ve used all your votes for this round!
-                  </p>
-                )}
               </div>
             )}
           </div>
 
-          {/* Photo gallery */}
-          <div className="relative bg-gray-100">
-            {restaurant.photos && restaurant.photos.length > 0 ? (
+          <div className="flex gap-3 mt-auto">
+            <Button
+              onClick={() => onVote("dislike")}
+              disabled={hasVoted || votingDisabled}
+              variant="outline"
+              size="lg"
+              className="flex-1 h-12 border-stone-200 text-stone-600 hover:bg-stone-50 hover:border-stone-300 disabled:opacity-30"
+            >
+              <ThumbsDown className="w-4 h-4 mr-2" />
+              Pass
+            </Button>
+            <Button
+              onClick={() => onVote("like")}
+              disabled={!canLike || votingDisabled}
+              size="lg"
+              className="flex-1 h-12 bg-stone-900 hover:bg-stone-800 text-white disabled:opacity-30"
+            >
+              <ThumbsUp className="w-4 h-4 mr-2" />
+              Like
+            </Button>
+          </div>
+
+          {hasVoted && (
+            <div className="px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 text-center">
+              <p className="text-sm font-medium text-stone-600">Vote recorded</p>
+            </div>
+          )}
+          {!hasVoted && sessionStarted && !sessionComplete && !roundTransitioning && (
+            <div className="px-4 py-3 bg-stone-50 rounded-xl border border-stone-100 text-center">
+              <p className="text-sm text-stone-500">
+                {currentRound === 1
+                  ? `${remainingVotes} of ${likesPerUser} votes remaining`
+                  : `${remainingVotes} final vote remaining`}
+              </p>
+              {remainingVotes === 0 && (
+                <p className="text-xs text-stone-400 mt-0.5">All votes used for this round</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Photo gallery */}
+        <div className="bg-stone-100">
+          {restaurant.photos && restaurant.photos.length > 0 ? (
+            <>
               <div className="aspect-square relative overflow-hidden">
                 <Image
                   src={restaurant.photos[currentPhotoIdx] ?? "/placeholder.svg"}
@@ -216,68 +200,63 @@ export function RestaurantCard({
                   className="object-cover"
                   unoptimized
                 />
-
-                {/* Photo navigation */}
-                <div className="absolute inset-0 flex items-center justify-between p-4">
+                <div className="absolute inset-0 flex items-center justify-between p-3">
                   <Button
                     onClick={prevPhoto}
                     variant="outline"
                     size="icon"
-                    className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                    className="bg-white/80 hover:bg-white border-0 shadow-sm w-8 h-8"
                   >
-                    <ChevronLeft />
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={nextPhoto}
                     variant="outline"
                     size="icon"
-                    className="bg-white/80 hover:bg-white border-0 shadow-lg"
+                    className="bg-white/80 hover:bg-white border-0 shadow-sm w-8 h-8"
                   >
-                    <ChevronRight />
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
-
-                {/* Photo counter */}
-                <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2.5 py-0.5 rounded-full text-xs tabular-nums">
                   {currentPhotoIdx + 1} / {restaurant.photos.length}
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <span className="text-gray-500">No photos</span>
-              </div>
-            )}
 
-            {/* Thumbnails */}
-            {restaurant.photos && restaurant.photos.length > 1 && (
-              <div className="p-4 bg-white">
-                <div className="grid grid-cols-6 gap-2">
-                  {restaurant.photos.map((url, idx) => (
-                    <button
-                      key={url}
-                      onClick={() => setCurrentPhotoIdx(idx)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                        idx === currentPhotoIdx
-                          ? "border-orange-500 shadow-md"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <Image
-                        src={url}
-                        alt={`Thumbnail ${idx + 1}`}
-                        width={120}
-                        height={120}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </button>
-                  ))}
+              {restaurant.photos.length > 1 && (
+                <div className="p-3 bg-white">
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {restaurant.photos.map((url, idx) => (
+                      <button
+                        key={url}
+                        onClick={() => setCurrentPhotoIdx(idx)}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          idx === currentPhotoIdx
+                            ? "border-stone-900"
+                            : "border-transparent hover:border-stone-300"
+                        }`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          width={120}
+                          height={120}
+                          className="w-full h-full object-cover"
+                          unoptimized
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full min-h-[200px]">
+              <span className="text-sm text-stone-400">No photos</span>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trophy, Users, CheckCircle, HelpCircle, XCircle } from "lucide-react";
+import { Trophy, Users, CheckCircle2, HelpCircle, XCircle } from "lucide-react";
 import { ApiClient, EventSummary } from "@/api/client";
 
 interface EventResultsPageProps {
@@ -17,75 +17,85 @@ export function EventResultsPage({ sessionId }: EventResultsPageProps) {
 
   if (!summary) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+      <div className="flex items-center justify-center py-12">
+        <div className="w-6 h-6 rounded-full border border-stone-300 border-t-stone-700 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Winner */}
       {summary.winnerName && (
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white text-center">
-          <Trophy className="w-10 h-10 mx-auto mb-2" />
-          <h2 className="text-2xl font-bold">{summary.winnerName}</h2>
-          <p className="text-orange-100 mt-1">The group has decided!</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-6 text-center">
+          <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Trophy className="w-5 h-5 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-stone-900">{summary.winnerName}</h2>
+          <p className="text-sm text-stone-400 mt-1">The group has decided</p>
         </div>
       )}
 
       {/* Attendance */}
-      <div className="bg-white rounded-2xl p-5 border border-[rgba(0,0,0,0.06)]">
-        <div className="flex items-center space-x-2 mb-3">
-          <Users className="w-4 h-4 text-orange-600" />
-          <h3 className="text-sm font-semibold text-gray-900">Attendance</h3>
+      <div className="bg-white rounded-xl border border-stone-200">
+        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-stone-100">
+          <Users className="w-3.5 h-3.5 text-stone-500" />
+          <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">Attendance</span>
         </div>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-2xl font-bold text-green-700">{summary.goingCount}</p>
-            <p className="text-xs text-green-600">Going</p>
+        <div className="grid grid-cols-3 divide-x divide-stone-100 px-5 py-4">
+          <div className="text-center pr-4">
+            <p className="text-2xl font-semibold text-stone-900">{summary.goingCount}</p>
+            <p className="text-xs text-stone-400 mt-0.5">Going</p>
           </div>
-          <div className="bg-yellow-50 rounded-lg p-3">
-            <p className="text-2xl font-bold text-yellow-700">{summary.maybeCount}</p>
-            <p className="text-xs text-yellow-600">Maybe</p>
+          <div className="text-center px-4">
+            <p className="text-2xl font-semibold text-stone-900">{summary.maybeCount}</p>
+            <p className="text-xs text-stone-400 mt-0.5">Maybe</p>
           </div>
-          <div className="bg-red-50 rounded-lg p-3">
-            <p className="text-2xl font-bold text-red-700">{summary.notGoingCount}</p>
-            <p className="text-xs text-red-600">Not Going</p>
+          <div className="text-center pl-4">
+            <p className="text-2xl font-semibold text-stone-900">{summary.notGoingCount}</p>
+            <p className="text-xs text-stone-400 mt-0.5">Not going</p>
           </div>
         </div>
       </div>
 
       {/* Restaurant votes */}
-      <div className="bg-white rounded-2xl p-5 border border-[rgba(0,0,0,0.06)]">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Restaurant Preferences</h3>
-        <div className="space-y-2">
-          {summary.restaurantVotes.sort((a, b) => b.votes - a.votes).map((r, i) => (
-            <div key={r.providerId} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-orange-600 w-5">{i + 1}</span>
-                <span className="text-sm font-medium text-gray-900">{r.name}</span>
+      <div className="bg-white rounded-xl border border-stone-200">
+        <div className="px-5 py-3.5 border-b border-stone-100">
+          <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">Restaurant preferences</span>
+        </div>
+        <div className="divide-y divide-stone-100">
+          {summary.restaurantVotes
+            .sort((a, b) => b.votes - a.votes)
+            .map((r, i) => (
+              <div key={r.providerId} className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-stone-400 w-4">{i + 1}</span>
+                  <span className="text-sm font-medium text-stone-900">{r.name}</span>
+                </div>
+                <span className="text-sm text-stone-500 tabular-nums">
+                  {r.votes} vote{r.votes !== 1 ? "s" : ""}
+                </span>
               </div>
-              <span className="text-sm font-bold text-gray-700">{r.votes} vote{r.votes !== 1 ? "s" : ""}</span>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
       {/* RSVP details */}
-      <div className="bg-white rounded-2xl p-5 border border-[rgba(0,0,0,0.06)]">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Responses</h3>
-        <div className="space-y-2">
+      <div className="bg-white rounded-xl border border-stone-200">
+        <div className="px-5 py-3.5 border-b border-stone-100">
+          <span className="text-xs font-semibold text-stone-700 uppercase tracking-wide">Responses</span>
+        </div>
+        <div className="divide-y divide-stone-100">
           {summary.rsvps.map((r) => (
-            <div key={r.userId} className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-2">
-                {r.rsvpStatus === "GOING" && <CheckCircle className="w-4 h-4 text-green-500" />}
-                {r.rsvpStatus === "MAYBE" && <HelpCircle className="w-4 h-4 text-yellow-500" />}
-                {r.rsvpStatus === "NOT_GOING" && <XCircle className="w-4 h-4 text-red-500" />}
-                <span className="text-sm text-gray-700">{r.userId}</span>
+            <div key={r.userId} className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center gap-2.5">
+                {r.rsvpStatus === "GOING" && <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />}
+                {r.rsvpStatus === "MAYBE" && <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />}
+                {r.rsvpStatus === "NOT_GOING" && <XCircle className="w-4 h-4 text-stone-400 shrink-0" />}
+                <span className="text-sm text-stone-700">{r.userId}</span>
               </div>
               {r.preferredRestaurantName && (
-                <span className="text-xs text-gray-500">{r.preferredRestaurantName}</span>
+                <span className="text-xs text-stone-400">{r.preferredRestaurantName}</span>
               )}
             </div>
           ))}

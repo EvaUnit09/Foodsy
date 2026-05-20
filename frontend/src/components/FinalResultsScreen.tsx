@@ -1,9 +1,8 @@
 "use client";
 
 import { Button } from "@/components/button";
-import { Card, CardContent } from "@/components/card";
 import { Restaurant } from "./RestaurantCard";
-import { MapPin, Star, Clock, DollarSign } from "lucide-react";
+import { Trophy, MapPin, Star, Clock, DollarSign } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface FinalResultsScreenProps {
@@ -14,122 +13,101 @@ interface FinalResultsScreenProps {
 export function FinalResultsScreen({ winner, sessionId }: FinalResultsScreenProps) {
   const router = useRouter();
 
-  const handleExitSession = () => {
-    router.push("/");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-      <div className="max-w-4xl mx-auto pt-8">
-        {/* Winner Announcement */}
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-4xl font-bold text-green-800 mb-2">
-            We Have a Winner!
-          </h1>
-          <p className="text-xl text-green-600">
-            Your group has chosen the perfect restaurant
-          </p>
+    <div className="min-h-screen bg-stone-50 p-4">
+      <div className="max-w-2xl mx-auto pt-10 space-y-4">
+        {/* Winner announcement */}
+        <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+          <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-6 h-6 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-semibold text-stone-900 mb-1">{winner.name}</h1>
+          {winner.address && (
+            <div className="flex items-center justify-center gap-1.5 text-sm text-stone-500 mt-2">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span>{winner.address}</span>
+            </div>
+          )}
+          <div className="mt-4 inline-block px-4 py-1.5 bg-stone-50 border border-stone-100 rounded-full">
+            <span className="text-sm font-medium text-stone-700">
+              {winner.voteCount ?? winner.likeCount ?? 0} vote{(winner.voteCount ?? winner.likeCount ?? 0) !== 1 ? "s" : ""}
+            </span>
+            {winner.round1Votes !== undefined && winner.round2Votes !== undefined && (
+              <span className="text-xs text-stone-400 ml-2">
+                (R1: {winner.round1Votes} + R2: {winner.round2Votes})
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Winner Details Card */}
-        <Card className="mb-8 shadow-xl border-2 border-green-200">
-          <CardContent className="p-8">
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                {winner.name}
-              </h2>
-              <div className="flex items-center justify-center text-gray-600 mb-4">
-                <MapPin className="w-5 h-5 mr-2" />
-                <span className="text-lg">{winner.address}</span>
-              </div>
-              
-              {/* Vote Count */}
-              <div className="inline-block bg-green-100 px-4 py-2 rounded-full mb-6">
-                <span className="text-green-800 font-semibold text-lg">
-                  Final Votes: {winner.voteCount || winner.likeCount || 0}
+        {/* Details */}
+        {(winner.category || winner.rating || winner.priceRange || winner.currentOpeningHours) && (
+          <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+            {winner.category && (
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <span className="w-2 h-2 rounded-full bg-stone-300 shrink-0" />
+                <span className="text-sm text-stone-600">
+                  <span className="font-medium text-stone-900">Cuisine</span> — {winner.category}
                 </span>
-                {winner.round1Votes !== undefined && winner.round2Votes !== undefined && (
-                  <div className="text-sm text-green-600 mt-1">
-                    (Round 1: {winner.round1Votes} + Round 2: {winner.round2Votes})
-                  </div>
-                )}
               </div>
-            </div>
+            )}
+            {winner.rating && (
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Star className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <span className="text-sm text-stone-600">
+                  <span className="font-medium text-stone-900">{winner.rating}</span> / 5
+                  {(winner.userRatingCount ?? 0) > 0 && (
+                    <span className="text-stone-400 ml-1">({winner.userRatingCount} reviews)</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {winner.priceRange && (
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <DollarSign className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <span className="text-sm text-stone-600">
+                  <span className="font-medium text-stone-900">Price</span> — {winner.priceRange}
+                </span>
+              </div>
+            )}
+            {winner.currentOpeningHours && (
+              <div className="flex items-center gap-3 px-5 py-3.5">
+                <Clock className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <span className="text-sm text-stone-600">
+                  <span className="font-medium text-stone-900">Hours</span> — {winner.currentOpeningHours}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
-            {/* Restaurant Details Grid */}
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
-              {winner.category && (
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                  <span className="text-gray-700">
-                    <strong>Cuisine:</strong> {winner.category}
-                  </span>
-                </div>
-              )}
-
-              {winner.rating && (
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 text-yellow-500 mr-2" />
-                  <span className="text-gray-700">
-                    <strong>Rating:</strong> {winner.rating}/5
-                    {(winner.userRatingCount ?? 0) > 0 && (
-                      <span className="text-sm text-gray-500 ml-1">
-                        ({winner.userRatingCount} reviews)
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {winner.priceRange && (
-                <div className="flex items-center">
-                  <DollarSign className="w-4 h-4 text-green-500 mr-2" />
-                  <span className="text-gray-700">
-                    <strong>Price:</strong> {winner.priceRange}
-                  </span>
-                </div>
-              )}
-
-              {winner.currentOpeningHours && (
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 text-blue-500 mr-2" />
-                  <span className="text-gray-700">
-                    <strong>Hours:</strong> {winner.currentOpeningHours}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Summaries */}
+        {/* Summaries */}
+        {(winner.generativeSummary || winner.reviewSummary) && (
+          <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
             {winner.generativeSummary && (
-              <div className="mb-4">
-                <h3 className="font-semibold text-gray-800 mb-2">About This Restaurant:</h3>
-                <p className="text-gray-600 leading-relaxed">{winner.generativeSummary}</p>
+              <div className="px-5 py-4">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">About</p>
+                <p className="text-sm text-stone-600 leading-relaxed">{winner.generativeSummary}</p>
               </div>
             )}
-
             {winner.reviewSummary && (
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-2">What People Are Saying:</h3>
-                <p className="text-gray-600 leading-relaxed">{winner.reviewSummary}</p>
+              <div className="px-5 py-4">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Reviews</p>
+                <p className="text-sm text-stone-600 leading-relaxed">{winner.reviewSummary}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        {/* Action Buttons */}
-        <div className="text-center space-y-4">
+        {/* Action */}
+        <div className="space-y-2 pb-8">
           <Button
-            onClick={handleExitSession}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
+            onClick={() => router.push("/")}
+            className="w-full h-11 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-sm font-medium"
           >
             Exit Session
           </Button>
-          
-          <div className="text-sm text-gray-500">
-            Session #{sessionId} completed
-          </div>
+          <p className="text-center text-xs text-stone-400">Session #{sessionId} completed</p>
         </div>
       </div>
     </div>
